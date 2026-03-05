@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3d1238"/>
+      <stop offset="100%" stop-color="#2d0f2a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+
+  <!-- h — drawn as paths, champagne #f5e6d3 -->
+  <!-- vertical stem -->
+  <rect x="4" y="6" width="2.5" height="20" rx="1" fill="#f5e6d3"/>
+  <!-- arch top -->
+  <path d="M6.5 14 Q10 10 13.5 14 L13.5 26 L11 26 L11 15.5 Q10 13.5 6.5 15.5Z" fill="#f5e6d3"/>
+
+  <!-- b — italic slant, rose #c97b8a -->
+  <!-- vertical stem with slight italic lean -->
+  <rect x="17" y="6" width="2.5" height="20" rx="1" fill="#c97b8a" transform="skewX(-4)"/>
+  <!-- bowl -->
+  <path d="M19.5 15.5 Q25 14 25 19 Q25 24.5 19.5 24.5 L19.5 22.5 Q23 22.5 23 19 Q23 16.5 19.5 17Z" fill="#c97b8a" transform="skewX(-4)"/>
+</svg>
