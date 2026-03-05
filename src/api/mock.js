@@ -24,7 +24,6 @@ const MOCK_USER = {
     totalEpisodes: 1840,
     totalHours: 2214,
     milestone: 'Drama Queen',
-    milestoneMessage: "You've watched 73 dramas. You are the main character.",
   },
   badges: [
     { id: 'drama_queen',    icon: '👑', name: 'Drama Queen',      unlocked: true },

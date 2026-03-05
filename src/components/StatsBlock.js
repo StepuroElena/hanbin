@@ -1,21 +1,51 @@
 /**
  * HANBIN — Stats Block Component
- * Hero-секция с большими числами и мотивационным баннером
+ * Hero-секция с большими числами и цитатой дня из дорамы
  */
 
 import { getUser } from '../api/mock.js';
 
+/**
+ * Загружает цитату дня.
+ * Берётся из localStorage если уже выбрана сегодня,
+ * иначе — из data/quotes.json. Меняется раз в сутки.
+ */
+async function getDailyQuote() {
+  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+  try {
+    const stored = JSON.parse(localStorage.getItem('hanbin_daily_quote') || 'null');
+    if (stored && stored.date === today) return stored.quote;
+  } catch (_) { /* битый localStorage — игнорируем */ }
+
+  const res = await fetch('data/quotes.json');
+  const quotes = await res.json();
+
+  // Детерминированный индекс по дате — одна цитата в день для всех
+  const seed = Number(today.replace(/-/g, '')); // "20260305" → 20260305
+  const quote = quotes[seed % quotes.length];
+
+  try {
+    localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote }));
+  } catch (_) { /* private mode — ничего страшного */ }
+
+  return quote;
+}
+
 export async function renderStatsBlock(container) {
-  const { data: user } = await getUser();
-  const { stats, badges } = user;
+  const [{ data: user }, quote] = await Promise.all([
+    getUser(),
+    getDailyQuote().catch(() => ({
+      emoji: '🕯️',
+      text: '«Даже самая долгая ночь в конце концов встречает рассвет.»',
+      source: 'Нирвана в огне · 2015',
+    })),
+  ]);
+
+  const { stats } = user;
 
   container.innerHTML = `
     <section class="hero-section">
-      <div class="milestone-banner">
-        <div class="milestone-dot"></div>
-        <span>${stats.milestoneMessage} ✦</span>
-      </div>
-
       <div class="stats-grid">
         <div class="stat-card glass-card" data-stat="dramas">
           <div class="stat-label">Dramas watched</div>
@@ -35,10 +65,10 @@ export async function renderStatsBlock(container) {
           <div class="stat-unit">hours of pure bliss</div>
         </div>
 
-        <div class="quote-card" data-stat="milestone">
-          <div class="quote-emoji">🌸</div>
-          <div class="quote-text">"${stats.milestoneMessage}"</div>
-          <div class="quote-sub">Milestone unlocked · ${stats.milestone} ✦</div>
+        <div class="quote-card" data-stat="quote">
+          <div class="quote-emoji">${quote.emoji}</div>
+          <div class="quote-text">${quote.text}</div>
+          <div class="quote-sub">${quote.source} ✦</div>
         </div>
       </div>
     </section>
