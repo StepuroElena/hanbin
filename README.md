@@ -38,7 +38,7 @@ To stop: click **Port: 5500** in the bottom-right corner of VS Code.
 ### Option 2 — Node.js
 
 ```bash
-cd /Users/elenastepuro/Desktop/hanbin
+cd /Users/elenastepuro/Desktop/hanbin/hanbin-front
 npx serve .
 ```
 
@@ -47,7 +47,7 @@ Opens at `http://localhost:3000`. Stop with **Ctrl+C**.
 ### Option 3 — Python (built into macOS)
 
 ```bash
-cd /Users/elenastepuro/Desktop/hanbin
+cd /Users/elenastepuro/Desktop/hanbin/hanbin-front
 python3 -m http.server 8080
 ```
 
