@@ -6,6 +6,7 @@ import { initRouter } from './router.js';
 import { buildCSSVariables } from './styles/theme.js';
 import { globalCSS } from './styles/global.js';
 import { setFavicon } from './utils/favicon.js';
+import { tooltipCSS } from './utils/tooltip.js';
 
 function injectStyles() {
   // CSS переменные из темы
@@ -17,7 +18,7 @@ function injectStyles() {
   // Глобальные стили
   const globalStyle = document.createElement('style');
   globalStyle.id = 'hanbin-global';
-  globalStyle.textContent = globalCSS + componentCSS;
+  globalStyle.textContent = globalCSS + tooltipCSS + componentCSS;
   document.head.appendChild(globalStyle);
 }
 
@@ -132,7 +133,8 @@ const componentCSS = `
   background: var(--color-glass);
   border: 1px solid var(--color-border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 .toggle-btn {
   padding: 9px 14px;
@@ -143,7 +145,10 @@ const componentCSS = `
   transition: var(--transition-fast);
   display: flex;
   align-items: center;
+  position: relative;
 }
+.toggle-btn:first-child { border-radius: 10px 0 0 10px; }
+.toggle-btn:last-child  { border-radius: 0 10px 10px 0; }
 .toggle-btn.active { background: rgba(201,123,138,0.25); color: var(--color-rose); }
 .toggle-btn:hover:not(.active) { color: var(--color-text); }
 
@@ -162,15 +167,33 @@ const componentCSS = `
 .avatar {
   width: 38px; height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-rose), var(--color-plum));
   display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 500;
-  border: 2px solid rgba(201,123,138,0.4);
   cursor: pointer;
   flex-shrink: 0;
   transition: var(--transition-fast);
+  position: relative;
 }
 .avatar:hover { transform: scale(1.05); }
+
+/* залогинен — градиентный фон с инициалами */
+.avatar--logged-in {
+  background: linear-gradient(135deg, var(--color-rose), var(--color-plum));
+  font-size: 14px; font-weight: 500;
+  border: 2px solid rgba(201,123,138,0.4);
+  color: var(--color-text);
+}
+
+/* гость — прозрачный с иконкой входа */
+.avatar--guest {
+  background: rgba(255,255,255,0.06);
+  border: 1px dashed rgba(201,123,138,0.45);
+  color: rgba(201,123,138,0.7);
+}
+.avatar--guest:hover {
+  background: rgba(201,123,138,0.15);
+  border-color: var(--color-rose);
+  color: var(--color-rose);
+}
 
 /* ── Hero Stats ── */
 .hero-section { margin-bottom: 48px; animation: fadeUp 0.7s ease both; }
