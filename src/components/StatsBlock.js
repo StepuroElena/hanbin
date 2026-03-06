@@ -18,7 +18,7 @@ async function getDailyQuote() {
     if (stored && stored.date === today) return stored.quote;
   } catch (_) { /* битый localStorage — игнорируем */ }
 
-  const res = await fetch('data/quotes.json');
+  const res = await fetch('/data/quotes.json');
   const quotes = await res.json();
 
   // Детерминированный индекс по дате — одна цитата в день для всех

@@ -4,6 +4,8 @@
 
 A beautifully designed SPA for tracking Korean and Chinese dramas. Built for women who are obsessed with Asian dramas and want to feel like legends about how much they've watched.
 
+![Hanbin preview](assets/preview.png)
+
 ---
 
 ## ✨ Features
@@ -21,14 +23,15 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 
 ## 🚀 Running Locally
 
-The project uses ES Modules (`type="module"`), so a local server is required — opening `index.html` directly in a browser won't work.
+The project uses ES Modules (`type="module"`), so a local server is required — opening the file directly in a browser won't work.
 
 ### Option 1 — VS Code Live Server (recommended)
 
 1. Install the **Live Server** extension in VS Code
-2. Right-click `index.html` → **Open with Live Server**
-3. Opens at `http://localhost:5500`
-4. Auto-reloads on file changes ✨
+2. Open the project folder in VS Code
+3. Right-click `pages/home.html` → **Open with Live Server**
+4. Opens at `http://localhost:5500`
+5. Auto-reloads on file changes ✨
 
 To stop: click **Port: 5500** in the bottom-right corner of VS Code.
 
@@ -56,7 +59,14 @@ Opens at `http://localhost:8080`. Stop with **Ctrl+C**.
 
 ```
 hanbin/
-├── index.html                  # Entry point
+├── pages/
+│   └── home.html               # Main page (add new pages here)
+│   └── ...                     # future pages go here
+├── data/
+│   └── quotes.json             # Daily drama quotes (Russian)
+├── assets/
+│   ├── favicon.svg
+│   └── preview.png             # App screenshot
 └── src/
     ├── app.js                  # App init, style injection
     ├── router.js               # Hash-based SPA router
