@@ -5,6 +5,7 @@
 import { initRouter } from './router.js';
 import { buildCSSVariables } from './styles/theme.js';
 import { globalCSS } from './styles/global.js';
+import { setFavicon } from './utils/favicon.js';
 
 function injectStyles() {
   // CSS переменные из темы
@@ -173,28 +174,6 @@ const componentCSS = `
 
 /* ── Hero Stats ── */
 .hero-section { margin-bottom: 48px; animation: fadeUp 0.7s ease both; }
-
-.milestone-banner {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, rgba(201,123,138,0.2), rgba(122,171,142,0.15));
-  border: 1px solid rgba(201,123,138,0.3);
-  border-radius: 30px;
-  padding: 8px 20px;
-  margin-bottom: 28px;
-  font-size: 13px;
-  color: var(--color-text);
-  letter-spacing: 0.02em;
-}
-.milestone-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--color-neon-rose);
-  box-shadow: 0 0 8px var(--color-neon-rose);
-  animation: pulse 2s infinite;
-  flex-shrink: 0;
-}
 
 .stats-grid {
   display: grid;
@@ -495,6 +474,7 @@ const componentCSS = `
 // ─── Init ─────────────────────────────────────
 function init() {
   injectStyles();
+  setFavicon('/assets/favicon.svg');
 
   const app = document.getElementById('app');
   if (!app) {
