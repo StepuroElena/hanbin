@@ -18,8 +18,8 @@ export async function renderHome(container) {
       <div id="filters-slot"></div>
       <section class="section">
         <div class="section-header">
-          <div class="section-title">Currently Watching</div>
-          <button class="see-all" id="see-all-watching">See all →</button>
+          <div class="section-title">Сейчас смотрю</div>
+          <button class="see-all" id="see-all-watching">Все →</button>
         </div>
         <div id="watching-slot"></div>
       </section>
@@ -63,7 +63,7 @@ export async function renderHome(container) {
   // ── Currently Watching ──
   async function loadWatching() {
     const slot = container.querySelector('#watching-slot');
-    slot.innerHTML = '<div class="loading-dots">Loading…</div>';
+    slot.innerHTML = '<div class="loading-dots">Загрузка…</div>';
     const { data } = await getDramas(currentFilters);
     if (currentView === 'table') {
       renderDramaTable(slot, data);

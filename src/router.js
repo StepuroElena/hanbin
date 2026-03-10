@@ -7,7 +7,9 @@
  * 2. Зарегистрируй маршрут в ROUTES ниже
  */
 
-import { renderHome }   from './pages/Home.js';
+import { renderHome }         from './pages/Home.js';
+import { renderUnauthorized } from './pages/Unauthorized.js';
+import { getAuthState }       from './api/mock.js';
 // TODO: раскомментируй когда создашь эти страницы:
 // import { renderSearch }    from './pages/Search.js';
 // import { renderDrama }     from './pages/Drama.js';
@@ -18,6 +20,7 @@ import { renderHome }   from './pages/Home.js';
 const ROUTES = {
   '#/':         renderHome,
   '#/home':     renderHome,
+  '#/guest':    renderUnauthorized,  // Публичная страница для незалогиненных
   // '#/search':   renderSearch,
   // '#/drama/:id':renderDrama,
   // '#/profile':  renderProfile,
@@ -60,7 +63,13 @@ function resolveRoute(hash) {
 export function initRouter(appEl) {
   async function render() {
     const hash = getCurrentRoute();
-    const { handler, params } = resolveRoute(hash);
+    let { handler, params } = resolveRoute(hash);
+
+    // Если пользователь открыл корень (#/ или пустой хэш) — проверяем авторизацию
+    if (hash === '#/' || hash === '#/home' || hash === '') {
+      const { data: auth } = await getAuthState();
+      if (!auth.isLoggedIn) handler = renderUnauthorized;
+    }
 
     appEl.innerHTML = '<div class="page-enter"></div>';
     const pageEl = appEl.querySelector('.page-enter');
