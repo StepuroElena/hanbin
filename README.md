@@ -20,8 +20,6 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 ### Модалка логина
 ![Login modal](assets/preview-login-modal.png)
 
-> **Note:** чтобы обновить скриншоты — открой `http://127.0.0.1:3000/pages/home.html#/guest`,
-> сделай скриншот нужного состояния и сохрани в `assets/` с соответствующим именем.
 
 ---
 
