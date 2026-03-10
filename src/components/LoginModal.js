@@ -66,7 +66,14 @@ const MODAL_CSS = `
     background: rgba(201,123,138,0.1);
   }
 
-  .hb-modal-emoji { font-size: 28px; margin-bottom: 10px; }
+  /* логотип */
+  .hb-modal-logo {
+    width: 44px; height: 44px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+    display: block;
+  }
+
   .hb-modal-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 30px; font-weight: 300; font-style: italic;
@@ -123,50 +130,57 @@ const MODAL_CSS = `
   .hb-divider-line { flex: 1; height: 1px; background: rgba(232,196,184,0.1); }
   .hb-divider-text { font-size: 11px; color: rgba(245,230,211,0.25); letter-spacing: 0.1em; }
 
-  /* ── Кнопка Войти: два состояния ── */
   #hb-btn-login {
     width: 100%; padding: 14px; margin-bottom: 4px;
     border: none; border-radius: 12px; color: #fff;
     font-family: 'DM Sans', sans-serif;
     font-size: 13px; font-weight: 500;
     letter-spacing: 0.1em; text-transform: uppercase;
-    transition: opacity 0.2s, transform 0.2s, background 0.25s, cursor 0.1s;
+    transition: opacity 0.2s, transform 0.2s, background 0.25s;
   }
-
-  /* недоступна — серая, не кликается */
   #hb-btn-login:disabled {
     background: rgba(255,255,255,0.08);
     color: rgba(245,230,211,0.3);
     cursor: not-allowed;
     transform: none !important;
   }
-
-  /* доступна — градиент, ховер */
   #hb-btn-login:not(:disabled) {
     background: linear-gradient(135deg, #c97b8a, #ff6b8a);
     cursor: pointer;
   }
-  #hb-btn-login:not(:disabled):hover {
-    opacity: 0.87;
-    transform: translateY(-1px);
-  }
+  #hb-btn-login:not(:disabled):hover { opacity: 0.87; transform: translateY(-1px); }
   #hb-btn-login:not(:disabled):active { transform: translateY(0); }
 
   #hb-btn-register {
     width: 100%; padding: 13px;
     background: transparent;
     border: 1px solid rgba(201,123,138,0.3);
-    border-radius: 12px;
-    color: #c97b8a;
+    border-radius: 12px; color: #c97b8a;
     font-family: 'DM Sans', sans-serif;
     font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
+    cursor: pointer; transition: all 0.2s;
   }
   #hb-btn-register:hover {
     border-color: rgba(201,123,138,0.6);
     background: rgba(201,123,138,0.08);
   }
+`;
+
+// ─── Логотип SVG (inline) ─────────────────────
+const LOGO_SVG = `
+  <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+    <defs>
+      <linearGradient id="hb-logo-bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#3d1238"/>
+        <stop offset="100%" stop-color="#2d0f2a"/>
+      </linearGradient>
+    </defs>
+    <rect width="32" height="32" rx="7" fill="url(#hb-logo-bg)"/>
+    <rect x="4" y="6" width="2.5" height="20" rx="1" fill="#f5e6d3"/>
+    <path d="M6.5 14 Q10 10 13.5 14 L13.5 26 L11 26 L11 15.5 Q10 13.5 6.5 15.5Z" fill="#f5e6d3"/>
+    <rect x="17" y="6" width="2.5" height="20" rx="1" fill="#c97b8a" transform="skewX(-4)"/>
+    <path d="M19.5 15.5 Q25 14 25 19 Q25 24.5 19.5 24.5 L19.5 22.5 Q23 22.5 23 19 Q23 16.5 19.5 17Z" fill="#c97b8a" transform="skewX(-4)"/>
+  </svg>
 `;
 
 // ─── Inject CSS once ──────────────────────────
@@ -185,9 +199,9 @@ function createModalHTML() {
       <div id="hb-login-modal">
         <button id="hb-login-close" aria-label="Закрыть">×</button>
 
-        <div class="hb-modal-emoji">🌸</div>
-        <div class="hb-modal-title">Добро пожаловать</div>
-        <div class="hb-modal-sub">Войдите в свой аккаунт</div>
+        ${LOGO_SVG}
+        <div class="hb-modal-title">Добро пожаловать домой</div>
+        <div class="hb-modal-sub">Войдите в свой любимый аккаунт</div>
 
         <div class="hb-field">
           <div class="hb-field-label">
@@ -253,7 +267,6 @@ function validateAndLogin() {
   if (btn.disabled) return;
 
   const emailEl = document.getElementById('hb-email');
-  const passEl  = document.getElementById('hb-pass');
   let valid = true;
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) {
@@ -285,15 +298,12 @@ export function openLoginModal() {
   wrapper.innerHTML = createModalHTML();
   document.body.appendChild(wrapper.firstElementChild);
 
-  // Закрыть по крестику
   document.getElementById('hb-login-close').addEventListener('click', closeLoginModal);
 
-  // Закрыть по клику на оверлей
   document.getElementById('hb-login-overlay').addEventListener('click', (e) => {
     if (e.target.id === 'hb-login-overlay') closeLoginModal();
   });
 
-  // Закрыть по Escape
   const onKeydown = (e) => {
     if (e.key === 'Escape') {
       closeLoginModal();
@@ -302,27 +312,22 @@ export function openLoginModal() {
   };
   document.addEventListener('keydown', onKeydown);
 
-  // Счётчики + sync кнопки при вводе
   document.getElementById('hb-email').addEventListener('input', () =>
     updateCounter('hb-email', 'hb-email-counter', 80, 'hb-email-error'));
   document.getElementById('hb-pass').addEventListener('input', () =>
     updateCounter('hb-pass', 'hb-pass-counter', 64, 'hb-pass-error'));
 
-  // Войти
   document.getElementById('hb-btn-login').addEventListener('click', validateAndLogin);
 
-  // Enter в полях
   ['hb-email', 'hb-pass'].forEach(id => {
     document.getElementById(id).addEventListener('keydown', (e) => {
       if (e.key === 'Enter') validateAndLogin();
     });
   });
 
-  // Регистрация — TODO
   document.getElementById('hb-btn-register').addEventListener('click', () => {
     alert('Регистрация — скоро! 🌸');
   });
 
-  // Фокус на первое поле
   document.getElementById('hb-email').focus();
 }
