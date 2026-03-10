@@ -11,9 +11,9 @@ export function renderDramaCards(container, dramas) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state__icon">🌸</div>
-        <div class="empty-state__text">No dramas here yet</div>
+        <div class="empty-state__text">Здесь пока пусто</div>
         <button class="btn-add-empty" onclick="document.querySelector('#add-drama-btn').click()">
-          + Add your first drama
+          + Добавить первую дораму
         </button>
       </div>
     `;
@@ -68,11 +68,11 @@ function dramaCardHTML(d, index) {
 
         <div class="card-badges">
           <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
-          ${d.ongoing ? '<span class="badge badge--ongoing">Ongoing</span>' : ''}
-          ${d.hasSubs ? '<span class="badge badge--ru">RU Sub</span>' : ''}
+          ${d.ongoing ? '<span class="badge badge--ongoing">Выходит</span>' : ''}
+          ${d.hasSubs ? '<span class="badge badge--ru">RU Озвучка</span>' : ''}
         </div>
 
-        <button class="card-watch-btn" title="Watch now">
+        <button class="card-watch-btn" title="Смотреть">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
         </button>
       </div>
@@ -103,7 +103,7 @@ function dramaCardHTML(d, index) {
 /** Рендерит табличный вид */
 export function renderDramaTable(container, dramas) {
   if (!dramas.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🌸</div><div>No dramas here yet</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🌸</div><div>Здесь пока пусто</div></div>`;
     return;
   }
 
@@ -112,12 +112,12 @@ export function renderDramaTable(container, dramas) {
       <table class="drama-table">
         <thead>
           <tr>
-            <th>Drama</th>
-            <th>Year</th>
-            <th>Genre</th>
-            <th>Status</th>
-            <th>Rating</th>
-            <th>Progress</th>
+            <th>Дорама</th>
+            <th>Год</th>
+            <th>Жанр</th>
+            <th>Статус</th>
+            <th>Оценка</th>
+            <th>Прогресс</th>
             <th></th>
           </tr>
         </thead>
@@ -136,7 +136,7 @@ export function renderDramaTable(container, dramas) {
               <td>${renderStars(d.rating)}</td>
               <td class="table-muted">${d.episodesWatched}/${d.episodesTotal}</td>
               <td>
-                <button class="table-watch-btn" title="Watch">▶</button>
+                <button class="table-watch-btn" title="Смотреть">▶</button>
               </td>
             </tr>
           `).join('')}

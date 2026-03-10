@@ -48,21 +48,21 @@ export async function renderStatsBlock(container) {
     <section class="hero-section">
       <div class="stats-grid">
         <div class="stat-card glass-card" data-stat="dramas">
-          <div class="stat-label">Dramas watched</div>
+          <div class="stat-label">Просмотрено дорам</div>
           <div class="stat-number stat-number--shimmer" id="stat-dramas">${stats.dramasWatched}</div>
-          <div class="stat-unit">completed series</div>
+          <div class="stat-unit">завершённых сериалов</div>
         </div>
 
         <div class="stat-card glass-card" data-stat="episodes">
-          <div class="stat-label">Total episodes</div>
+          <div class="stat-label">Всего эпизодов</div>
           <div class="stat-number" id="stat-episodes">${stats.totalEpisodes.toLocaleString()}</div>
-          <div class="stat-unit">episodes devoured</div>
+          <div class="stat-unit">поглощённых серий</div>
         </div>
 
         <div class="stat-card glass-card" data-stat="hours">
-          <div class="stat-label">Hours of drama</div>
+          <div class="stat-label">Часов дорам</div>
           <div class="stat-number" id="stat-hours">${stats.totalHours.toLocaleString()}</div>
-          <div class="stat-unit">hours of pure bliss</div>
+          <div class="stat-unit">часов чистого удовольствия</div>
         </div>
 
         <div class="quote-card" data-stat="quote">

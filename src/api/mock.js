@@ -26,17 +26,17 @@ const MOCK_USER = {
     milestone: 'Drama Queen',
   },
   badges: [
-    { id: 'drama_queen',    icon: '👑', name: 'Drama Queen',      unlocked: true },
-    { id: 'kdrama_fan',     icon: '🌸', name: 'K-Drama Fan',      unlocked: true },
-    { id: 'cdrama_exp',     icon: '🏮', name: 'C-Drama Explorer', unlocked: true },
-    { id: 'club_2000',      icon: '⏱️', name: '2000h Club',       unlocked: true },
-    { id: 'night_owl',      icon: '🌙', name: 'Night Owl',        unlocked: true },
-    { id: 'club_100',       icon: '🔒', name: '100 Dramas',       unlocked: false },
+    { id: 'drama_queen',    icon: '👑', name: 'Королева дорам',      unlocked: true },
+    { id: 'kdrama_fan',     icon: '🌸', name: 'K-Дорама фанат',      unlocked: true },
+    { id: 'cdrama_exp',     icon: '🏮', name: 'C-Дорама исследователь', unlocked: true },
+    { id: 'club_2000',      icon: '⏱️', name: 'Клуб 2000ч',       unlocked: true },
+    { id: 'night_owl',      icon: '🌙', name: 'Ночная сова',        unlocked: true },
+    { id: 'club_100',       icon: '🔒', name: '100 дорам',       unlocked: false },
   ],
   countries: [
-    { code: 'kr', flag: '🇰🇷', name: 'Korea', count: 50, percent: 68, colorClass: 'fill-korea' },
-    { code: 'cn', flag: '🇨🇳', name: 'China', count: 20, percent: 27, colorClass: 'fill-china' },
-    { code: 'jp', flag: '🇯🇵', name: 'Japan', count: 3,  percent: 4,  colorClass: 'fill-japan' },
+    { code: 'kr', flag: '🇰🇷', name: 'Корея', count: 50, percent: 68, colorClass: 'fill-korea' },
+    { code: 'cn', flag: '🇨🇳', name: 'Китай', count: 20, percent: 27, colorClass: 'fill-china' },
+    { code: 'jp', flag: '🇯🇵', name: 'Япония', count: 3,  percent: 4,  colorClass: 'fill-japan' },
   ],
 };
 
@@ -285,6 +285,27 @@ export async function rateDrama(id, rating) {
 }
 
 /**
+ * Получить последние дорамы с сайта (для незалогиненной страницы)
+ * TODO: GET /api/dramas/latest?source=doramyclub
+ */
+export async function getLatestDramas(limit = 10) {
+  await delay();
+  const latestDramas = [
+    { id: 'latest_001', title: 'Возвращение к истокам', year: 2025, country: 'cn', genres: ['Исторические'], ongoing: false, isNew: false, latestEpisode: 10, cover: 'https://images.unsplash.com/photo-1551269901-5c5e14c25df7?w=400&q=80' },
+    { id: 'latest_002', title: 'Агентство «Красная нить»', year: 2025, country: 'kr', genres: ['Романтика'], ongoing: true, isNew: false, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1519895709498-ce3c5fa1a100?w=400&q=80' },
+    { id: 'latest_003', title: 'Заколка Феникса', year: 2025, country: 'cn', genres: ['Исторические'], ongoing: true, isNew: false, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&q=80' },
+    { id: 'latest_004', title: 'Выйти замуж за злодея', year: 2025, country: 'cn', genres: ['Фэнтези'], ongoing: true, isNew: true, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80' },
+    { id: 'latest_005', title: 'Бездна', year: 2025, country: 'kr', genres: ['Триллер'], ongoing: true, isNew: false, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=400&q=80' },
+    { id: 'latest_006', title: 'Первый человек', year: 2025, country: 'kr', genres: ['Романтика'], ongoing: true, isNew: false, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&q=80' },
+    { id: 'latest_007', title: 'Наш соседский спецназ', year: 2025, country: 'kr', genres: ['Боевик'], ongoing: false, isNew: false, latestEpisode: 8, cover: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&q=80' },
+    { id: 'latest_008', title: 'Рассвет книги небес', year: 2025, country: 'cn', genres: ['Исторические'], ongoing: false, isNew: false, latestEpisode: 10, cover: 'https://images.unsplash.com/photo-1535016120720-40c646be5580?w=400&q=80' },
+    { id: 'latest_009', title: 'Её величество Феникс', year: 2025, country: 'cn', genres: ['Исторические'], ongoing: false, isNew: true, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80' },
+    { id: 'latest_010', title: 'Двойная жизнь детектива', year: 2025, country: 'kr', genres: ['Мистерия'], ongoing: true, isNew: false, latestEpisode: null, cover: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=400&q=80' },
+  ];
+  return { data: latestDramas.slice(0, limit), error: null };
+}
+
+/**
  * Удалить дораму из списка
  * @param {string} id
  * TODO: DELETE /api/dramas/:id
@@ -320,4 +341,40 @@ export async function setViewMode(mode) {
 
 export async function getViewMode() {
   return { data: { mode: localStorage.getItem('hanbin_view_mode') || 'card' }, error: null };
+}
+
+/**
+ * Получить состояние авторизации из кэша.
+ *
+ * Проверяет localStorage по ключу 'hanbin_user'.
+ * Если запись есть — пользователь считается залогиненным.
+ * Если записи нет — незалогиненный, показываем unauthorized страницу.
+ *
+ * Чтобы имитировать вход, запиши в консоли браузера:
+ *   localStorage.setItem('hanbin_user', JSON.stringify({ id: 'user_001', name: 'Elena' }))
+ * Чтобы разлогиниться:
+ *   localStorage.removeItem('hanbin_user')
+ *
+ * TODO: GET /api/auth/me — заменить на реальный запрос когда будет бэкенд
+ */
+export async function getAuthState() {
+  try {
+    // Чистим устаревший ключ от предыдущей версии
+    localStorage.removeItem('hanbin_logged_in');
+
+    const cached = localStorage.getItem('hanbin_user');
+    if (!cached) return { data: { isLoggedIn: false, user: null }, error: null };
+
+    const user = JSON.parse(cached);
+    // Минимальная валидация: нужен id
+    if (!user?.id) return { data: { isLoggedIn: false, user: null }, error: null };
+
+    // Дополняем кэшированные данные данными из MOCK_USER (до появления реального бэка)
+    const fullUser = { ...MOCK_USER, ...user };
+    return { data: { isLoggedIn: true, user: fullUser }, error: null };
+  } catch {
+    // Битый JSON — чистим кэш и считаем незалогиненным
+    localStorage.removeItem('hanbin_user');
+    return { data: { isLoggedIn: false, user: null }, error: null };
+  }
 }

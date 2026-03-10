@@ -6,6 +6,10 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 
 ![Hanbin preview](assets/preview.png)
 
+### Страница для незалогиненных пользователей
+
+![Unauthorized preview](assets/preview-unauthorized.png)
+
 ---
 
 ## ✨ Features
@@ -18,6 +22,9 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 - **Badges & achievements** system
 - **Search** with live dropdown
 - Hash-based **SPA router** — ready for new pages
+- **Auth-aware routing** — при запуске показывает unauthorized страницу если пользователь не залогинен
+- **Unauthorized landing page** — публичная страница с hero, цитатой дня и лентой последних дорам
+- **Весь UI на русском языке**
 
 ---
 
@@ -60,32 +67,35 @@ Opens at `http://localhost:8080`. Stop with **Ctrl+C**.
 ```
 hanbin/
 ├── pages/
-│   └── home.html               # Main page (add new pages here)
-│   └── ...                     # future pages go here
+│   ├── home.html               # Главная страница (залогиненный)
+│   ├── unauthorized.html       # Публичная страница (незалогиненный)
+│   └── ...                     # новые страницы добавлять сюда
 ├── data/
-│   └── quotes.json             # Daily drama quotes (Russian)
+│   └── quotes.json             # Цитаты из дорам (русский)
 ├── assets/
 │   ├── favicon.svg
-│   └── preview.png             # App screenshot
+│   ├── preview.png             # Скриншот — главная (залогиненный)
+│   └── preview-unauthorized.png# Скриншот — страница гостя
 └── src/
-    ├── app.js                  # App init, style injection
-    ├── router.js               # Hash-based SPA router
+    ├── app.js                  # Инициализация, инъекция стилей, unauthorizedCSS
+    ├── router.js               # Hash-based SPA роутер + auth-aware redirect
     ├── styles/
-    │   ├── theme.js            # ★ ALL colors, tokens, fonts — edit here
-    │   └── global.js           # Base CSS, animations, utilities
+    │   ├── theme.js            # ★ Все цвета, токены, шрифты — редактировать здесь
+    │   └── global.js           # Базовый CSS, анимации, утилиты
     ├── api/
-    │   └── mock.js             # Mock API — replace with real fetch when backend is ready
+    │   └── mock.js             # Mock API — заменить на fetch когда будет бэкенд
     ├── components/
-    │   ├── Header.js           # Search, view toggle, add button, avatar
-    │   ├── StatsBlock.js       # Hero stats with number animation
-    │   ├── DramaCard.js        # Card view + Table view
-    │   ├── ActivityFeed.js     # Recent activity list
-    │   ├── Sidebar.js          # Country stats + badges
-    │   └── Filters.js          # Filter chips bar
+    │   ├── Header.js           # Поиск, переключатель вида, кнопка добавления, аватар
+    │   ├── StatsBlock.js       # Герой-статистика с анимацией чисел + цитата дня
+    │   ├── DramaCard.js        # Карточный вид + таблица
+    │   ├── ActivityFeed.js     # Лента последних действий
+    │   ├── Sidebar.js          # Статистика по странам + достижения
+    │   └── Filters.js          # Панель фильтров
     ├── pages/
-    │   └── Home.js             # Home page — assembles all components
+    │   ├── Home.js             # Главная страница — собирает все компоненты
+    │   └── Unauthorized.js     # Публичная страница для гостей
     └── utils/
-        └── helpers.js          # timeAgo, renderStars, debounce, etc.
+        └── helpers.js          # timeAgo, renderStars, statusLabel, debounce
 ```
 
 ---
@@ -164,13 +174,47 @@ navigate('#/your-page');
 
 | Route | Page | Status |
 |---|---|---|
-| `#/` | Home / Dashboard | ✅ Done |
-| `#/search` | Discover / Search | 🔲 TODO |
-| `#/drama/:id` | Drama Detail | 🔲 TODO |
-| `#/my-list` | Full drama list | 🔲 TODO |
-| `#/profile` | User profile | 🔲 TODO |
-| `#/achievements` | Badges & stats | 🔲 TODO |
-| `#/settings` | Settings | 🔲 TODO |
+| `#/` | Home / Dashboard (залогиненный) | ✅ Done |
+| `#/guest` | Unauthorized landing (гость) | ✅ Done |
+| `#/search` | Поиск / Каталог | 🔲 TODO |
+| `#/drama/:id` | Детальная страница дорамы | 🔲 TODO |
+| `#/my-list` | Полный список дорам | 🔲 TODO |
+| `#/profile` | Профиль пользователя | 🔲 TODO |
+| `#/achievements` | Достижения и статистика | 🔲 TODO |
+| `#/settings` | Настройки | 🔲 TODO |
+| `#/login` | Авторизация | 🔲 TODO |
+
+---
+
+## 🔐 Auth-Aware Routing
+
+При запуске приложения роутер автоматически определяет состояние авторизации:
+
+```js
+// src/router.js
+if (hash === '#/' || hash === '#/home' || hash === '') {
+  const { data: auth } = await getAuthState();
+  if (!auth.isLoggedIn) handler = renderUnauthorized;
+}
+```
+
+- **Не залогинен** → показывается `Unauthorized.js` (публичный лендинг)
+- **Залогинен** → показывается `Home.js` (дашборд с личными данными)
+- Все остальные маршруты (`#/search`, `#/drama/:id` и т.д.) пока не защищены — добавить guard по аналогии когда понадобится.
+
+---
+
+## 🌐 Unauthorized Page
+
+Публичная страница `src/pages/Unauthorized.js` показывается незалогиненным пользователям. Состоит из:
+
+- **Хедер** — логотип + поиск + кнопка «Войти» (вместо аватара)
+- **Hero-секция** — заголовок + subtitle + CTA-кнопка «Войти в профиль»
+- **Цитата дня** — из `data/quotes.json`, меняется раз в сутки (та же логика seed, что в `StatsBlock`)
+- **Сетка последних дорам** — 10 дорам из `getLatestDramas()` без фильтров и личных данных
+- **Login-баннер** — призыв зарегистрироваться внизу страницы
+
+Стили для страницы живут в `unauthorizedCSS` в конце `src/app.js` и подключаются через `injectStyles()`.
 
 ---
 

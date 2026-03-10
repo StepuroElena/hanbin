@@ -4,24 +4,24 @@
 
 export function renderFilters(container, { activeFilter = 'all', onFilter }) {
   const statusFilters = [
-    { id: 'all',       label: 'All' },
-    { id: 'watching',  label: '▶ Watching',      cls: 'status-watching' },
-    { id: 'completed', label: '✓ Completed',      cls: 'status-completed' },
-    { id: 'plan',      label: 'Plan to watch',    cls: 'status-plan' },
-    { id: 'dropped',   label: 'Dropped',          cls: 'status-dropped' },
+    { id: 'all',       label: 'Все' },
+    { id: 'watching',  label: '▶ Смотрю',      cls: 'status-watching' },
+    { id: 'completed', label: '✓ Просмотрено',      cls: 'status-completed' },
+    { id: 'plan',      label: 'Запланировано',    cls: 'status-plan' },
+    { id: 'dropped',   label: 'Брошено',          cls: 'status-dropped' },
   ];
 
   const genreFilters = [
-    { id: 'Romance', label: 'Romance' },
-    { id: 'Thriller', label: 'Thriller' },
-    { id: 'Historical', label: 'Historical' },
-    { id: 'Fantasy', label: 'Fantasy' },
+    { id: 'Romance', label: 'Романтика' },
+    { id: 'Thriller', label: 'Триллер' },
+    { id: 'Historical', label: 'Исторические' },
+    { id: 'Fantasy', label: 'Фэнтези' },
   ];
 
   const countryFilters = [
-    { id: 'kr', label: '🇰🇷 Korea' },
-    { id: 'cn', label: '🇨🇳 China' },
-    { id: 'jp', label: '🇯🇵 Japan' },
+    { id: 'kr', label: '🇰🇷 Корея' },
+    { id: 'cn', label: '🇨🇳 Китай' },
+    { id: 'jp', label: '🇯🇵 Япония' },
   ];
 
   container.innerHTML = `

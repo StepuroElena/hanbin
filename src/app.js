@@ -18,7 +18,7 @@ function injectStyles() {
   // Глобальные стили
   const globalStyle = document.createElement('style');
   globalStyle.id = 'hanbin-global';
-  globalStyle.textContent = globalCSS + tooltipCSS + componentCSS;
+  globalStyle.textContent = globalCSS + tooltipCSS + componentCSS + unauthorizedCSS;
   document.head.appendChild(globalStyle);
 }
 
@@ -492,6 +492,243 @@ const componentCSS = `
   .watching-row { grid-template-columns: 1fr 1fr; }
   .stat-number { font-size: 40px; }
 }
+`;
+
+// ─── Unauthorized page CSS ─────────────────────────────
+const unauthorizedCSS = `
+
+/* ── Login button (header) ── */
+.btn-login-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, rgba(201,123,138,0.25), rgba(74,25,66,0.4));
+  border: 1px solid rgba(201,123,138,0.45);
+  border-radius: 40px;
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+}
+.btn-login-header svg { color: var(--color-rose); }
+.btn-login-header:hover {
+  background: linear-gradient(135deg, rgba(201,123,138,0.4), rgba(74,25,66,0.6));
+  border-color: var(--color-rose);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(201,123,138,0.2);
+}
+
+/* ── Hero ── */
+.unauthorized-hero {
+  text-align: center;
+  padding: 20px 0 8px;
+  margin-bottom: 48px;
+  animation: fadeUp 0.7s ease both;
+}
+.unauthorized-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(201,123,138,0.2), rgba(122,171,142,0.15));
+  border: 1px solid rgba(201,123,138,0.3);
+  border-radius: 30px;
+  padding: 8px 20px;
+  margin-bottom: 32px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+}
+.unauthorized-hero__eyebrow-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-neon-rose);
+  box-shadow: 0 0 8px var(--color-neon-rose);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+.unauthorized-hero__title {
+  font-family: var(--font-display);
+  font-size: clamp(38px, 6vw, 72px);
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--color-text);
+  margin-bottom: 18px;
+  letter-spacing: -0.01em;
+}
+.unauthorized-hero__title em { color: var(--color-rose); font-style: italic; }
+.unauthorized-hero__subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted);
+  max-width: 420px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+.unauthorized-hero__cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 36px;
+  background: linear-gradient(135deg, var(--color-rose), #a35f6e);
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  box-shadow: 0 8px 32px rgba(201,123,138,0.35);
+  text-transform: uppercase;
+}
+.unauthorized-hero__cta-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(201,123,138,0.45);
+}
+
+/* ── Цитата дня ── */
+.unauthorized-daily-quote {
+  margin: 52px 0;
+  animation: fadeUp 0.7s 0.1s ease both;
+}
+.unauthorized-daily-quote__label {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245,230,211,0.35);
+  margin-bottom: 20px;
+  text-align: center;
+}
+.unauthorized-daily-quote__card {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 32px 40px;
+  background: linear-gradient(135deg, rgba(74,25,66,0.5), rgba(45,15,42,0.7));
+  border: 1px solid rgba(201,123,138,0.2);
+  border-radius: 24px;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.3s;
+}
+.unauthorized-daily-quote__card:hover { border-color: rgba(201,123,138,0.4); }
+.unauthorized-daily-quote__emoji { font-size: 44px; flex-shrink: 0; line-height: 1; }
+.unauthorized-daily-quote__body { display: flex; flex-direction: column; }
+.unauthorized-daily-quote__text {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-style: italic;
+  color: var(--color-text);
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.unauthorized-daily-quote__source {
+  font-size: 12px;
+  color: var(--color-rose);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+/* ── Последние дорамы ── */
+.unauthorized-latest-dramas { animation: fadeUp 0.7s 0.2s ease both; }
+.unauthorized-latest-dramas__source-label {
+  font-size: 12px;
+  color: rgba(245,230,211,0.3);
+  letter-spacing: 0.08em;
+}
+.unauthorized-latest-dramas__grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.unauthorized-drama-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: var(--transition-normal);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.unauthorized-drama-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(201,123,138,0.35);
+  box-shadow: var(--shadow-card);
+}
+.unauthorized-drama-card .card-cover { position: relative; aspect-ratio: 2/3; overflow: hidden; }
+.unauthorized-drama-card .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
+.unauthorized-drama-card:hover .card-cover img { transform: scale(1.04); }
+.unauthorized-drama-card .card-cover-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(45,15,42,0.95) 0%, transparent 55%);
+}
+.badge--ep  { background: rgba(74,25,66,0.7);    color: var(--color-blush);  border: 1px solid rgba(232,196,184,0.25); }
+.badge--new { background: rgba(122,171,142,0.3); color: var(--color-jade);   border: 1px solid rgba(122,171,142,0.4); }
+
+/* ── Баннер «войди» ── */
+.unauthorized-login-banner {
+  margin-top: 36px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(74,25,66,0.5), rgba(45,15,42,0.7));
+  border: 1px solid rgba(201,123,138,0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  backdrop-filter: blur(10px);
+  animation: fadeUp 0.7s 0.35s ease both;
+}
+.unauthorized-login-banner__left { display: flex; align-items: center; gap: 18px; }
+.unauthorized-login-banner__icon { font-size: 36px; }
+.unauthorized-login-banner__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 4px;
+  color: var(--color-text);
+}
+.unauthorized-login-banner__subtitle { font-size: 13px; color: var(--color-text-muted); }
+.unauthorized-login-banner__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--color-rose), #a35f6e);
+  border: none;
+  border-radius: 40px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(201,123,138,0.3);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.unauthorized-login-banner__btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(201,123,138,0.4);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) { .unauthorized-latest-dramas__grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 860px) {
+  .unauthorized-latest-dramas__grid { grid-template-columns: repeat(3, 1fr); }
+  .unauthorized-login-banner { flex-direction: column; text-align: center; }
+  .unauthorized-login-banner__left { flex-direction: column; gap: 10px; }
+  .unauthorized-daily-quote__card { padding: 24px; }
+  .unauthorized-daily-quote__text { font-size: 20px; }
+}
+@media (max-width: 640px) { .unauthorized-latest-dramas__grid { grid-template-columns: repeat(2, 1fr); } }
 `;
 
 // ─── Init ─────────────────────────────────────

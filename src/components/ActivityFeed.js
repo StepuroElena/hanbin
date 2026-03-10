@@ -9,18 +9,18 @@ export async function renderActivityFeed(container) {
   const { data: activity } = await getActivity(5);
 
   const actionLabel = (action) => ({
-    completed: 'Completed',
-    rated:     'Rated',
-    plan:      'Added to Plan to Watch',
-    watching:  'Started watching',
-    dropped:   'Dropped',
+    completed: 'Просмотрено',
+    rated:     'Оценено',
+    plan:      'Добавлено в «Запланировано»',
+    watching:  'Начала смотреть',
+    dropped:   'Брошено',
   }[action] || action);
 
   container.innerHTML = `
     <section class="section">
       <div class="section-header">
-        <div class="section-title">Recent Activity</div>
-        <button class="see-all" id="see-all-activity">View all →</button>
+        <div class="section-title">Последние действия</div>
+        <button class="see-all" id="see-all-activity">Все →</button>
       </div>
 
       <div class="activity-list">
