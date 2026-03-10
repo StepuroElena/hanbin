@@ -1,64 +1,83 @@
 /**
  * HANBIN — Unauthorized Page
- * Публичная главная страница для незалогиненного пользователя.
- *
- * Содержит:
- *  - Хедер с кнопкой «Войти»
- *  - Hero-секция с CTA
- *  - Цитата дня (из /data/quotes.json, та же логика что в StatsBlock)
- *  - Сетка последних дорам с doramyclub.art (без фильтров и тегов)
- *  - Баннер-призыв залогиниться
+ * Парсит "Горячие новинки" с m.doramatv.one через corsproxy.io.
  */
 
-import { getLatestDramas } from '../api/mock.js';
-import { openLoginModal }  from '../components/LoginModal.js';
+import { openLoginModal } from '../components/LoginModal.js';
+
+const SITE_URL = 'https://m.doramatv.one/';
+const PROXY    = (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`;
+const LIMIT    = 10;
+
+// ─── Парсинг горячих новинок ──────────────────
+async function fetchHotDramas() {
+  const res  = await fetch(PROXY(SITE_URL), { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const html = await res.text();
+
+  const doc     = new DOMParser().parseFromString(html, 'text/html');
+  const section = Array.from(doc.querySelectorAll('.feed-section'))
+    .find(s => s.querySelector('[data-tab-text="Горячие новинки"]'));
+
+  if (!section) throw new Error('Section "Горячие новинки" not found');
+
+  return Array.from(section.querySelectorAll('.entity-card-tile')).slice(0, LIMIT).map(card => {
+    const href  = card.getAttribute('href') || '';
+    const link  = href.startsWith('http') ? href : 'https://m.doramatv.one' + href;
+    const title = card.querySelector('.entity-card-tile__title')?.textContent?.trim() || '—';
+    const img   = card.querySelector('img');
+    const cover = img?.getAttribute('data-original') || img?.getAttribute('src') || '';
+
+    const rating = parseFloat(card.querySelector('.compact-rate')?.getAttribute('title')) || null;
+
+    const genres = Array.from(card.querySelectorAll('.elem_genre'))
+      .map(b => b.textContent.trim()).slice(0, 2);
+
+    const popText = card.querySelector('.html-popover-holder')?.textContent || '';
+    const ongoing = /выходит|аирится/i.test(popText);
+
+    return { title, link, cover, rating, genres, ongoing };
+  });
+}
 
 // ─── Цитата дня ──────────────────────────────
 async function getDailyQuote() {
   const today = new Date().toISOString().slice(0, 10);
-
   try {
     const cached = JSON.parse(localStorage.getItem('hanbin_daily_quote') || 'null');
-    if (cached && cached.date === today) return cached.quote;
+    if (cached?.date === today) return cached.quote;
   } catch (_) {}
-
   const res    = await fetch('/data/quotes.json');
   const quotes = await res.json();
-
-  const seed  = Number(today.replace(/-/g, ''));
-  const quote = quotes[seed % quotes.length];
-
-  try {
-    localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote }));
-  } catch (_) {}
-
+  const seed   = Number(today.replace(/-/g, ''));
+  const quote  = quotes[seed % quotes.length];
+  try { localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote })); } catch (_) {}
   return quote;
 }
 
-// ─── Рендер ──────────────────────────────────
+// ─── Главный рендер ──────────────────────────
 export async function renderUnauthorized(container) {
   container.innerHTML = `
-    <div id="unauthorized-header-slot"></div>
+    <div id="unauth-header"></div>
     <div class="container">
-      <div id="unauthorized-hero-slot"></div>
-      <div id="unauthorized-daily-quote-slot"></div>
-      <div id="unauthorized-latest-dramas-slot"></div>
-      <div id="unauthorized-login-banner-slot"></div>
+      <div id="unauth-hero"></div>
+      <div id="unauth-quote"></div>
+      <div id="unauth-dramas"></div>
+      <div id="unauth-banner"></div>
     </div>
   `;
-
   await Promise.all([
-    renderUnauthorizedHeader(container.querySelector('#unauthorized-header-slot')),
-    renderHeroSection(container.querySelector('#unauthorized-hero-slot')),
-    renderDailyQuoteSection(container.querySelector('#unauthorized-daily-quote-slot')),
-    renderLatestDramas(container.querySelector('#unauthorized-latest-dramas-slot')),
-    renderLoginBanner(container.querySelector('#unauthorized-login-banner-slot')),
+    _renderHeader(container.querySelector('#unauth-header')),
+    _renderHero(container.querySelector('#unauth-hero')),
+    _renderQuote(container.querySelector('#unauth-quote')),
+    _renderDramas(container.querySelector('#unauth-dramas')),
+    _renderBanner(container.querySelector('#unauth-banner')),
   ]);
 }
 
 // ─── Хедер ───────────────────────────────────
-function renderUnauthorizedHeader(container) {
-  container.innerHTML = `
+function _renderHeader(el) {
+  el.innerHTML = `
     <header class="header">
       <div class="header__logo">
         <a href="#/guest" class="logo-link">
@@ -66,16 +85,14 @@ function renderUnauthorizedHeader(container) {
           <div class="logo-tagline">Трекер дорам</div>
         </a>
       </div>
-
       <div class="header__right">
-        <div class="search-bar" id="unauthorized-search-bar">
+        <div class="search-bar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          <input type="text" id="unauthorized-search-input" placeholder="Поиск дорам…" autocomplete="off">
+          <input type="text" placeholder="Поиск дорам…" autocomplete="off">
         </div>
-
-        <button class="btn-login-header" id="unauthorized-login-btn">
+        <button class="btn-login-header" id="unauth-login-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
             <polyline points="10 17 15 12 10 7"/>
@@ -84,18 +101,13 @@ function renderUnauthorizedHeader(container) {
           Войти
         </button>
       </div>
-    </header>
-  `;
-
-  // Кнопка «Войти» в хедере — открывает модалку
-  container.querySelector('#unauthorized-login-btn').addEventListener('click', () => {
-    openLoginModal();
-  });
+    </header>`;
+  el.querySelector('#unauth-login-btn').addEventListener('click', openLoginModal);
 }
 
 // ─── Hero ─────────────────────────────────────
-function renderHeroSection(container) {
-  container.innerHTML = `
+function _renderHero(el) {
+  el.innerHTML = `
     <section class="unauthorized-hero">
       <div class="unauthorized-hero__eyebrow">
         <span class="unauthorized-hero__eyebrow-dot"></span>
@@ -105,7 +117,7 @@ function renderHeroSection(container) {
       <p class="unauthorized-hero__subtitle">
         Отслеживай просмотренные, планируй следующие, делись впечатлениями. Всё в одном месте.
       </p>
-      <button class="unauthorized-hero__cta-btn" id="unauthorized-hero-login-btn">
+      <button class="unauthorized-hero__cta-btn" id="unauth-hero-btn">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
           <polyline points="10 17 15 12 10 7"/>
@@ -113,104 +125,125 @@ function renderHeroSection(container) {
         </svg>
         Войти в профиль
       </button>
-    </section>
-  `;
-
-  // Кнопка «Войти в профиль» в hero — открывает модалку
-  container.querySelector('#unauthorized-hero-login-btn').addEventListener('click', () => {
-    openLoginModal();
-  });
+    </section>`;
+  el.querySelector('#unauth-hero-btn').addEventListener('click', openLoginModal);
 }
 
-// ─── Цитата дня ──────────────────────────────
-async function renderDailyQuoteSection(container) {
-  container.innerHTML = `
+// ─── Цитата ───────────────────────────────────
+async function _renderQuote(el) {
+  el.innerHTML = `
     <div class="unauthorized-daily-quote">
       <div class="unauthorized-daily-quote__label">Цитата дня</div>
-      <div class="unauthorized-daily-quote__card" id="unauthorized-daily-quote-card">
-        <span class="unauthorized-daily-quote__emoji" id="unauthorized-daily-quote-emoji">🌸</span>
+      <div class="unauthorized-daily-quote__card">
+        <span id="unauth-q-emoji">🌸</span>
         <div class="unauthorized-daily-quote__body">
-          <p class="unauthorized-daily-quote__text" id="unauthorized-daily-quote-text">Загрузка…</p>
-          <span class="unauthorized-daily-quote__source" id="unauthorized-daily-quote-source"></span>
+          <p class="unauthorized-daily-quote__text" id="unauth-q-text">Загрузка…</p>
+          <span class="unauthorized-daily-quote__source" id="unauth-q-src"></span>
         </div>
       </div>
-    </div>
-  `;
-
-  const fallbackQuote = {
-    emoji: '🕯️',
-    text: '«Даже самая долгая ночь в конце концов встречает рассвет.»',
-    source: 'Нирвана в огне · 2015',
-  };
-
-  const quote = await getDailyQuote().catch(() => fallbackQuote);
-
-  container.querySelector('#unauthorized-daily-quote-emoji').textContent  = quote.emoji;
-  container.querySelector('#unauthorized-daily-quote-text').textContent   = quote.text;
-  container.querySelector('#unauthorized-daily-quote-source').textContent = quote.source;
+    </div>`;
+  const fallback = { emoji: '🕯️', text: '«Даже самая долгая ночь встречает рассвет.»', source: 'Нирвана в огне · 2015' };
+  const q = await getDailyQuote().catch(() => fallback);
+  el.querySelector('#unauth-q-emoji').textContent = q.emoji;
+  el.querySelector('#unauth-q-text').textContent  = q.text;
+  el.querySelector('#unauth-q-src').textContent   = q.source;
 }
 
-// ─── Последние дорамы ─────────────────────────
-async function renderLatestDramas(container) {
-  container.innerHTML = `
-    <section class="section unauthorized-latest-dramas">
+// ─── Тебе понравится ─────────────────────────
+async function _renderDramas(el) {
+  el.innerHTML = `
+    <section class="section unauth-hot">
       <div class="section-header">
-        <div class="section-title">Последние дорамы</div>
-        <span class="unauthorized-latest-dramas__source-label">с doramyclub.art</span>
+        <div class="section-title">Тебе понравится</div>
+        <a class="unauth-hot__source" href="${SITE_URL}" target="_blank" rel="noopener">
+          doramatv.one ↗
+        </a>
       </div>
-      <div class="unauthorized-latest-dramas__grid" id="unauthorized-dramas-grid">
-        <div class="loading-dots">Загрузка…</div>
+      <div class="unauth-hot__grid" id="unauth-hot-grid">
+        ${Array.from({ length: LIMIT }).map(() => `
+          <div class="unauth-card unauth-card--skeleton">
+            <div class="unauth-card__cover unauth-skel-box"></div>
+            <div class="unauth-card__info">
+              <div class="unauth-skel-line" style="width:80%;height:12px;margin-bottom:6px"></div>
+              <div class="unauth-skel-line" style="width:55%;height:9px"></div>
+            </div>
+          </div>`).join('')}
       </div>
-    </section>
-  `;
+    </section>`;
 
-  const { data: dramas } = await getLatestDramas();
+  let dramas = [];
+  try {
+    dramas = await fetchHotDramas();
+  } catch (err) {
+    console.warn('[Unauthorized] fetchHotDramas failed:', err.message);
+  }
 
-  const grid = container.querySelector('#unauthorized-dramas-grid');
-  grid.innerHTML = dramas.map(d => unauthorizedDramaCardHTML(d)).join('');
+  const grid = el.querySelector('#unauth-hot-grid');
 
-  grid.querySelectorAll('.unauthorized-drama-card').forEach((card, i) => {
-    card.style.animation = `fadeUp 0.5s ${0.05 + i * 0.05}s ease both`;
+  if (!dramas.length) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(245,230,211,0.4);font-size:13px">
+        Не удалось загрузить список.
+        <a href="${SITE_URL}" target="_blank" rel="noopener" style="color:#c97b8a;margin-left:6px">Открыть сайт ↗</a>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = dramas.map((d, i) => _cardHTML(d, i)).join('');
+
+  grid.querySelectorAll('.unauth-card').forEach((card, i) => {
+    card.addEventListener('click', () => window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener'));
+    card.querySelector('.unauth-card__ext-btn')?.addEventListener('click', e => {
+      e.stopPropagation();
+      window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener');
+    });
   });
 }
 
-function unauthorizedDramaCardHTML(drama) {
-  const episodeBadge = drama.latestEpisode
-    ? `<span class="badge badge--ep">EP ${drama.latestEpisode}</span>`
+// ─── HTML карточки ────────────────────────────
+function _cardHTML(d, i) {
+  const fallback = `https://picsum.photos/seed/${encodeURIComponent(d.title)}/300/450`;
+  const cover    = d.cover || fallback;
+
+  const ratingHTML = d.rating != null
+    ? `<div class="unauth-card__rating">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="#d4a574"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        ${d.rating.toFixed(1)}
+       </div>`
     : '';
-  const ongoingBadge = drama.ongoing
+
+  const statusBadge = d.ongoing
     ? `<span class="badge badge--ongoing">Выходит</span>`
-    : '';
-  const newBadge = drama.isNew
-    ? `<span class="badge badge--new">Новинка</span>`
-    : '';
+    : `<span class="badge badge--completed">Завершён</span>`;
+
+  const genre = d.genres?.[0] || '';
 
   return `
-    <div class="unauthorized-drama-card" data-id="${drama.id}">
-      <div class="card-cover">
-        <img src="${drama.cover}" alt="${drama.title}" loading="lazy">
-        <div class="card-cover-overlay"></div>
-        <div class="card-badges">
-          ${episodeBadge}${ongoingBadge}${newBadge}
-        </div>
-        <button class="card-watch-btn" title="Смотреть">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
+    <div class="unauth-card" style="animation:fadeUp 0.45s ${0.04 + i * 0.05}s ease both" title="${d.title}">
+      <div class="unauth-card__cover">
+        <img src="${cover}" alt="${d.title}" loading="lazy"
+             onerror="this.onerror=null;this.src='${fallback}'">
+        <div class="unauth-card__overlay"></div>
+        <div class="unauth-card__badges">${statusBadge}</div>
+        <button class="unauth-card__ext-btn" title="Смотреть на сайте">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M7 17L17 7M17 7H7M17 7v10"/>
+          </svg>
         </button>
+        ${ratingHTML}
       </div>
-      <div class="card-info">
-        <div class="card-title">${drama.title}</div>
+      <div class="unauth-card__info">
+        <div class="card-title">${d.title}</div>
         <div class="card-meta">
-          <span class="card-year">${drama.year}</span>
-          <span class="card-genre">${drama.genres[0]}</span>
+          ${genre ? `<span class="card-genre">${genre}</span>` : ''}
         </div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
-// ─── Баннер «войди» ───────────────────────────
-function renderLoginBanner(container) {
-  container.innerHTML = `
+// ─── Баннер ───────────────────────────────────
+function _renderBanner(el) {
+  el.innerHTML = `
     <div class="unauthorized-login-banner">
       <div class="unauthorized-login-banner__left">
         <span class="unauthorized-login-banner__icon">🔐</span>
@@ -221,7 +254,7 @@ function renderLoginBanner(container) {
           </div>
         </div>
       </div>
-      <button class="unauthorized-login-banner__btn" id="unauthorized-banner-login-btn">
+      <button class="unauthorized-login-banner__btn" id="unauth-banner-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
           <polyline points="10 17 15 12 10 7"/>
@@ -229,11 +262,6 @@ function renderLoginBanner(container) {
         </svg>
         Войти
       </button>
-    </div>
-  `;
-
-  // Кнопка «Войти» в баннере — открывает модалку
-  container.querySelector('#unauthorized-banner-login-btn').addEventListener('click', () => {
-    openLoginModal();
-  });
+    </div>`;
+  el.querySelector('#unauth-banner-btn').addEventListener('click', openLoginModal);
 }
