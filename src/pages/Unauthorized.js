@@ -11,33 +11,26 @@
  */
 
 import { getLatestDramas } from '../api/mock.js';
-import { navigate }        from '../router.js';
+import { openLoginModal }  from '../components/LoginModal.js';
 
 // ─── Цитата дня ──────────────────────────────
-/**
- * Загружает цитату дня из /data/quotes.json.
- * Та же детерминированная логика что в StatsBlock.js:
- * индекс = числовое представление даты YYYYMMDD % длина массива.
- * Меняется раз в сутки, одинакова для всех пользователей.
- */
 async function getDailyQuote() {
-  const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const today = new Date().toISOString().slice(0, 10);
 
-  // Проверяем кэш
   try {
     const cached = JSON.parse(localStorage.getItem('hanbin_daily_quote') || 'null');
     if (cached && cached.date === today) return cached.quote;
-  } catch (_) { /* битый localStorage — игнорируем */ }
+  } catch (_) {}
 
   const res    = await fetch('/data/quotes.json');
   const quotes = await res.json();
 
-  const seed  = Number(today.replace(/-/g, '')); // "20260307" → 20260307
+  const seed  = Number(today.replace(/-/g, ''));
   const quote = quotes[seed % quotes.length];
 
   try {
     localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote }));
-  } catch (_) { /* private mode — ничего страшного */ }
+  } catch (_) {}
 
   return quote;
 }
@@ -94,8 +87,9 @@ function renderUnauthorizedHeader(container) {
     </header>
   `;
 
+  // Кнопка «Войти» в хедере — открывает модалку
   container.querySelector('#unauthorized-login-btn').addEventListener('click', () => {
-    navigate('#/login');
+    openLoginModal();
   });
 }
 
@@ -122,14 +116,14 @@ function renderHeroSection(container) {
     </section>
   `;
 
+  // Кнопка «Войти в профиль» в hero — открывает модалку
   container.querySelector('#unauthorized-hero-login-btn').addEventListener('click', () => {
-    navigate('#/login');
+    openLoginModal();
   });
 }
 
 // ─── Цитата дня ──────────────────────────────
 async function renderDailyQuoteSection(container) {
-  // Показываем fallback пока грузим
   container.innerHTML = `
     <div class="unauthorized-daily-quote">
       <div class="unauthorized-daily-quote__label">Цитата дня</div>
@@ -175,13 +169,11 @@ async function renderLatestDramas(container) {
   const grid = container.querySelector('#unauthorized-dramas-grid');
   grid.innerHTML = dramas.map(d => unauthorizedDramaCardHTML(d)).join('');
 
-  // Анимация появления карточек
   grid.querySelectorAll('.unauthorized-drama-card').forEach((card, i) => {
     card.style.animation = `fadeUp 0.5s ${0.05 + i * 0.05}s ease both`;
   });
 }
 
-/** HTML одной карточки дорамы (без прогресса, статуса, рейтинга) */
 function unauthorizedDramaCardHTML(drama) {
   const episodeBadge = drama.latestEpisode
     ? `<span class="badge badge--ep">EP ${drama.latestEpisode}</span>`
@@ -240,7 +232,8 @@ function renderLoginBanner(container) {
     </div>
   `;
 
+  // Кнопка «Войти» в баннере — открывает модалку
   container.querySelector('#unauthorized-banner-login-btn').addEventListener('click', () => {
-    navigate('#/login');
+    openLoginModal();
   });
 }
