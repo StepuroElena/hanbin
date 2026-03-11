@@ -16,7 +16,27 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
   function buildHTML() {
     const avatarHTML = auth.isLoggedIn
-      ? `<div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>`
+      ? `<div class="avatar-wrap" id="avatar-wrap">
+          <div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>
+          <div class="avatar-dropdown" id="avatar-dropdown">
+            <div class="avatar-dropdown__user">
+              <div class="avatar-dropdown__name">${auth.user.name}</div>
+              <div class="avatar-dropdown__label">Drama Queen · 73 дорамы</div>
+            </div>
+            <button class="avatar-dropdown__btn" id="dropdown-profile-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              ${t('header.dropdown.profile')}
+            </button>
+            <button class="avatar-dropdown__btn" id="dropdown-settings-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+              ${t('header.dropdown.settings')}
+            </button>
+            <button class="avatar-dropdown__btn avatar-dropdown__btn--logout" id="dropdown-logout-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              ${t('header.dropdown.logout')}
+            </button>
+          </div>
+        </div>`
       : `<button class="avatar avatar--guest" id="avatar-btn" data-tooltip="${t('header.tooltip.login')}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
@@ -149,10 +169,48 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
       alert(t('header.add_todo'));
     });
 
-    // ── Avatar / Profile ──
-    container.querySelector('#avatar-btn').addEventListener('click', () => {
-      navigate('#/profile');
-    });
+    // ── Avatar dropdown ──
+    const avatarBtn      = container.querySelector('#avatar-btn');
+    const avatarDropdown = container.querySelector('#avatar-dropdown');
+
+    if (avatarDropdown) {
+      // Открыть/закрыть по клику на аватар
+      avatarBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        avatarDropdown.classList.toggle('avatar-dropdown--open');
+      });
+
+      // Закрыть при клике вне дропдауна
+      document.addEventListener('click', () => {
+        avatarDropdown.classList.remove('avatar-dropdown--open');
+      });
+
+      // Не закрывать при клике внутри дропдауна
+      avatarDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+      // Перейти в профиль
+      container.querySelector('#dropdown-profile-btn')?.addEventListener('click', () => {
+        avatarDropdown.classList.remove('avatar-dropdown--open');
+        navigate('#/profile');
+      });
+
+      // Перейти в настройки
+      container.querySelector('#dropdown-settings-btn')?.addEventListener('click', () => {
+        avatarDropdown.classList.remove('avatar-dropdown--open');
+        navigate('#/settings');
+      });
+
+      // Логаут (TODO: подключить к бэку позже)
+      container.querySelector('#dropdown-logout-btn')?.addEventListener('click', () => {
+        avatarDropdown.classList.remove('avatar-dropdown--open');
+        localStorage.removeItem('hanbin_user');
+        navigate('#/guest');
+      });
+
+    } else {
+      // Гость — переходим на логин
+      avatarBtn?.addEventListener('click', () => navigate('#/guest'));
+    }
   }
 
   attachListeners();

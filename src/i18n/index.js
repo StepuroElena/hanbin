@@ -23,6 +23,9 @@ export const translations = {
     'header.tooltip.login':       'Войти в аккаунт',
     'header.tooltip.lang':        'Switch to English',
     'header.add_todo':            'Форма добавления дорамы — TODO: подключить к бэку 🌸',
+    'header.dropdown.profile':     'Профиль',
+    'header.dropdown.settings':    'Настройки',
+    'header.dropdown.logout':      'Выйти из аккаунта',
     'header.search_not_found':    'Ничего не найдено по «{q}»',
 
     // Stats block
@@ -143,6 +146,9 @@ export const translations = {
     'header.tooltip.login':       'Sign in',
     'header.tooltip.lang':        'Переключить на русский',
     'header.add_todo':            'Add drama form — TODO: connect to backend 🌸',
+    'header.dropdown.profile':     'Profile',
+    'header.dropdown.settings':    'Settings',
+    'header.dropdown.logout':      'Sign out',
     'header.search_not_found':    'Nothing found for "{q}"',
 
     // Stats block
