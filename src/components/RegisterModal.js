@@ -1,20 +1,11 @@
 /**
  * HANBIN — Register Modal Component
- *
- * Использование:
- *   import { openRegisterModal } from './components/RegisterModal.js';
- *   openRegisterModal();
- *
- * При переходе из LoginModal — оверлей остаётся, контент плавно слайдится.
- * При закрытии крестиком / оверлеем — возврат на страницу unauthorized.
- * Кнопка «Зарегистрироваться» недоступна пока все три поля не заполнены.
- * Кнопка «Войти» — плавно возвращает к LoginModal.
  */
 
-import { navigate }                                        from '../router.js';
+import { navigate }                                              from '../router.js';
+import { t }                                                     from '../i18n/index.js';
 import { closeModal, transitionModalContent, mountLoginContent } from './LoginModal.js';
 
-// ─── HTML контента — форма регистрации ────────
 const LOGO_SVG = `
   <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
     <defs>
@@ -31,55 +22,56 @@ const LOGO_SVG = `
   </svg>
 `;
 
+// ─── HTML контента регистрации (i18n-aware) ───
 function registerContentHTML() {
   return `
     ${LOGO_SVG}
-    <div class="hb-modal-title">Стань легендой</div>
-    <div class="hb-modal-sub">Создай аккаунт и начни свой путь</div>
+    <div class="hb-modal-title">${t('modal.reg.title')}</div>
+    <div class="hb-modal-sub">${t('modal.reg.sub')}</div>
 
     <div class="hb-field">
       <div class="hb-field-label">
-        <span>Имя <span class="hb-required">*</span></span>
+        <span>${t('modal.reg.name')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-reg-name-counter">0 / 40</span>
       </div>
       <input class="hb-field-input" id="hb-reg-name" type="text"
-        placeholder="Как тебя зовут?" maxlength="40" autocomplete="name">
+        placeholder="${t('modal.reg.name_ph')}" maxlength="40" autocomplete="name">
       <div class="hb-field-error" id="hb-reg-name-error"></div>
     </div>
 
     <div class="hb-field">
       <div class="hb-field-label">
-        <span>Email <span class="hb-required">*</span></span>
+        <span>${t('modal.reg.email')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-reg-email-counter">0 / 80</span>
       </div>
       <input class="hb-field-input" id="hb-reg-email" type="email"
-        placeholder="your@email.com" maxlength="80" autocomplete="email">
+        placeholder="${t('modal.login.email_ph')}" maxlength="80" autocomplete="email">
       <div class="hb-field-error" id="hb-reg-email-error"></div>
     </div>
 
     <div class="hb-field">
       <div class="hb-field-label">
-        <span>Пароль <span class="hb-required">*</span></span>
+        <span>${t('modal.reg.password')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-reg-pass-counter">0 / 64</span>
       </div>
       <input class="hb-field-input" id="hb-reg-pass" type="password"
-        placeholder="Минимум 6 символов" maxlength="64" autocomplete="new-password">
+        placeholder="${t('modal.reg.pass_ph')}" maxlength="64" autocomplete="new-password">
       <div class="hb-field-error" id="hb-reg-pass-error"></div>
     </div>
 
-    <button class="hb-btn-primary" id="hb-btn-reg-submit" disabled>Зарегистрироваться</button>
+    <button class="hb-btn-primary" id="hb-btn-reg-submit" disabled>${t('modal.reg.btn')}</button>
 
     <div class="hb-divider">
       <div class="hb-divider-line"></div>
-      <span class="hb-divider-text">или</span>
+      <span class="hb-divider-text">${t('modal.reg.or')}</span>
       <div class="hb-divider-line"></div>
     </div>
 
-    <button class="hb-btn-secondary" id="hb-btn-reg-login">Войти</button>
+    <button class="hb-btn-secondary" id="hb-btn-reg-login">${t('modal.reg.to_login')}</button>
   `;
 }
 
-// ─── Логика формы регистрации ─────────────────
+// ─── Логика формы ─────────────────────────────
 function syncRegisterButton() {
   const name  = document.getElementById('hb-reg-name')?.value.trim();
   const email = document.getElementById('hb-reg-email')?.value.trim();
@@ -111,25 +103,23 @@ function validateAndRegister() {
 
   if (nameEl.value.trim().length < 2) {
     nameEl.classList.add('hb-error');
-    document.getElementById('hb-reg-name-error').textContent = '⚠ Имя слишком короткое';
+    document.getElementById('hb-reg-name-error').textContent = t('modal.reg.err_name');
     valid = false;
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) {
     emailEl.classList.add('hb-error');
-    document.getElementById('hb-reg-email-error').textContent = '⚠ Некорректный адрес почты';
+    document.getElementById('hb-reg-email-error').textContent = t('modal.reg.err_email');
     valid = false;
   }
   if (passEl.value.length < 6) {
     passEl.classList.add('hb-error');
-    document.getElementById('hb-reg-pass-error').textContent = '⚠ Минимум 6 символов';
+    document.getElementById('hb-reg-pass-error').textContent = t('modal.reg.err_pass');
     valid = false;
   }
 
   if (valid) {
-    // TODO: POST /api/auth/register
     console.log('[RegisterModal] Register attempt:', emailEl.value);
-    alert('✓ Аккаунт создан! (TODO: подключить к API)');
-    // После успешной регистрации закрываем и переходим на unauthorized
+    alert(t('modal.reg.success'));
     closeModal();
     navigate('#/guest');
   }
@@ -137,11 +127,23 @@ function validateAndRegister() {
 
 // ─── Смонтировать содержимое регистрации ─────
 export function mountRegisterContent(content, enterClass) {
+  // Сохраняем значения полей перед перерисовкой (при смене языка)
+  const prevName  = document.getElementById('hb-reg-name')?.value  ?? '';
+  const prevEmail = document.getElementById('hb-reg-email')?.value ?? '';
+  const prevPass  = document.getElementById('hb-reg-pass')?.value  ?? '';
+
   content.innerHTML = registerContentHTML();
+
   if (enterClass) {
     content.classList.add(enterClass);
     content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
   }
+
+  // Восстанавливаем значения
+  if (prevName)  { document.getElementById('hb-reg-name').value  = prevName; }
+  if (prevEmail) { document.getElementById('hb-reg-email').value = prevEmail; }
+  if (prevPass)  { document.getElementById('hb-reg-pass').value  = prevPass; }
+  syncRegisterButton();
 
   document.getElementById('hb-reg-name').addEventListener('input', () =>
     updateRegCounter('hb-reg-name', 'hb-reg-name-counter', 40, 'hb-reg-name-error'));
@@ -157,7 +159,6 @@ export function mountRegisterContent(content, enterClass) {
     })
   );
 
-  // Кнопка «Войти» — плавно возвращаемся к логину (слайд вправо)
   document.getElementById('hb-btn-reg-login').addEventListener('click', () => {
     transitionModalContent('right', (el, cls) => mountLoginContent(el, cls));
   });
@@ -166,18 +167,13 @@ export function mountRegisterContent(content, enterClass) {
 }
 
 // ─── Открыть модалку регистрации напрямую ─────
-// (например, по прямой ссылке #/register)
 export function openRegisterModal() {
-  // Если оверлей уже есть (открыт логин) — просто переключаем контент
   if (document.getElementById('hb-modal-overlay')) {
     transitionModalContent('left', (el, cls) => mountRegisterContent(el, cls));
     return;
   }
-
-  // Иначе — импортируем openLoginModal и открываем через него
   import('./LoginModal.js').then(({ openLoginModal }) => {
     openLoginModal();
-    // После того как оверлей создан, сразу переключаем контент без анимации
     requestAnimationFrame(() => {
       const content = document.getElementById('hb-modal-content');
       if (content) mountRegisterContent(content, null);

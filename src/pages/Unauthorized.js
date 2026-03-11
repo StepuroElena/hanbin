@@ -4,6 +4,8 @@
  */
 
 import { openLoginModal } from '../components/LoginModal.js';
+import { t, getLang, onLangChange } from '../i18n/index.js';
+import { renderLangToggle } from '../components/LangToggle.js';
 
 const SITE_URL = 'https://m.doramatv.one/';
 const PROXY    = (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`;
@@ -43,16 +45,27 @@ async function fetchHotDramas() {
 // ─── Цитата дня ──────────────────────────────
 async function getDailyQuote() {
   const today = new Date().toISOString().slice(0, 10);
+
+  let quote;
   try {
     const cached = JSON.parse(localStorage.getItem('hanbin_daily_quote') || 'null');
-    if (cached?.date === today) return cached.quote;
+    // Если кеш не содержит .en — он устаревший (до i18n), сбрасываем.
+    if (cached?.date === today && cached.quote?.en) quote = cached.quote;
   } catch (_) {}
-  const res    = await fetch('/data/quotes.json');
-  const quotes = await res.json();
-  const seed   = Number(today.replace(/-/g, ''));
-  const quote  = quotes[seed % quotes.length];
-  try { localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote })); } catch (_) {}
-  return quote;
+
+  if (!quote) {
+    const res    = await fetch('/data/quotes.json');
+    const quotes = await res.json();
+    const seed   = Number(today.replace(/-/g, ''));
+    quote = quotes[seed % quotes.length];
+    try { localStorage.setItem('hanbin_daily_quote', JSON.stringify({ date: today, quote })); } catch (_) {}
+  }
+
+  const lang = getLang();
+  if (lang === 'en' && quote.en) {
+    return { emoji: quote.emoji, text: quote.en.text, source: quote.en.source };
+  }
+  return { emoji: quote.emoji, text: quote.text, source: quote.source };
 }
 
 // ─── Главный рендер ──────────────────────────
@@ -77,99 +90,138 @@ export async function renderUnauthorized(container) {
 
 // ─── Хедер ───────────────────────────────────
 function _renderHeader(el) {
-  el.innerHTML = `
-    <header class="header">
-      <div class="header__logo">
-        <a href="#/guest" class="logo-link">
-          <div class="logo-name">han<span>bin</span></div>
-          <div class="logo-tagline">Трекер дорам</div>
-        </a>
-      </div>
-      <div class="header__right">
-        <div class="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input type="text" placeholder="Поиск дорам…" autocomplete="off">
+  function build() {
+    el.innerHTML = `
+      <header class="header">
+        <div class="header__logo">
+          <a href="#/guest" class="logo-link">
+            <div class="logo-name">han<span>bin</span></div>
+            <div class="logo-tagline">${t('header.tagline')}</div>
+          </a>
         </div>
-        <button class="btn-login-header" id="unauth-login-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-            <polyline points="10 17 15 12 10 7"/>
-            <line x1="15" y1="12" x2="3" y2="12"/>
-          </svg>
-          Войти
-        </button>
-      </div>
-    </header>`;
-  el.querySelector('#unauth-login-btn').addEventListener('click', openLoginModal);
+        <div class="header__right">
+          <div class="search-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" placeholder="${t('header.search_placeholder')}" autocomplete="off">
+          </div>
+          <div id="unauth-lang-slot"></div>
+          <button class="btn-login-header" id="unauth-login-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            ${t('unauth.banner_btn').split(' / ')[0]}
+          </button>
+        </div>
+      </header>`;
+
+    renderLangToggle(el.querySelector('#unauth-lang-slot'));
+    el.querySelector('#unauth-login-btn').addEventListener('click', openLoginModal);
+  }
+
+  build();
+  onLangChange(() => build());
 }
 
 // ─── Hero ─────────────────────────────────────
 function _renderHero(el) {
-  el.innerHTML = `
-    <section class="unauthorized-hero">
-      <div class="unauthorized-hero__eyebrow">
-        <span class="unauthorized-hero__eyebrow-dot"></span>
-        Трекер дорам для настоящих ценителей ✦
-      </div>
-      <h1 class="unauthorized-hero__title">Твой личный<br><em>дневник дорам</em></h1>
-      <p class="unauthorized-hero__subtitle">
-        Отслеживай просмотренные, планируй следующие, делись впечатлениями. Всё в одном месте.
-      </p>
-      <button class="unauthorized-hero__cta-btn" id="unauth-hero-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-        Войти в профиль
-      </button>
-    </section>`;
-  el.querySelector('#unauth-hero-btn').addEventListener('click', openLoginModal);
+  function build() {
+    el.innerHTML = `
+      <section class="unauthorized-hero">
+        <div class="unauthorized-hero__eyebrow">
+          <span class="unauthorized-hero__eyebrow-dot"></span>
+          ${t('unauth.eyebrow')}
+        </div>
+        <h1 class="unauthorized-hero__title">
+          ${t('unauth.title_pre')}<br><em>${t('unauth.title_em')}</em>
+          ${t('unauth.title_post') ? `<br>${t('unauth.title_post')}` : ''}
+        </h1>
+        <p class="unauthorized-hero__subtitle">${t('unauth.subtitle')}</p>
+        <button class="unauthorized-hero__cta-btn" id="unauth-hero-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          ${t('unauth.cta')}
+        </button>
+      </section>`;
+    el.querySelector('#unauth-hero-btn').addEventListener('click', openLoginModal);
+  }
+
+  build();
+  onLangChange(() => build());
 }
 
 // ─── Цитата ───────────────────────────────────
 async function _renderQuote(el) {
-  el.innerHTML = `
-    <div class="unauthorized-daily-quote">
-      <div class="unauthorized-daily-quote__label">Цитата дня</div>
-      <div class="unauthorized-daily-quote__card">
-        <span id="unauth-q-emoji">🌸</span>
-        <div class="unauthorized-daily-quote__body">
-          <p class="unauthorized-daily-quote__text" id="unauth-q-text">Загрузка…</p>
-          <span class="unauthorized-daily-quote__source" id="unauth-q-src"></span>
+  function buildShell() {
+    el.innerHTML = `
+      <div class="unauthorized-daily-quote">
+        <div class="unauthorized-daily-quote__label">${t('unauth.quote_label')}</div>
+        <div class="unauthorized-daily-quote__card">
+          <span id="unauth-q-emoji">🌸</span>
+          <div class="unauthorized-daily-quote__body">
+            <p class="unauthorized-daily-quote__text" id="unauth-q-text">${t('loading')}</p>
+            <span class="unauthorized-daily-quote__source" id="unauth-q-src"></span>
+          </div>
         </div>
-      </div>
-    </div>`;
-  const fallback = { emoji: '🕯️', text: '«Даже самая долгая ночь встречает рассвет.»', source: 'Нирвана в огне · 2015' };
-  const q = await getDailyQuote().catch(() => fallback);
-  el.querySelector('#unauth-q-emoji').textContent = q.emoji;
-  el.querySelector('#unauth-q-text').textContent  = q.text;
-  el.querySelector('#unauth-q-src').textContent   = q.source;
+      </div>`;
+  }
+
+  buildShell();
+
+  const fallbackRu = { emoji: '🕯️', text: '«Даже самая долгая ночь встречает рассвет.»', source: 'Нирвана в огне · 2015' };
+  const fallbackEn = { emoji: '🕯️', text: '«Even the longest night will eventually meet the dawn.»', source: 'Nirvana in Fire · 2015' };
+
+  let q = await getDailyQuote().catch(() => fallbackRu);
+
+  async function fillQuote() {
+    q = await getDailyQuote().catch(() =>
+      getLang() === 'en' ? fallbackEn : fallbackRu
+    );
+    el.querySelector('#unauth-q-emoji').textContent = q.emoji;
+    el.querySelector('#unauth-q-text').textContent  = q.text;
+    el.querySelector('#unauth-q-src').textContent   = q.source;
+    const label = el.querySelector('.unauthorized-daily-quote__label');
+    if (label) label.textContent = t('unauth.quote_label');
+  }
+
+  fillQuote();
+  onLangChange(async () => {
+    buildShell();
+    await fillQuote();
+  });
 }
 
 // ─── Тебе понравится ─────────────────────────
 async function _renderDramas(el) {
-  el.innerHTML = `
-    <section class="section unauth-hot">
-      <div class="section-header">
-        <div class="section-title">Тебе понравится</div>
-        <a class="unauth-hot__source" href="${SITE_URL}" target="_blank" rel="noopener">
-          doramatv.one ↗
-        </a>
-      </div>
-      <div class="unauth-hot__grid" id="unauth-hot-grid">
-        ${Array.from({ length: LIMIT }).map(() => `
-          <div class="unauth-card unauth-card--skeleton">
-            <div class="unauth-card__cover unauth-skel-box"></div>
-            <div class="unauth-card__info">
-              <div class="unauth-skel-line" style="width:80%;height:12px;margin-bottom:6px"></div>
-              <div class="unauth-skel-line" style="width:55%;height:9px"></div>
-            </div>
-          </div>`).join('')}
-      </div>
-    </section>`;
+  function buildSkeleton() {
+    el.innerHTML = `
+      <section class="section unauth-hot">
+        <div class="section-header">
+          <div class="section-title">${t('unauth.hot_title')}</div>
+          <a class="unauth-hot__source" href="${SITE_URL}" target="_blank" rel="noopener">
+            doramatv.one ↗
+          </a>
+        </div>
+        <div class="unauth-hot__grid" id="unauth-hot-grid">
+          ${Array.from({ length: LIMIT }).map(() => `
+            <div class="unauth-card unauth-card--skeleton">
+              <div class="unauth-card__cover unauth-skel-box"></div>
+              <div class="unauth-card__info">
+                <div class="unauth-skel-line" style="width:80%;height:12px;margin-bottom:6px"></div>
+                <div class="unauth-skel-line" style="width:55%;height:9px"></div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </section>`;
+  }
+
+  buildSkeleton();
 
   let dramas = [];
   try {
@@ -178,26 +230,35 @@ async function _renderDramas(el) {
     console.warn('[Unauthorized] fetchHotDramas failed:', err.message);
   }
 
-  const grid = el.querySelector('#unauth-hot-grid');
+  function renderDramas() {
+    const titleEl = el.querySelector('.section-title');
+    if (titleEl) titleEl.textContent = t('unauth.hot_title');
 
-  if (!dramas.length) {
-    grid.innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(245,230,211,0.4);font-size:13px">
-        Не удалось загрузить список.
-        <a href="${SITE_URL}" target="_blank" rel="noopener" style="color:#c97b8a;margin-left:6px">Открыть сайт ↗</a>
-      </div>`;
-    return;
+    const grid = el.querySelector('#unauth-hot-grid');
+    if (!grid) return;
+
+    if (!dramas.length) {
+      grid.innerHTML = `
+        <div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(245,230,211,0.4);font-size:13px">
+          ${t('loading').replace('…', '')}... 
+          <a href="${SITE_URL}" target="_blank" rel="noopener" style="color:#c97b8a;margin-left:6px">doramatv.one ↗</a>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = dramas.map((d, i) => _cardHTML(d, i)).join('');
+
+    grid.querySelectorAll('.unauth-card').forEach((card, i) => {
+      card.addEventListener('click', () => window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener'));
+      card.querySelector('.unauth-card__ext-btn')?.addEventListener('click', e => {
+        e.stopPropagation();
+        window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener');
+      });
+    });
   }
 
-  grid.innerHTML = dramas.map((d, i) => _cardHTML(d, i)).join('');
-
-  grid.querySelectorAll('.unauth-card').forEach((card, i) => {
-    card.addEventListener('click', () => window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener'));
-    card.querySelector('.unauth-card__ext-btn')?.addEventListener('click', e => {
-      e.stopPropagation();
-      window.open(dramas[i]?.link || SITE_URL, '_blank', 'noopener');
-    });
-  });
+  renderDramas();
+  onLangChange(() => renderDramas());
 }
 
 // ─── HTML карточки ────────────────────────────
@@ -213,8 +274,8 @@ function _cardHTML(d, i) {
     : '';
 
   const statusBadge = d.ongoing
-    ? `<span class="badge badge--ongoing">Выходит</span>`
-    : `<span class="badge badge--completed">Завершён</span>`;
+    ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>`
+    : `<span class="badge badge--completed">${t('status.completed')}</span>`;
 
   const genre = d.genres?.[0] || '';
 
@@ -225,7 +286,7 @@ function _cardHTML(d, i) {
              onerror="this.onerror=null;this.src='${fallback}'">
         <div class="unauth-card__overlay"></div>
         <div class="unauth-card__badges">${statusBadge}</div>
-        <button class="unauth-card__ext-btn" title="Смотреть на сайте">
+        <button class="unauth-card__ext-btn" title="↗">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M7 17L17 7M17 7H7M17 7v10"/>
           </svg>
@@ -243,25 +304,28 @@ function _cardHTML(d, i) {
 
 // ─── Баннер ───────────────────────────────────
 function _renderBanner(el) {
-  el.innerHTML = `
-    <div class="unauthorized-login-banner">
-      <div class="unauthorized-login-banner__left">
-        <span class="unauthorized-login-banner__icon">🔐</span>
-        <div>
-          <div class="unauthorized-login-banner__title">Начни отслеживать свои дорамы</div>
-          <div class="unauthorized-login-banner__subtitle">
-            Войди в профиль, чтобы добавлять в список, ставить оценки и следить за прогрессом
+  function build() {
+    el.innerHTML = `
+      <div class="unauthorized-login-banner">
+        <div class="unauthorized-login-banner__left">
+          <span class="unauthorized-login-banner__icon">🔐</span>
+          <div>
+            <div class="unauthorized-login-banner__title">${t('unauth.banner_title')}</div>
+            <div class="unauthorized-login-banner__subtitle">${t('unauth.banner_sub')}</div>
           </div>
         </div>
-      </div>
-      <button class="unauthorized-login-banner__btn" id="unauth-banner-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-        Войти
-      </button>
-    </div>`;
-  el.querySelector('#unauth-banner-btn').addEventListener('click', openLoginModal);
+        <button class="unauthorized-login-banner__btn" id="unauth-banner-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          ${t('unauth.banner_btn')}
+        </button>
+      </div>`;
+    el.querySelector('#unauth-banner-btn').addEventListener('click', openLoginModal);
+  }
+
+  build();
+  onLangChange(() => build());
 }
