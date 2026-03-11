@@ -20,6 +20,8 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 ### Модалка логина
 ![Login modal](assets/preview-login-modal.png)
 
+### Модалка регистрации
+![Register modal](assets/preview-register-modal.png)
 
 ---
 
@@ -36,7 +38,8 @@ A beautifully designed SPA for tracking Korean and Chinese dramas. Built for wom
 - **Auth-aware routing** — при запуске показывает unauthorized страницу если пользователь не залогинен
 - **Unauthorized landing page** — публичная страница с hero, цитатой дня, разделом «Тебе понравится» и баннером входа
 - **«Тебе понравится»** — живая лента из 10 дорам, парсится с [doramatv.one](https://m.doramatv.one/) через CORS-прокси; показывает рейтинг ★, жанр и статус прямо на постере
-- **Модалка логина** — открывается по кнопке «Войти» в хедере, hero-секции и баннере; поля email + пароль, кнопки «Войти» и «Зарегистрироваться»
+- **Модалка логина** — email + пароль, плавный переход к регистрации без пересоздания оверлея
+- **Модалка регистрации** — имя + email + пароль, валидация, плавный переход обратно к логину
 - **Весь UI на русском языке**
 
 ---
@@ -78,10 +81,11 @@ hanbin/
 │   └── quotes.json             # Цитаты из дорам (русский)
 ├── assets/
 │   ├── favicon.svg
-│   ├── preview.png                  # Скриншот — главная (залогиненный)
-│   ├── preview-unauthorized.png     # Скриншот — hero-секция гостя
-│   ├── preview-you-might-like.png   # Скриншот — раздел «Тебе понравится»
-│   └── preview-login-modal.png      # Скриншот — модалка логина
+│   ├── preview.png                   # Скриншот — главная (залогиненный)
+│   ├── preview-unauthorized.png      # Скриншот — hero-секция гостя
+│   ├── preview-you-might-like.png    # Скриншот — раздел «Тебе понравится»
+│   ├── preview-login-modal.png       # Скриншот — модалка логина
+│   └── preview-register-modal.png    # Скриншот — модалка регистрации
 └── src/
     ├── app.js                  # Инициализация, инъекция стилей, componentCSS + unauthorizedCSS
     ├── router.js               # Hash-based SPA роутер + auth-aware redirect
@@ -97,7 +101,8 @@ hanbin/
     │   ├── ActivityFeed.js     # Лента последних действий
     │   ├── Sidebar.js          # Статистика по странам + достижения
     │   ├── Filters.js          # Панель фильтров
-    │   └── LoginModal.js       # Модалка авторизации (email + пароль)
+    │   ├── LoginModal.js       # Модалка авторизации — единый оверлей, слайд-переходы
+    │   └── RegisterModal.js    # Модалка регистрации — монтируется внутри того же оверлея
     ├── pages/
     │   ├── Home.js             # Главная страница — собирает все компоненты
     │   └── Unauthorized.js     # Публичная страница для гостей
@@ -144,18 +149,87 @@ fetchHotDramas()
 
 ---
 
-## 🔐 Login Modal
+## 🔐 Auth Modals — Login & Register
 
-Компонент `src/components/LoginModal.js`. Открывается из трёх мест на странице гостя:
+### Архитектура
 
-```js
-import { openLoginModal } from '../components/LoginModal.js';
-openLoginModal();
+Обе модалки работают через **один общий оверлей** (`#hb-modal-overlay`). При переходе между ними оверлей и фон остаются на месте — меняется только контент внутри `#hb-modal-content`. Это исключает моргание фона.
+
+```
+#hb-modal-overlay   ← создаётся один раз, не удаляется при переходах
+  └─ #hb-modal-box  ← карточка модалки
+       └─ #hb-modal-content  ← сюда монтируется loginContent или registerContent
 ```
 
-**Поля:** Email (maxlength 80) + Пароль (maxlength 64, счётчик символов)  
-**Кнопки:** «Войти» (submit) и «Зарегистрироваться» → `#/register`  
-**Закрытие:** клик на оверлей или кнопку ×
+### Анимация переходов
+
+| Переход | Старый контент | Новый контент |
+|---|---|---|
+| Логин → Регистрация | slide-out влево (220ms) | slide-in справа (280ms) |
+| Регистрация → Логин | slide-out вправо (220ms) | slide-in слева (280ms) |
+| Открытие модалки | — | slideUp + scale (320ms) |
+| Закрытие | fade-out (220ms) | — |
+
+### API
+
+```js
+// Открыть логин
+import { openLoginModal } from '../components/LoginModal.js';
+openLoginModal();
+
+// Открыть регистрацию напрямую
+import { openRegisterModal } from '../components/RegisterModal.js';
+openRegisterModal();
+
+// Закрыть текущую модалку (с анимацией)
+import { closeModal } from '../components/LoginModal.js';
+closeModal();
+```
+
+### Поля и валидация
+
+**Логин:** Email (maxlength 80) + Пароль (maxlength 64)
+- Кнопка «Войти» активна только когда оба поля заполнены
+- Валидация email по regex
+
+**Регистрация:** Имя (maxlength 40) + Email (maxlength 80) + Пароль (maxlength 64)
+- Кнопка «Зарегистрироваться» активна только когда все три поля заполнены
+- Имя ≥ 2 символов, email по regex, пароль ≥ 6 символов
+- Счётчик символов у каждого поля
+
+### Закрытие
+
+| Действие | Логин | Регистрация |
+|---|---|---|
+| Крестик × | Остаётся на текущей странице | Переход на `#/guest` |
+| Клик на оверлей | Остаётся на текущей странице | Переход на `#/guest` |
+| Escape | Остаётся на текущей странице | Переход на `#/guest` |
+
+### Backend integration TODO
+
+```js
+// LoginModal.js — validateAndLogin():
+const res = await fetch('/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+});
+const { token, user } = await res.json();
+localStorage.setItem('hanbin_user', JSON.stringify(user));
+closeModal();
+navigate('#/');
+
+// RegisterModal.js — validateAndRegister():
+const res = await fetch('/api/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name, email, password })
+});
+const { token, user } = await res.json();
+localStorage.setItem('hanbin_user', JSON.stringify(user));
+closeModal();
+navigate('#/');
+```
 
 ---
 
@@ -171,6 +245,14 @@ if (hash === '#/' || hash === '') {
 
 - **Не залогинен** → `Unauthorized.js`
 - **Залогинен** → `Home.js`
+
+Чтобы залогиниться для тестирования:
+```js
+// В консоли браузера:
+localStorage.setItem('hanbin_user', JSON.stringify({ id: 'user_001', name: 'Elena' }))
+// Разлогиниться:
+localStorage.removeItem('hanbin_user')
+```
 
 ---
 
@@ -212,7 +294,7 @@ export async function getDramas(filters = {}) {
 |---|---|---|
 | `#/` | Home / Dashboard (залогиненный) | ✅ Done |
 | `#/guest` | Unauthorized landing (гость) | ✅ Done |
-| `#/register` | Регистрация | 🔲 In progress |
+| `#/register` | Регистрация | ✅ Done (модалка) |
 | `#/search` | Поиск / Каталог | 🔲 TODO |
 | `#/drama/:id` | Детальная страница дорамы | 🔲 TODO |
 | `#/my-list` | Полный список дорам | 🔲 TODO |
