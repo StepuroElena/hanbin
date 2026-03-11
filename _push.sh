@@ -2,30 +2,25 @@
 set -e
 cd "$(dirname "$0")"
 
+# Удаляем старые скриптовые костыли из репозитория
+git rm --cached _screenshots.sh install_screenshot.py save_screenshots.py 2>/dev/null || true
+rm -f _screenshots.sh install_screenshot.py save_screenshots.py
+
 git add \
-  src/api/mock.js \
-  src/router.js \
-  src/app.js \
-  src/components/Header.js \
-  src/components/StatsBlock.js \
-  src/components/DramaCard.js \
-  src/components/ActivityFeed.js \
-  src/components/Sidebar.js \
-  src/components/Filters.js \
-  src/pages/Home.js \
-  src/pages/Unauthorized.js \
-  src/utils/helpers.js \
-  pages/unauthorized.html \
+  src/components/LoginModal.js \
+  src/components/RegisterModal.js \
   README.md
 
-git commit -m "feat(unauthorized): публичная страница для гостей + auth-aware роутинг
+git commit -m "feat(auth): модалка регистрации + плавные переходы между модалками
 
-- renderUnauthorized: hero, цитата дня, лента последних дорам, login-баннер
-- getAuthState: читает 'hanbin_user' из localStorage; нет записи — гость
-- router: при старте проверяет auth, редиректит на unauthorized если нужно
-- Весь UI переведён на русский (статусы, фильтры, хедер, активность, сайдбар)
-- unauthorizedCSS перемещён до init() — фикс пустой страницы
-- README: скриншот страницы гостя, секции Auth-Aware Routing и Unauthorized Page"
+- RegisterModal: имя + email + пароль, валидация, счётчик символов
+- LoginModal: рефактор — единый оверлей (#hb-modal-overlay) для обеих модалок
+- Переход логин ↔ регистрация: slide-left / slide-right анимация контента
+  без пересоздания оверлея (нет моргания фона)
+- Закрытие: fade-out анимация вместо мгновенного remove()
+- Декоративный блик меняет цвет при переключении форм (rose → jade)
+- CSS унифицирован: .hb-btn-primary / .hb-btn-secondary, общий hb-modal-css
+- README: секция Auth Modals с архитектурой, анимациями, API и TODO для бэка"
 
-git push -u origin feature/unauthorized
-echo "✅ Готово — ветка feature/unauthorized запушена"
+git push -u origin feature/register
+echo "✅ Готово"
