@@ -7,6 +7,7 @@ import { buildCSSVariables } from './styles/theme.js';
 import { globalCSS } from './styles/global.js';
 import { setFavicon } from './utils/favicon.js';
 import { tooltipCSS } from './utils/tooltip.js';
+import { langToggleCSS } from './components/LangToggle.js';
 
 function injectStyles() {
   const rootStyle = document.createElement('style');
@@ -16,7 +17,7 @@ function injectStyles() {
 
   const globalStyle = document.createElement('style');
   globalStyle.id = 'hanbin-global';
-  globalStyle.textContent = globalCSS + tooltipCSS + componentCSS + unauthorizedCSS;
+  globalStyle.textContent = globalCSS + tooltipCSS + langToggleCSS + componentCSS + unauthorizedCSS;
   document.head.appendChild(globalStyle);
 }
 

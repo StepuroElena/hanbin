@@ -5,6 +5,7 @@
 import { navigate }                                              from '../router.js';
 import { t }                                                     from '../i18n/index.js';
 import { closeModal, transitionModalContent, mountLoginContent } from './LoginModal.js';
+import { registerUser }                                          from '../api/mock.js';
 
 const LOGO_SVG = `
   <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -59,6 +60,7 @@ function registerContentHTML() {
       <div class="hb-field-error" id="hb-reg-pass-error"></div>
     </div>
 
+    <div class="hb-field-error" id="hb-reg-global-error" style="text-align:center;margin-bottom:4px"></div>
     <button class="hb-btn-primary" id="hb-btn-reg-submit" disabled>${t('modal.reg.btn')}</button>
 
     <div class="hb-divider">
@@ -92,13 +94,15 @@ function updateRegCounter(inputId, counterId, max, errorId) {
   syncRegisterButton();
 }
 
-function validateAndRegister() {
+async function validateAndRegister() {
   const btn = document.getElementById('hb-btn-reg-submit');
   if (!btn || btn.disabled) return;
 
   const nameEl  = document.getElementById('hb-reg-name');
   const emailEl = document.getElementById('hb-reg-email');
   const passEl  = document.getElementById('hb-reg-pass');
+
+  // ─ Клиентская валидация ──────────────────────────────
   let valid = true;
 
   if (nameEl.value.trim().length < 2) {
@@ -111,18 +115,54 @@ function validateAndRegister() {
     document.getElementById('hb-reg-email-error').textContent = t('modal.reg.err_email');
     valid = false;
   }
-  if (passEl.value.length < 6) {
+  if (passEl.value.length < 8) {
     passEl.classList.add('hb-error');
     document.getElementById('hb-reg-pass-error').textContent = t('modal.reg.err_pass');
     valid = false;
   }
+  if (!valid) return;
 
-  if (valid) {
-    console.log('[RegisterModal] Register attempt:', emailEl.value);
-    alert(t('modal.reg.success'));
-    closeModal();
-    navigate('#/guest');
+  // ─ Запрос к бэку ────────────────────────────────────
+  setLoadingState(btn, true);
+
+  const { data, error } = await registerUser({
+    name:     nameEl.value.trim(),
+    email:    emailEl.value.trim(),
+    password: passEl.value,
+  });
+
+  setLoadingState(btn, false);
+
+  if (error) {
+    const isEmailError = error.includes('email') || error.includes('taken') || error.includes('занят');
+    if (isEmailError) {
+      emailEl.classList.add('hb-error');
+      document.getElementById('hb-reg-email-error').textContent = error;
+    } else {
+      // Общая/серверная ошибка — показываем отдельным баннером над кнопкой
+      document.getElementById('hb-reg-global-error').textContent = error;
+    }
+    return;
   }
+
+  // ─ Успех: сохраняем user_id ─────────────────────────
+  console.log('[RegisterModal] Регистрация успешна, user_id:', data.user_id);
+
+  localStorage.setItem('hanbin_user', JSON.stringify({
+    id:    data.user_id,
+    name:  data.name,
+    email: data.email,
+  }));
+
+  closeModal();
+  navigate('#/');
+}
+
+// Блокируем/разблокируем кнопку во время запроса
+function setLoadingState(btn, loading) {
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Загрузка…' : t('modal.reg.btn');
+  btn.style.opacity = loading ? '0.7' : '';
 }
 
 // ─── Смонтировать содержимое регистрации ─────

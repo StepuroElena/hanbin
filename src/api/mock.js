@@ -305,6 +305,53 @@ export async function getLatestDramas(limit = 10) {
   return { data: latestDramas.slice(0, limit), error: null };
 }
 
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+
+const API_BASE = 'http://localhost:8080/api/v1';
+
+/**
+ * Зарегистрировать нового пользователя.
+ * @param {{ name: string, email: string, password: string }} input
+ * @returns {{ data: { user_id: number, name: string, email: string } | null, error: string | null }}
+ *
+ * POST /api/v1/auth/register
+ */
+export async function registerUser({ name, email, password }) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    // Бэк может вернуть text/plain при 404 — безопасно читаем текст, потом парсим
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
+      }
+      // Бэк возвращает { error: '...' }
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    // Успех → { user_id, name, email }
+    return { data: json, error: null };
+  } catch (err) {
+    console.error('[API] registerUser network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
+        : 'Ошибка регистрации. Попробуй позже.',
+    };
+  }
+}
+
 /**
  * Удалить дораму из списка
  * @param {string} id

@@ -5,6 +5,8 @@
 import { navigate } from '../router.js';
 import { searchDramas, setViewMode, getViewMode, getAuthState } from '../api/mock.js';
 import { debounce } from '../utils/helpers.js';
+import { t, onLangChange } from '../i18n/index.js';
+import { renderLangToggle } from './LangToggle.js';
 
 export async function renderHeader(container, { onSearch, onViewChange }) {
   const [{ data: { mode } }, { data: auth }] = await Promise.all([
@@ -12,123 +14,146 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
     getAuthState(),
   ]);
 
-  const avatarHTML = auth.isLoggedIn
-    ? `<div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="Профиль: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>`
-    : `<button class="avatar avatar--guest" id="avatar-btn" data-tooltip="Войти в аккаунт">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-          <polyline points="10 17 15 12 10 7"/>
-          <line x1="15" y1="12" x2="3" y2="12"/>
-        </svg>
-      </button>`;
-
-  container.innerHTML = `
-    <header class="header">
-      <div class="header__logo">
-        <a href="#/" class="logo-link">
-          <div class="logo-name">han<span>bin</span></div>
-          <div class="logo-tagline">Трекер дорам</div>
-        </a>
-      </div>
-
-      <nav class="header__nav hide-mobile">
-        <a href="#/" class="nav-link nav-link--active">Главная</a>
-        <a href="#/search" class="nav-link">Каталог</a>
-        <a href="#/profile" class="nav-link">Мой список</a>
-      </nav>
-
-      <div class="header__right">
-        <div class="search-bar" id="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input type="text" id="search-input" placeholder="Поиск дорам…" autocomplete="off">
-          <div id="search-results" class="search-dropdown hidden"></div>
-        </div>
-
-        <div class="view-toggle">
-          <button class="toggle-btn ${mode === 'card' ? 'active' : ''}" data-view="card" data-tooltip="Вид карточек">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-            </svg>
-          </button>
-          <button class="toggle-btn ${mode === 'table' ? 'active' : ''}" data-view="table" data-tooltip="Табличный вид">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-            </svg>
-          </button>
-        </div>
-
-        <button class="add-btn" id="add-drama-btn" data-tooltip="Добавить дораму">
+  function buildHTML() {
+    const avatarHTML = auth.isLoggedIn
+      ? `<div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>`
+      : `<button class="avatar avatar--guest" id="avatar-btn" data-tooltip="${t('header.tooltip.login')}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+            <polyline points="10 17 15 12 10 7"/>
+            <line x1="15" y1="12" x2="3" y2="12"/>
           </svg>
-        </button>
+        </button>`;
 
-        ${avatarHTML}
-      </div>
-    </header>
-  `;
-
-  // ── Search ──
-  const searchInput = container.querySelector('#search-input');
-  const searchDropdown = container.querySelector('#search-results');
-
-  const handleSearch = debounce(async (q) => {
-    if (!q.trim()) {
-      searchDropdown.classList.add('hidden');
-      onSearch?.('');
-      return;
-    }
-    const { data } = await searchDramas(q);
-    onSearch?.(q, data);
-
-    if (data.length === 0) {
-      searchDropdown.innerHTML = `<div class="search-empty">Nothing found for "${q}"</div>`;
-    } else {
-      searchDropdown.innerHTML = data.slice(0, 5).map(d => `
-        <div class="search-item" data-id="${d.id}">
-          <img src="${d.cover}" alt="${d.title}" class="search-item__thumb">
-          <div>
-            <div class="search-item__title">${d.title}</div>
-            <div class="search-item__meta">${d.year} · ${d.genres[0]}</div>
-          </div>
-          <span class="badge badge--${d.status}">${d.status}</span>
+    return `
+      <header class="header">
+        <div class="header__logo">
+          <a href="#/" class="logo-link">
+            <div class="logo-name">han<span>bin</span></div>
+            <div class="logo-tagline">${t('header.tagline')}</div>
+          </a>
         </div>
-      `).join('');
-    }
-    searchDropdown.classList.remove('hidden');
-  }, 250);
 
-  searchInput.addEventListener('input', e => handleSearch(e.target.value));
+        <nav class="header__nav hide-mobile">
+          <a href="#/" class="nav-link nav-link--active">${t('header.nav.home')}</a>
+          <a href="#/search" class="nav-link">${t('header.nav.catalog')}</a>
+          <a href="#/profile" class="nav-link">${t('header.nav.my_list')}</a>
+        </nav>
 
-  document.addEventListener('click', (e) => {
-    if (!container.querySelector('#search-bar').contains(e.target)) {
-      searchDropdown.classList.add('hidden');
-    }
+        <div class="header__right">
+          <div class="search-bar" id="search-bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input type="text" id="search-input" placeholder="${t('header.search_placeholder')}" autocomplete="off">
+            <div id="search-results" class="search-dropdown hidden"></div>
+          </div>
+
+          <div class="view-toggle">
+            <button class="toggle-btn ${mode === 'card' ? 'active' : ''}" data-view="card" data-tooltip="${t('header.tooltip.card_view')}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+              </svg>
+            </button>
+            <button class="toggle-btn ${mode === 'table' ? 'active' : ''}" data-view="table" data-tooltip="${t('header.tooltip.table_view')}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div id="lang-toggle-slot"></div>
+
+          <button class="add-btn" id="add-drama-btn" data-tooltip="${t('header.tooltip.add')}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+
+          ${avatarHTML}
+        </div>
+      </header>
+    `;
+  }
+
+  // ── Initial render ──
+  container.innerHTML = buildHTML();
+  let langUnsub = renderLangToggle(container.querySelector('#lang-toggle-slot'));
+
+  // ── Re-render header on language change (nav links, placeholder, tagline…) ──
+  onLangChange(async () => {
+    // Save scroll position
+    const scrollY = window.scrollY;
+    // Tear down previous lang toggle subscription
+    langUnsub?.();
+    container.innerHTML = buildHTML();
+    langUnsub = renderLangToggle(container.querySelector('#lang-toggle-slot'));
+    attachListeners();
+    window.scrollTo(0, scrollY);
   });
 
-  // ── View toggle ──
-  container.querySelectorAll('.toggle-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const viewMode = btn.dataset.view;
-      await setViewMode(viewMode);
-      onViewChange?.(viewMode);
+  function attachListeners() {
+    // ── Search ──
+    const searchInput    = container.querySelector('#search-input');
+    const searchDropdown = container.querySelector('#search-results');
+
+    const handleSearch = debounce(async (q) => {
+      if (!q.trim()) {
+        searchDropdown.classList.add('hidden');
+        onSearch?.('');
+        return;
+      }
+      const { data } = await searchDramas(q);
+      onSearch?.(q, data);
+
+      if (data.length === 0) {
+        searchDropdown.innerHTML = `<div class="search-empty">${t('header.search_not_found', { q })}</div>`;
+      } else {
+        searchDropdown.innerHTML = data.slice(0, 5).map(d => `
+          <div class="search-item" data-id="${d.id}">
+            <img src="${d.cover}" alt="${d.title}" class="search-item__thumb">
+            <div>
+              <div class="search-item__title">${d.title}</div>
+              <div class="search-item__meta">${d.year} · ${d.genres[0]}</div>
+            </div>
+            <span class="badge badge--${d.status}">${d.status}</span>
+          </div>
+        `).join('');
+      }
+      searchDropdown.classList.remove('hidden');
+    }, 250);
+
+    searchInput.addEventListener('input', e => handleSearch(e.target.value));
+
+    document.addEventListener('click', (e) => {
+      if (!container.querySelector('#search-bar')?.contains(e.target)) {
+        searchDropdown?.classList.add('hidden');
+      }
     });
-  });
 
-  // ── Add drama ──
-  container.querySelector('#add-drama-btn').addEventListener('click', () => {
-    // TODO: открыть модал добавления дорамы
-    console.log('[UI] Add drama clicked — TODO: open modal');
-    alert('Форма добавления дорамы — TODO: подключить к бэку 🌸');
-  });
+    // ── View toggle ──
+    container.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const viewMode = btn.dataset.view;
+        await setViewMode(viewMode);
+        onViewChange?.(viewMode);
+      });
+    });
 
-  // ── Avatar / Profile ──
-  container.querySelector('#avatar-btn').addEventListener('click', () => {
-    navigate('#/profile');
-  });
+    // ── Add drama ──
+    container.querySelector('#add-drama-btn').addEventListener('click', () => {
+      console.log('[UI] Add drama clicked — TODO: open modal');
+      alert(t('header.add_todo'));
+    });
+
+    // ── Avatar / Profile ──
+    container.querySelector('#avatar-btn').addEventListener('click', () => {
+      navigate('#/profile');
+    });
+  }
+
+  attachListeners();
 }
