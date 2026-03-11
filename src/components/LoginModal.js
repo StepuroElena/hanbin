@@ -1,17 +1,8 @@
 /**
  * HANBIN — Login Modal Component
- *
- * Использование:
- *   import { openLoginModal } from './components/LoginModal.js';
- *   openLoginModal();
- *
- * Модалка монтируется в <body>, поверх любой страницы.
- * По крестику / клику на оверлей — закрывается, пользователь остаётся на текущей странице.
- * Кнопка «Войти» недоступна пока оба поля не заполнены.
- * Кнопка «Зарегистрироваться» — плавно переходит в RegisterModal (оверлей не пересоздаётся).
  */
 
-import { mountRegisterContent } from './RegisterModal.js';
+import { t, onLangChange } from '../i18n/index.js';
 
 // ─── CSS ─────────────────────────────────────
 const MODAL_CSS = `
@@ -23,7 +14,6 @@ const MODAL_CSS = `
   @keyframes hb-enterLeft  { from{opacity:0;transform:translateX(-40px)} to{opacity:1;transform:translateX(0)} }
   @keyframes hb-enterRight { from{opacity:0;transform:translateX(40px)}  to{opacity:1;transform:translateX(0)} }
 
-  /* ── Overlay — общий для обеих модалок ── */
   #hb-modal-overlay {
     position: fixed; inset: 0; z-index: 9999;
     background: rgba(18,6,18,0.78);
@@ -36,29 +26,24 @@ const MODAL_CSS = `
     pointer-events: none;
   }
 
-  /* ── Общая обёртка контента ── */
   #hb-modal-box {
     width: 420px;
     border-radius: 24px;
     background: linear-gradient(145deg, rgba(74,25,66,0.96), rgba(45,15,42,0.99));
     border: 1px solid rgba(201,123,138,0.28);
     box-shadow: 0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,123,138,0.07);
-    position: relative;
-    overflow: hidden;
+    position: relative; overflow: hidden;
     animation: hb-slideUp 0.32s cubic-bezier(0.34,1.56,0.64,1);
   }
 
-  /* ── Слот контента внутри box ── */
   #hb-modal-content {
-    padding: 44px 40px 40px;
-    position: relative;
+    padding: 44px 40px 40px; position: relative;
   }
   #hb-modal-content.hb-exit-left  { animation: hb-slideLeft  0.22s ease forwards; pointer-events:none; }
   #hb-modal-content.hb-exit-right { animation: hb-slideRight 0.22s ease forwards; pointer-events:none; }
   #hb-modal-content.hb-enter-left  { animation: hb-enterLeft  0.28s cubic-bezier(0.34,1.26,0.64,1) both; }
   #hb-modal-content.hb-enter-right { animation: hb-enterRight 0.28s cubic-bezier(0.34,1.26,0.64,1) both; }
 
-  /* ── Декор box ── */
   #hb-modal-box::before {
     content: ''; position: absolute; top: -60px; right: -60px;
     width: 200px; height: 200px; border-radius: 50%;
@@ -70,11 +55,9 @@ const MODAL_CSS = `
   }
   #hb-modal-box::after {
     content: '✦'; position: absolute; bottom: 14px; right: 22px;
-    font-size: 52px; color: rgba(201,123,138,0.07);
-    pointer-events: none;
+    font-size: 52px; color: rgba(201,123,138,0.07); pointer-events: none;
   }
 
-  /* ── Закрыть ── */
   #hb-modal-close {
     position: absolute; top: 16px; right: 16px; z-index: 10;
     width: 32px; height: 32px; border-radius: 50%;
@@ -90,13 +73,8 @@ const MODAL_CSS = `
     background: rgba(201,123,138,0.1);
   }
 
-  /* ── Логотип ── */
-  .hb-modal-logo {
-    width: 44px; height: 44px; margin-bottom: 16px;
-    border-radius: 10px; display: block;
-  }
+  .hb-modal-logo { width: 44px; height: 44px; margin-bottom: 16px; border-radius: 10px; display: block; }
 
-  /* ── Типографика ── */
   .hb-modal-title {
     font-family: 'Cormorant Garamond', serif;
     font-size: 30px; font-weight: 300; font-style: italic;
@@ -107,7 +85,6 @@ const MODAL_CSS = `
     color: rgba(245,230,211,0.38); margin-bottom: 32px;
   }
 
-  /* ── Поля ── */
   .hb-field { margin-bottom: 10px; }
   .hb-field-label {
     display: flex; justify-content: space-between; align-items: center;
@@ -141,12 +118,10 @@ const MODAL_CSS = `
   }
   .hb-field-error { margin-top: 5px; font-size: 11px; color: #ff6b8a; min-height: 16px; }
 
-  /* ── Разделитель ── */
   .hb-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 14px; }
   .hb-divider-line { flex: 1; height: 1px; background: rgba(232,196,184,0.1); }
   .hb-divider-text { font-size: 11px; color: rgba(245,230,211,0.25); letter-spacing: 0.1em; }
 
-  /* ── Кнопки ── */
   .hb-btn-primary {
     width: 100%; padding: 14px; margin-bottom: 4px;
     border: none; border-radius: 12px; color: #fff;
@@ -193,7 +168,6 @@ const LOGO_SVG = `
   </svg>
 `;
 
-// ─── Inject CSS once ──────────────────────────
 function injectModalCSS() {
   if (document.getElementById('hb-modal-css')) return;
   const style = document.createElement('style');
@@ -202,60 +176,57 @@ function injectModalCSS() {
   document.head.appendChild(style);
 }
 
-// ─── HTML обёртки (оверлей + box, без контента) ──
 function createOverlayHTML() {
   return `
     <div id="hb-modal-overlay">
       <div id="hb-modal-box">
-        <button id="hb-modal-close" aria-label="Закрыть">×</button>
+        <button id="hb-modal-close" aria-label="${t('modal.close')}">×</button>
         <div id="hb-modal-content"></div>
       </div>
     </div>
   `;
 }
 
-// ─── HTML контента — форма логина ─────────────
+// ─── HTML контента логина (i18n-aware) ────────
 function loginContentHTML() {
   return `
     ${LOGO_SVG}
-    <div class="hb-modal-title">Добро пожаловать домой</div>
-    <div class="hb-modal-sub">Войдите в свой любимый аккаунт</div>
+    <div class="hb-modal-title">${t('modal.login.title')}</div>
+    <div class="hb-modal-sub">${t('modal.login.sub')}</div>
 
     <div class="hb-field">
       <div class="hb-field-label">
-        <span>Email <span class="hb-required">*</span></span>
+        <span>${t('modal.login.email')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-email-counter">0 / 80</span>
       </div>
       <input class="hb-field-input" id="hb-email" type="email"
-        placeholder="your@email.com" maxlength="80" autocomplete="email">
+        placeholder="${t('modal.login.email_ph')}" maxlength="80" autocomplete="email">
       <div class="hb-field-error" id="hb-email-error"></div>
     </div>
 
     <div class="hb-field">
       <div class="hb-field-label">
-        <span>Пароль <span class="hb-required">*</span></span>
+        <span>${t('modal.login.password')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-pass-counter">0 / 64</span>
       </div>
       <input class="hb-field-input" id="hb-pass" type="password"
-        placeholder="••••••••" maxlength="64" autocomplete="current-password">
+        placeholder="${t('modal.login.pass_ph')}" maxlength="64" autocomplete="current-password">
       <div class="hb-field-error" id="hb-pass-error"></div>
     </div>
 
-    <button class="hb-btn-primary" id="hb-btn-login" disabled>Войти</button>
+    <button class="hb-btn-primary" id="hb-btn-login" disabled>${t('modal.login.btn')}</button>
 
     <div class="hb-divider">
       <div class="hb-divider-line"></div>
-      <span class="hb-divider-text">или</span>
+      <span class="hb-divider-text">${t('modal.login.or')}</span>
       <div class="hb-divider-line"></div>
     </div>
 
-    <button class="hb-btn-secondary" id="hb-btn-register">Зарегистрироваться</button>
+    <button class="hb-btn-secondary" id="hb-btn-register">${t('modal.login.to_register')}</button>
   `;
 }
 
 // ─── Плавный переход контента ─────────────────
-// direction: 'left' — уходим влево (переход к регистрации)
-//            'right' — уходим вправо (возврат к логину)
 export function transitionModalContent(direction, renderFn) {
   const content = document.getElementById('hb-modal-content');
   const box     = document.getElementById('hb-modal-box');
@@ -264,12 +235,10 @@ export function transitionModalContent(direction, renderFn) {
   const exitClass  = direction === 'left' ? 'hb-exit-left'  : 'hb-exit-right';
   const enterClass = direction === 'left' ? 'hb-enter-right' : 'hb-enter-left';
 
-  // Тема декора box
   if (direction === 'left') box.classList.add('hb-theme-register');
   else                       box.classList.remove('hb-theme-register');
 
   content.classList.add(exitClass);
-
   content.addEventListener('animationend', () => {
     content.classList.remove(exitClass);
     renderFn(content, enterClass);
@@ -302,22 +271,31 @@ function validateAndLogin() {
   const emailEl = document.getElementById('hb-email');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) {
     emailEl.classList.add('hb-error');
-    document.getElementById('hb-email-error').textContent = '⚠ Некорректный адрес почты';
+    document.getElementById('hb-email-error').textContent = t('modal.login.err_email');
     return;
   }
-  // TODO: подключить к POST /api/auth/login
   console.log('[LoginModal] Login attempt:', emailEl.value);
-  alert('✓ Вход выполнен! (TODO: подключить к API)');
+  alert(t('modal.login.success'));
   closeModal();
 }
 
 // ─── Смонтировать содержимое логина ──────────
 export function mountLoginContent(content, enterClass) {
+  // Сохраняем значения полей если они уже были введены (при смене языка)
+  const prevEmail = document.getElementById('hb-email')?.value ?? '';
+  const prevPass  = document.getElementById('hb-pass')?.value ?? '';
+
   content.innerHTML = loginContentHTML();
+
   if (enterClass) {
     content.classList.add(enterClass);
     content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
   }
+
+  // Восстанавливаем значения
+  if (prevEmail) { document.getElementById('hb-email').value = prevEmail; }
+  if (prevPass)  { document.getElementById('hb-pass').value  = prevPass; }
+  syncLoginButton();
 
   document.getElementById('hb-email').addEventListener('input', () =>
     updateCounter('hb-email', 'hb-email-counter', 80, 'hb-email-error'));
@@ -333,7 +311,6 @@ export function mountLoginContent(content, enterClass) {
 
   document.getElementById('hb-btn-register').addEventListener('click', () => {
     transitionModalContent('left', (el, cls) => {
-      // импортируем здесь чтобы избежать circular dependency во время выполнения
       import('./RegisterModal.js').then(({ mountRegisterContent }) => {
         mountRegisterContent(el, cls);
       });
@@ -343,7 +320,7 @@ export function mountLoginContent(content, enterClass) {
   document.getElementById('hb-email').focus();
 }
 
-// ─── Закрыть оверлей с анимацией ─────────────
+// ─── Закрыть оверлей ─────────────────────────
 export function closeModal() {
   const overlay = document.getElementById('hb-modal-overlay');
   if (!overlay) return;
@@ -361,15 +338,11 @@ export function openLoginModal() {
   wrapper.innerHTML = createOverlayHTML();
   document.body.appendChild(wrapper.firstElementChild);
 
-  // Закрытие — крестик
   document.getElementById('hb-modal-close').addEventListener('click', closeModal);
-
-  // Закрытие — клик на оверлей
   document.getElementById('hb-modal-overlay').addEventListener('click', e => {
     if (e.target.id === 'hb-modal-overlay') closeModal();
   });
 
-  // Закрытие — Escape
   const onKeydown = e => {
     if (e.key === 'Escape') {
       closeModal();
@@ -378,6 +351,29 @@ export function openLoginModal() {
   };
   document.addEventListener('keydown', onKeydown);
 
-  // Монтируем контент логина
   mountLoginContent(document.getElementById('hb-modal-content'), null);
+
+  // ── При смене языка перерисовываем активный контент модалки ──
+  const unsub = onLangChange(() => {
+    const overlay = document.getElementById('hb-modal-overlay');
+    if (!overlay) { unsub(); return; } // модалка закрыта — отписываемся
+
+    // Обновляем aria-label крестика
+    const closeBtn = document.getElementById('hb-modal-close');
+    if (closeBtn) closeBtn.setAttribute('aria-label', t('modal.close'));
+
+    const content = document.getElementById('hb-modal-content');
+    if (!content) return;
+
+    // Определяем что сейчас открыто — логин или регистрация
+    const isRegister = document.getElementById('hb-modal-box')?.classList.contains('hb-theme-register');
+
+    if (isRegister) {
+      import('./RegisterModal.js').then(({ mountRegisterContent }) => {
+        mountRegisterContent(content, null);
+      });
+    } else {
+      mountLoginContent(content, null);
+    }
+  });
 }
