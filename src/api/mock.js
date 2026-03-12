@@ -353,6 +353,51 @@ export async function registerUser({ name, email, password }) {
 }
 
 /**
+ * Войти в аккаунт.
+ * @param {{ email: string, password: string }} input
+ * @returns {{ data: { user_id: number, email: string, token: string } | null, error: string | null }}
+ *
+ * POST /api/v1/auth/login
+ */
+export async function loginUser({ email, password }) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        return { data: null, error: 'Неверная почта или пароль.' };
+      }
+      if (res.status === 400) {
+        return { data: null, error: json?.error ?? 'Заполни все поля.' };
+      }
+      if (res.status === 404) {
+        return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
+      }
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    // Успех → { user_id, email, token }
+    return { data: json, error: null };
+  } catch (err) {
+    console.error('[API] loginUser network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
+        : 'Ошибка входа. Попробуй позже.',
+    };
+  }
+}
+
+/**
  * Удалить дораму из списка
  * @param {string} id
  * TODO: DELETE /api/dramas/:id
@@ -391,36 +436,64 @@ export async function getViewMode() {
 }
 
 /**
- * Получить состояние авторизации из кэша.
+ * Получить данные текущего пользователя с бэка.
+ * Отправляет JWT-токен в заголовке Authorization.
  *
- * Проверяет localStorage по ключу 'hanbin_user'.
- * Если запись есть — пользователь считается залогиненным.
- * Если записи нет — незалогиненный, показываем unauthorized страницу.
+ * TODO: GET /api/v1/profiles/{id} — пока замокирован, вернёт MOCK_USER с реальным email
+ */
+export async function getMe() {
+  const token = localStorage.getItem('hanbin_token');
+  const cached = localStorage.getItem('hanbin_user');
+
+  if (!token || !cached) return { data: null, error: 'not authenticated' };
+
+  let userCache;
+  try { userCache = JSON.parse(cached); } catch { return { data: null, error: 'invalid cache' }; }
+
+  // TODO: когда на бэке появится GET /api/v1/users/me — заменить мок ниже на реальный fetch:
+  // const res = await fetch(`${API_BASE}/users/me`, {
+  //   headers: { 'Authorization': `Bearer ${token}` },
+  // });
+  // if (!res.ok) { ... }
+  // return { data: await res.json(), error: null };
+
+  // Мок: сливаем MOCK_USER с реальными данными из localStorage
+  await delay(100);
+  const fullUser = { ...MOCK_USER, ...userCache };
+  return { data: fullUser, error: null };
+}
+
+/**
+ * Получить состояние авторизации.
  *
- * Чтобы имитировать вход, запиши в консоли браузера:
- *   localStorage.setItem('hanbin_user', JSON.stringify({ id: 'user_001', name: 'Elena' }))
- * Чтобы разлогиниться:
- *   localStorage.removeItem('hanbin_user')
- *
- * TODO: GET /api/auth/me — заменить на реальный запрос когда будет бэкенд
+ * Если в localStorage есть токен + user — считаем залогиненным
+ * и подтягиваем актуальные данные через getMe().
+ * При ошибке getMe — очищаем сессию.
  */
 export async function getAuthState() {
   try {
-    // Чистим устаревший ключ от предыдущей версии
     localStorage.removeItem('hanbin_logged_in');
 
+    const token  = localStorage.getItem('hanbin_token');
     const cached = localStorage.getItem('hanbin_user');
-    if (!cached) return { data: { isLoggedIn: false, user: null }, error: null };
 
-    const user = JSON.parse(cached);
-    // Минимальная валидация: нужен id
-    if (!user?.id) return { data: { isLoggedIn: false, user: null }, error: null };
+    if (!token || !cached) return { data: { isLoggedIn: false, user: null }, error: null };
 
-    // Дополняем кэшированные данные данными из MOCK_USER (до появления реального бэка)
-    const fullUser = { ...MOCK_USER, ...user };
-    return { data: { isLoggedIn: true, user: fullUser }, error: null };
+    const userCache = JSON.parse(cached);
+    if (!userCache?.id) return { data: { isLoggedIn: false, user: null }, error: null };
+
+    // Получаем актуальные данные пользователя
+    const { data: user, error } = await getMe();
+    if (error || !user) {
+      // Токен протух или невалиден — сбрасываем сессию
+      localStorage.removeItem('hanbin_token');
+      localStorage.removeItem('hanbin_user');
+      return { data: { isLoggedIn: false, user: null }, error: null };
+    }
+
+    return { data: { isLoggedIn: true, user }, error: null };
   } catch {
-    // Битый JSON — чистим кэш и считаем незалогиненным
+    localStorage.removeItem('hanbin_token');
     localStorage.removeItem('hanbin_user');
     return { data: { isLoggedIn: false, user: null }, error: null };
   }
