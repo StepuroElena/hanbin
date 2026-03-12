@@ -233,17 +233,31 @@ export function transitionModalContent(direction, renderFn) {
   const box     = document.getElementById('hb-modal-box');
   if (!content) return;
 
-  const exitClass  = direction === 'left' ? 'hb-exit-left'  : 'hb-exit-right';
-  const enterClass = direction === 'left' ? 'hb-enter-right' : 'hb-enter-left';
+  const exitClass   = direction === 'left' ? 'hb-exit-left'  : 'hb-exit-right';
+  const enterClass  = direction === 'left' ? 'hb-enter-right' : 'hb-enter-left';
+  const exitAnim    = direction === 'left' ? 'hb-slideLeft'   : 'hb-slideRight';
 
   if (direction === 'left') box.classList.add('hb-theme-register');
   else                       box.classList.remove('hb-theme-register');
 
   content.classList.add(exitClass);
-  content.addEventListener('animationend', () => {
+
+  const onEnd = (e) => {
+    if (e.animationName !== exitAnim) return; // игнорируем чужие animationend
+    content.removeEventListener('animationend', onEnd);
     content.classList.remove(exitClass);
     renderFn(content, enterClass);
-  }, { once: true });
+  };
+
+  content.addEventListener('animationend', onEnd);
+
+  // Фолбэк: если анимация вдруг не сработала (hidden, reduced-motion и т.д.)
+  setTimeout(() => {
+    if (!content.classList.contains(exitClass)) return; // уже сработало
+    content.removeEventListener('animationend', onEnd);
+    content.classList.remove(exitClass);
+    renderFn(content, enterClass);
+  }, 400);
 }
 
 // ─── Логика формы логина ──────────────────────
@@ -324,7 +338,14 @@ export function mountLoginContent(content, enterClass) {
 
   if (enterClass) {
     content.classList.add(enterClass);
-    content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
+    const enterAnim = enterClass === 'hb-enter-right' ? 'hb-enterRight' : 'hb-enterLeft';
+    const onEnterEnd = (e) => {
+      if (e.animationName !== enterAnim) return;
+      content.classList.remove(enterClass);
+      content.removeEventListener('animationend', onEnterEnd);
+    };
+    content.addEventListener('animationend', onEnterEnd);
+    setTimeout(() => { content.classList.remove(enterClass); content.removeEventListener('animationend', onEnterEnd); }, 500);
   }
 
   // Восстанавливаем значения

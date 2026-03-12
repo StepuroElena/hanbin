@@ -194,7 +194,14 @@ export function mountRegisterContent(content, enterClass) {
 
   if (enterClass) {
     content.classList.add(enterClass);
-    content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
+    const enterAnim = enterClass === 'hb-enter-right' ? 'hb-enterRight' : 'hb-enterLeft';
+    const onEnterEnd = (e) => {
+      if (e.animationName !== enterAnim) return;
+      content.classList.remove(enterClass);
+      content.removeEventListener('animationend', onEnterEnd);
+    };
+    content.addEventListener('animationend', onEnterEnd);
+    setTimeout(() => { content.classList.remove(enterClass); content.removeEventListener('animationend', onEnterEnd); }, 500);
   }
 
   // Восстанавливаем значения
