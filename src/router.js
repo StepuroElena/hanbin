@@ -36,6 +36,11 @@ export function getCurrentRoute() {
   return window.location.hash || '#/';
 }
 
+// ─── Принудительный ре-рендер текущего маршрута ──
+// Используется после логина: хэш мог не измениться,
+// поэтому hashchange не стреляет — вызываем render вручную.
+export let forceRender = () => {}; // будет заменён внутри initRouter
+
 // ─── Resolve маршрута с параметрами ───────────
 function resolveRoute(hash) {
   // Точное совпадение
@@ -83,6 +88,9 @@ export function initRouter(appEl) {
       </div>`;
     }
   }
+
+  // Привязываем forceRender к локальному render
+  forceRender = render;
 
   window.addEventListener('hashchange', render);
   render(); // initial render

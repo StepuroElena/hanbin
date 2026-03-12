@@ -3,6 +3,7 @@
  */
 
 import { t, onLangChange } from '../i18n/index.js';
+import { loginUser } from '../api/mock.js';
 
 // ─── CSS ─────────────────────────────────────
 const MODAL_CSS = `
@@ -232,17 +233,31 @@ export function transitionModalContent(direction, renderFn) {
   const box     = document.getElementById('hb-modal-box');
   if (!content) return;
 
-  const exitClass  = direction === 'left' ? 'hb-exit-left'  : 'hb-exit-right';
-  const enterClass = direction === 'left' ? 'hb-enter-right' : 'hb-enter-left';
+  const exitClass   = direction === 'left' ? 'hb-exit-left'  : 'hb-exit-right';
+  const enterClass  = direction === 'left' ? 'hb-enter-right' : 'hb-enter-left';
+  const exitAnim    = direction === 'left' ? 'hb-slideLeft'   : 'hb-slideRight';
 
   if (direction === 'left') box.classList.add('hb-theme-register');
   else                       box.classList.remove('hb-theme-register');
 
   content.classList.add(exitClass);
-  content.addEventListener('animationend', () => {
+
+  const onEnd = (e) => {
+    if (e.animationName !== exitAnim) return; // игнорируем чужие animationend
+    content.removeEventListener('animationend', onEnd);
     content.classList.remove(exitClass);
     renderFn(content, enterClass);
-  }, { once: true });
+  };
+
+  content.addEventListener('animationend', onEnd);
+
+  // Фолбэк: если анимация вдруг не сработала (hidden, reduced-motion и т.д.)
+  setTimeout(() => {
+    if (!content.classList.contains(exitClass)) return; // уже сработало
+    content.removeEventListener('animationend', onEnd);
+    content.classList.remove(exitClass);
+    renderFn(content, enterClass);
+  }, 400);
 }
 
 // ─── Логика формы логина ──────────────────────
@@ -265,18 +280,52 @@ function updateCounter(inputId, counterId, max, errorId) {
   syncLoginButton();
 }
 
-function validateAndLogin() {
+async function validateAndLogin() {
   const btn = document.getElementById('hb-btn-login');
   if (!btn || btn.disabled) return;
+
   const emailEl = document.getElementById('hb-email');
+  const passEl  = document.getElementById('hb-pass');
+
+  // Клиентская валидация email
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value)) {
     emailEl.classList.add('hb-error');
     document.getElementById('hb-email-error').textContent = t('modal.login.err_email');
     return;
   }
-  console.log('[LoginModal] Login attempt:', emailEl.value);
-  alert(t('modal.login.success'));
+
+  // Блокируем кнопку на время запроса
+  btn.disabled = true;
+  btn.textContent = 'Вход…';
+
+  const { data, error } = await loginUser({
+    email: emailEl.value.trim(),
+    password: passEl.value,
+  });
+
+  if (error) {
+    // Показываем ошибку под полем пароля (general error)
+    passEl.classList.add('hb-error');
+    document.getElementById('hb-pass-error').textContent = error;
+    btn.disabled = false;
+    btn.textContent = t('modal.login.btn');
+    return;
+  }
+
+  // Успех — сохраняем токен и данные пользователя
+  localStorage.setItem('hanbin_token', data.token);
+  localStorage.setItem('hanbin_user', JSON.stringify({
+    id: String(data.user_id),
+    email: data.email,
+  }));
+
+  // Закрываем модалку и сразу рендерим главную.
+  // Не ждём animationend и не полагаемся на hashchange — вызываем forceRender напрямую.
   closeModal();
+  import('../router.js').then(({ navigate, forceRender }) => {
+    navigate('#/');
+    forceRender();
+  });
 }
 
 // ─── Смонтировать содержимое логина ──────────
@@ -289,7 +338,14 @@ export function mountLoginContent(content, enterClass) {
 
   if (enterClass) {
     content.classList.add(enterClass);
-    content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
+    const enterAnim = enterClass === 'hb-enter-right' ? 'hb-enterRight' : 'hb-enterLeft';
+    const onEnterEnd = (e) => {
+      if (e.animationName !== enterAnim) return;
+      content.classList.remove(enterClass);
+      content.removeEventListener('animationend', onEnterEnd);
+    };
+    content.addEventListener('animationend', onEnterEnd);
+    setTimeout(() => { content.classList.remove(enterClass); content.removeEventListener('animationend', onEnterEnd); }, 500);
   }
 
   // Восстанавливаем значения

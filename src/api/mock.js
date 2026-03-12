@@ -7,6 +7,8 @@
  * Задержка configurable через MOCK_DELAY.
  */
 
+import { API_BASE, authGet } from './client.js';
+
 const MOCK_DELAY = 300; // ms, имитация latency
 
 const delay = (ms = MOCK_DELAY) => new Promise(res => setTimeout(res, ms));
@@ -192,20 +194,78 @@ const MOCK_ACTIVITY = [
 // ─────────────────────────────────────────────
 
 /**
- * Получить профиль и статистику пользователя
- * TODO: GET /api/user/me
+ * Получить профиль и статистику пользователя.
+ * Теперь идёт через реальный GET /api/v1/users/me.
+ * Если не авторизован — фаллбэк на MOCK_USER.
  */
 export async function getUser() {
+  const { data, error } = await getMe();
+  if (data) return { data, error: null };
+  // Фаллбэк: пользователь не залогинен или бэк недоступен
   await delay();
   return { data: MOCK_USER, error: null };
 }
 
 /**
- * Получить список всех дорам
+ * Адаптирует дораму с бэка в формат, который ожидают компоненты.
+ * Бэк: { id, name, year, genre, country, watch_status, current_episode, total_episodes, doramatv_url, doramatv_rating, tags }
+ * Фронт: { id, title, year, genres[], country, status, episodesWatched, episodesTotal, watchUrl, rating, hasSubs, ongoing, cover }
+ */
+function adaptDramaFromApi(d) {
+  // Определяем по тегам
+  const tags = d.tags ?? [];
+  const ongoing = tags.some(t => t.toLowerCase().includes('выходит') || t.toLowerCase() === 'ongoing');
+  const hasSubs = tags.some(t => t.toLowerCase().includes('перевод') || t.toLowerCase() === 'subbed');
+
+  return {
+    id:              String(d.id),
+    title:           d.name,
+    year:            d.year || null,
+    genres:          d.genre ? [d.genre] : [],
+    country:         (d.country || '').toLowerCase().slice(0, 2),
+    status:          d.watch_status,
+    episodesWatched: d.current_episode ?? 0,
+    episodesTotal:   d.total_episodes ?? 0,
+    watchUrl:        d.doramatv_url || null,
+    // Рейтинг: на бэке хранится doramatv_rating (0-10), на фронте 1-5 звёзд
+    rating:          d.doramatv_rating ? Math.round(d.doramatv_rating / 2) : null,
+    ongoing,
+    hasSubs,
+    tags,
+    cover:           null, // бэк пока не хранит обложки
+  };
+}
+
+/**
+ * Получить список всех дорам.
+ * Если пользователь залогинен — берёт дорамы с бэка через /users/me.
+ * Фаллбэк на MOCK_DRAMAS если не авторизован.
  * @param {Object} filters — { status, country, genre, search }
- * TODO: GET /api/dramas?status=watching&country=kr
  */
 export async function getDramas(filters = {}) {
+  // Пытаемся взять данные с бэка
+  const { data: user } = await getMe();
+  if (user?._rawDramas) {
+    let result = user._rawDramas.map(adaptDramaFromApi);
+
+    if (filters.status && filters.status !== 'all') {
+      result = result.filter(d => d.status === filters.status);
+    }
+    if (filters.country) {
+      result = result.filter(d => d.country === filters.country);
+    }
+    if (filters.genre) {
+      result = result.filter(d => d.genres.some(g => g.toLowerCase().includes(filters.genre.toLowerCase())));
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(d => d.title.toLowerCase().includes(q));
+    }
+
+    return { data: result, error: null };
+  }
+
+  // Фаллбэк: мок
   await delay();
   let result = [...MOCK_DRAMAS];
 
@@ -227,13 +287,11 @@ export async function getDramas(filters = {}) {
 }
 
 /**
- * Получить дорамы со статусом "watching"
- * TODO: GET /api/dramas?status=watching
+ * Получить дорамы со статусом "watching".
+ * Идёт через getDramas({ status: 'watching' }), т.е. автоматически использует бэк если залогинен.
  */
 export async function getCurrentlyWatching() {
-  await delay();
-  const watching = MOCK_DRAMAS.filter(d => d.status === 'watching');
-  return { data: watching, error: null };
+  return getDramas({ status: 'watching' });
 }
 
 /**
@@ -309,8 +367,6 @@ export async function getLatestDramas(limit = 10) {
 // AUTH
 // ─────────────────────────────────────────────
 
-const API_BASE = 'http://localhost:8080/api/v1';
-
 /**
  * Зарегистрировать нового пользователя.
  * @param {{ name: string, email: string, password: string }} input
@@ -348,6 +404,51 @@ export async function registerUser({ name, email, password }) {
       error: err instanceof TypeError
         ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
         : 'Ошибка регистрации. Попробуй позже.',
+    };
+  }
+}
+
+/**
+ * Войти в аккаунт.
+ * @param {{ email: string, password: string }} input
+ * @returns {{ data: { user_id: number, email: string, token: string } | null, error: string | null }}
+ *
+ * POST /api/v1/auth/login
+ */
+export async function loginUser({ email, password }) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        return { data: null, error: 'Неверная почта или пароль.' };
+      }
+      if (res.status === 400) {
+        return { data: null, error: json?.error ?? 'Заполни все поля.' };
+      }
+      if (res.status === 404) {
+        return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
+      }
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    // Успех → { user_id, email, token }
+    return { data: json, error: null };
+  } catch (err) {
+    console.error('[API] loginUser network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
+        : 'Ошибка входа. Попробуй позже.',
     };
   }
 }
@@ -391,36 +492,105 @@ export async function getViewMode() {
 }
 
 /**
- * Получить состояние авторизации из кэша.
+ * Получить данные текущего пользователя с бэка.
+ * GET /api/v1/users/me — требует Authorization: Bearer <token>
  *
- * Проверяет localStorage по ключу 'hanbin_user'.
- * Если запись есть — пользователь считается залогиненным.
- * Если записи нет — незалогиненный, показываем unauthorized страницу.
+ * Ответ бэка: { user_id, name, email, dramas[], badges[] }
+ * Адаптируем в формат, который ожидают компоненты (stats, countries, badges).
+ */
+export async function getMe() {
+  const { data: raw, error } = await authGet('/users/me');
+  if (error || !raw) return { data: null, error: error ?? 'no data' };
+
+  // Считаем статистику из списка дорам
+  const dramas = raw.dramas ?? [];
+  const dramasWatched = dramas.filter(d => d.watch_status === 'completed').length;
+  const totalEpisodes = dramas.reduce((sum, d) => sum + (d.current_episode ?? 0), 0);
+  // Среднее: ~45 минут на эпизод
+  const totalHours = Math.round(totalEpisodes * 45 / 60);
+
+  // Группировка по странам
+  const countryMap = {};
+  for (const d of dramas) {
+    const c = d.country || 'unknown';
+    countryMap[c] = (countryMap[c] ?? 0) + 1;
+  }
+  const total = dramas.length || 1;
+  const COUNTRY_META = {
+    Korea:  { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+    China:  { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+    Japan:  { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+  };
+  const countries = Object.entries(countryMap)
+    .map(([country, count]) => {
+      const meta = COUNTRY_META[country] ?? { flag: '🌏', name: country, colorClass: 'fill-korea' };
+      return { code: country.toLowerCase().slice(0, 2), flag: meta.flag, name: meta.name, count, percent: Math.round(count / total * 100), colorClass: meta.colorClass };
+    })
+    .sort((a, b) => b.count - a.count);
+
+  // Бэйджи
+  const BADGE_ICONS = {
+    drama_queen: '👑', k_drama_fan: '🌸', c_drama_explorer: '🏮',
+    '2000h_club': '⏱️', night_owl: '🌙', '100_dramas': '🔒',
+  };
+  const badges = (raw.badges ?? []).map(b => ({
+    id:       b.code,
+    icon:     b.icon || BADGE_ICONS[b.code] || '🏅',
+    name:     b.name,
+    unlocked: true,
+  }));
+
+  // Добавляем заблокированные бэйджи-ориентиры, которых ещё нет у пользователя
+  const LOCKED_BADGES = [
+    { id: '100_dramas', icon: '🔒', name: '100 дорам', unlocked: false },
+  ];
+  for (const locked of LOCKED_BADGES) {
+    if (!badges.find(b => b.id === locked.id)) badges.push(locked);
+  }
+
+  const adapted = {
+    id:     String(raw.user_id),
+    name:   raw.name,
+    email:  raw.email,
+    avatar: raw.name?.slice(0, 2) ?? '소',
+    stats: {
+      dramasWatched,
+      totalEpisodes,
+      totalHours,
+      milestone: 'Drama Queen',
+    },
+    badges,
+    countries: countries.length ? countries : MOCK_USER.countries,
+    // Сырые дорамы для getDramas()
+    _rawDramas: dramas,
+  };
+
+  return { data: adapted, error: null };
+}
+
+/**
+ * Получить состояние авторизации.
  *
- * Чтобы имитировать вход, запиши в консоли браузера:
- *   localStorage.setItem('hanbin_user', JSON.stringify({ id: 'user_001', name: 'Elena' }))
- * Чтобы разлогиниться:
- *   localStorage.removeItem('hanbin_user')
- *
- * TODO: GET /api/auth/me — заменить на реальный запрос когда будет бэкенд
+ * Если в localStorage есть токен + user — считаем залогиненным
+ * и подтягиваем актуальные данные через getMe().
+ * При ошибке getMe — очищаем сессию.
  */
 export async function getAuthState() {
+  // Достаточно наличия токена — всё остальное проверит getMe() через реальный запрос к бэку
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: { isLoggedIn: false, user: null }, error: null };
+
   try {
-    // Чистим устаревший ключ от предыдущей версии
-    localStorage.removeItem('hanbin_logged_in');
-
-    const cached = localStorage.getItem('hanbin_user');
-    if (!cached) return { data: { isLoggedIn: false, user: null }, error: null };
-
-    const user = JSON.parse(cached);
-    // Минимальная валидация: нужен id
-    if (!user?.id) return { data: { isLoggedIn: false, user: null }, error: null };
-
-    // Дополняем кэшированные данные данными из MOCK_USER (до появления реального бэка)
-    const fullUser = { ...MOCK_USER, ...user };
-    return { data: { isLoggedIn: true, user: fullUser }, error: null };
+    const { data: user, error } = await getMe();
+    if (error || !user) {
+      // Токен протух или бэк недоступен — сбрасываем сессию
+      localStorage.removeItem('hanbin_token');
+      localStorage.removeItem('hanbin_user');
+      return { data: { isLoggedIn: false, user: null }, error: null };
+    }
+    return { data: { isLoggedIn: true, user }, error: null };
   } catch {
-    // Битый JSON — чистим кэш и считаем незалогиненным
+    localStorage.removeItem('hanbin_token');
     localStorage.removeItem('hanbin_user');
     return { data: { isLoggedIn: false, user: null }, error: null };
   }

@@ -204,6 +204,7 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
       container.querySelector('#dropdown-logout-btn')?.addEventListener('click', () => {
         avatarDropdown.classList.remove('avatar-dropdown--open');
         localStorage.removeItem('hanbin_user');
+        localStorage.removeItem('hanbin_token');
         navigate('#/guest');
       });
 

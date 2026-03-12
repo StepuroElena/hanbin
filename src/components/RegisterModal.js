@@ -2,10 +2,10 @@
  * HANBIN — Register Modal Component
  */
 
-import { navigate }                                              from '../router.js';
+import { navigate, forceRender }                                 from '../router.js';
 import { t }                                                     from '../i18n/index.js';
 import { closeModal, transitionModalContent, mountLoginContent } from './LoginModal.js';
-import { registerUser }                                          from '../api/mock.js';
+import { registerUser, loginUser }                               from '../api/mock.js';
 
 const LOGO_SVG = `
   <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -148,14 +148,32 @@ async function validateAndRegister() {
   // ─ Успех: сохраняем user_id ─────────────────────────
   console.log('[RegisterModal] Регистрация успешна, user_id:', data.user_id);
 
+  // Получаем JWT-токен сразу после регистрации, чтобы не заставлять пользователя логиниться второй раз
+  setLoadingState(btn, true);
+  const { data: loginData, error: loginError } = await loginUser({
+    email:    emailEl.value.trim(),
+    password: passEl.value,
+  });
+  setLoadingState(btn, false);
+
+  if (loginError || !loginData?.token) {
+    // Регистрация прошла, но автологин не удался — отправляем на страницу логина
+    console.warn('[RegisterModal] Автологин не удался:', loginError);
+    closeModal();
+    navigate('#/guest');
+    return;
+  }
+
+  // Сохраняем токен — дальше getMe() будет его использовать для запросов к бэку
+  localStorage.setItem('hanbin_token', loginData.token);
   localStorage.setItem('hanbin_user', JSON.stringify({
-    id:    data.user_id,
-    name:  data.name,
-    email: data.email,
+    id:    String(loginData.user_id),
+    email: loginData.email,
   }));
 
   closeModal();
   navigate('#/');
+  forceRender();
 }
 
 // Блокируем/разблокируем кнопку во время запроса
@@ -176,7 +194,14 @@ export function mountRegisterContent(content, enterClass) {
 
   if (enterClass) {
     content.classList.add(enterClass);
-    content.addEventListener('animationend', () => content.classList.remove(enterClass), { once: true });
+    const enterAnim = enterClass === 'hb-enter-right' ? 'hb-enterRight' : 'hb-enterLeft';
+    const onEnterEnd = (e) => {
+      if (e.animationName !== enterAnim) return;
+      content.classList.remove(enterClass);
+      content.removeEventListener('animationend', onEnterEnd);
+    };
+    content.addEventListener('animationend', onEnterEnd);
+    setTimeout(() => { content.classList.remove(enterClass); content.removeEventListener('animationend', onEnterEnd); }, 500);
   }
 
   // Восстанавливаем значения
