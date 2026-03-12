@@ -305,9 +305,13 @@ async function validateAndLogin() {
     email: data.email,
   }));
 
+  // Закрываем модалку и сразу рендерим главную.
+  // Не ждём animationend и не полагаемся на hashchange — вызываем forceRender напрямую.
   closeModal();
-  // Перезагружаем страницу, чтобы роутер отработал auth-aware редирект
-  window.location.reload();
+  import('../router.js').then(({ navigate, forceRender }) => {
+    navigate('#/');
+    forceRender();
+  });
 }
 
 // ─── Смонтировать содержимое логина ──────────
