@@ -169,7 +169,7 @@ const LOGO_SVG = `
   </svg>
 `;
 
-function injectModalCSS() {
+export function injectModalCSS() {
   if (document.getElementById('hb-modal-css')) return;
   const style = document.createElement('style');
   style.id = 'hb-modal-css';

@@ -4,7 +4,7 @@
  * Открывается через openAddDramaModal(), закрывается через closeModal() из LoginModal.js.
  */
 
-import { closeModal } from './LoginModal.js';
+import { closeModal, injectModalCSS } from './LoginModal.js';
 import { addDrama, getDramas } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
@@ -937,81 +937,7 @@ export function openAddDramaModal() {
   if (document.getElementById('hb-modal-overlay')) return;
 
   injectAddDramaCSS();
-
-  // Переиспользуем CSS и overlay из LoginModal
-  // (он уже может быть заинжектирован если раньше открывали логин)
-  if (!document.getElementById('hb-modal-css')) {
-    import('./LoginModal.js').then(({ openLoginModal: _ }) => {});
-    // Инжектируем только нужный base CSS
-    const baseStyle = document.createElement('style');
-    baseStyle.id = 'hb-modal-css';
-    baseStyle.textContent = `
-      @keyframes hb-fadeIn  { from{opacity:0} to{opacity:1} }
-      @keyframes hb-fadeOut { from{opacity:1} to{opacity:0} }
-      @keyframes hb-slideUp { from{opacity:0;transform:translateY(28px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
-
-      #hb-modal-overlay {
-        position:fixed; inset:0; z-index:9999;
-        background:rgba(18,6,18,0.78);
-        backdrop-filter:blur(14px);
-        display:flex; align-items:center; justify-content:center;
-        animation: hb-fadeIn 0.25s ease;
-      }
-      #hb-modal-overlay.hb-closing {
-        animation: hb-fadeOut 0.22s ease forwards;
-        pointer-events:none;
-      }
-      #hb-modal-box {
-        width:420px;
-        border-radius:24px;
-        background:linear-gradient(145deg, rgba(74,25,66,0.96), rgba(45,15,42,0.99));
-        border:1px solid rgba(201,123,138,0.28);
-        box-shadow:0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,123,138,0.07);
-        position:relative; overflow:hidden;
-        animation: hb-slideUp 0.32s cubic-bezier(0.34,1.56,0.64,1);
-      }
-      #hb-modal-box::before {
-        content:''; position:absolute; top:-60px; right:-60px;
-        width:200px; height:200px; border-radius:50%;
-        background:radial-gradient(circle, rgba(201,123,138,0.16), transparent 70%);
-        pointer-events:none;
-      }
-      #hb-modal-box::after {
-        content:'✦'; position:absolute; bottom:14px; right:22px;
-        font-size:52px; color:rgba(201,123,138,0.07); pointer-events:none;
-      }
-      #hb-modal-content { padding:44px 40px 40px; position:relative; }
-      #hb-modal-close {
-        position:absolute; top:16px; right:16px; z-index:10;
-        width:32px; height:32px; border-radius:50%;
-        background:rgba(255,255,255,0.06);
-        border:1px solid rgba(232,196,184,0.15);
-        color:rgba(245,230,211,0.45); font-size:18px; cursor:pointer;
-        display:flex; align-items:center; justify-content:center;
-        transition:all 0.2s;
-      }
-      #hb-modal-close:hover { color:#f5e6d3; border-color:rgba(201,123,138,0.45); background:rgba(201,123,138,0.1); }
-      .hb-modal-logo { width:44px; height:44px; margin-bottom:16px; border-radius:10px; display:block; }
-      .hb-modal-title { font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:300; font-style:italic; color:#f5e6d3; letter-spacing:0.02em; margin-bottom:6px; }
-      .hb-modal-sub { font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:rgba(245,230,211,0.38); margin-bottom:28px; }
-      .hb-field { margin-bottom:14px; }
-      .hb-field-label { display:flex; justify-content:space-between; align-items:center; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color:rgba(245,230,211,0.4); margin-bottom:8px; }
-      .hb-required { color:#ff6b8a; }
-      .hb-counter { font-size:10px; color:rgba(245,230,211,0.22); letter-spacing:0; text-transform:none; transition:color 0.2s; }
-      .hb-counter.warn { color:rgba(255,107,138,0.75); }
-      .hb-field-input { width:100%; padding:13px 16px; background:rgba(255,255,255,0.06); border:1px solid rgba(232,196,184,0.18); border-radius:12px; color:#f5e6d3; font-family:'DM Sans',sans-serif; font-size:14px; outline:none; transition:border-color 0.2s, box-shadow 0.2s; box-sizing:border-box; }
-      .hb-field-input::placeholder { color:rgba(245,230,211,0.22); }
-      .hb-field-input:focus { border-color:rgba(201,123,138,0.55); box-shadow:0 0 0 3px rgba(201,123,138,0.08); }
-      .hb-field-input.hb-error { border-color:rgba(255,107,138,0.6); box-shadow:0 0 0 3px rgba(255,107,138,0.07); }
-      .hb-field-error { margin-top:5px; font-size:11px; color:#ff6b8a; min-height:16px; }
-      .hb-btn-primary { width:100%; padding:14px; margin-bottom:4px; border:none; border-radius:12px; color:#fff; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; transition:opacity 0.2s, transform 0.2s; }
-      .hb-btn-primary:disabled { background:rgba(255,255,255,0.08); color:rgba(245,230,211,0.3); cursor:not-allowed; }
-      .hb-btn-primary:not(:disabled) { background:linear-gradient(135deg,#c97b8a,#ff6b8a); cursor:pointer; }
-      .hb-btn-primary:not(:disabled):hover { opacity:0.87; transform:translateY(-1px); }
-      .hb-btn-primary:not(:disabled):active { transform:translateY(0); }
-    `;
-    document.head.appendChild(baseStyle);
-  }
+  injectModalCSS(); // полный CSS из LoginModal — включает .hb-btn-secondary и все остальные стили
 
   // Создаём оверлей
   const wrapper = document.createElement('div');
