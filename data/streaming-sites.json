@@ -1,0 +1,112 @@
+[
+  {
+    "id": 1,
+    "name": "DoramaTV",
+    "url": "https://doramatv.one",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Самая большая база дорам в рунете",
+    "countries": ["KR", "CN", "JP"],
+    "features": ["озвучка", "субтитры"]
+  },
+  {
+    "id": 2,
+    "name": "Dorama.land",
+    "url": "https://dorama.land",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Быстрые обновления, много студий озвучки",
+    "countries": ["KR", "CN", "JP", "TH"],
+    "features": ["озвучка", "субтитры", "расписание онгоингов"]
+  },
+  {
+    "id": 3,
+    "name": "Doramy.club",
+    "url": "https://doramy.club",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Большой каталог с рейтингами и сортировкой",
+    "countries": ["KR", "CN", "JP"],
+    "features": ["озвучка", "рейтинги", "топы"]
+  },
+  {
+    "id": 4,
+    "name": "Doramy.info",
+    "url": "https://doramy.info",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Несколько вариантов озвучек и субтитры",
+    "countries": ["KR", "CN", "JP", "TH", "TW"],
+    "features": ["озвучка", "субтитры"]
+  },
+  {
+    "id": 5,
+    "name": "Doramiru",
+    "url": "https://doram-ru.org",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Без рекламы, новости и обзоры дорам",
+    "countries": ["KR", "CN", "JP", "TH"],
+    "features": ["озвучка", "новости", "без рекламы"]
+  },
+  {
+    "id": 6,
+    "name": "Dorama24",
+    "url": "https://dorama24.su",
+    "language": "ru",
+    "type": "streaming",
+    "free": true,
+    "description": "Более 40 категорий фильтрации, несколько плееров",
+    "countries": ["KR", "CN", "JP", "TH", "PH", "TW"],
+    "features": ["озвучка", "субтитры", "несколько плееров"]
+  },
+  {
+    "id": 7,
+    "name": "Rakuten Viki",
+    "url": "https://viki.com",
+    "language": "en",
+    "type": "streaming",
+    "free": "частично",
+    "description": "Крупнейшая легальная платформа, субтитры на десятках языков",
+    "countries": ["KR", "CN", "JP", "TH"],
+    "features": ["субтитры", "watch party", "приложение", "премиум подписка"]
+  },
+  {
+    "id": 8,
+    "name": "Netflix",
+    "url": "https://netflix.com",
+    "language": "multi",
+    "type": "streaming",
+    "free": false,
+    "description": "Эксклюзивные к-дорамы и собственное производство",
+    "countries": ["KR", "JP"],
+    "features": ["оригиналы", "HD", "приложение", "загрузка офлайн"]
+  },
+  {
+    "id": 9,
+    "name": "iQiyi",
+    "url": "https://iq.com",
+    "language": "multi",
+    "type": "streaming",
+    "free": "частично",
+    "description": "Главная платформа для китайских дорам, официальные релизы",
+    "countries": ["CN", "KR", "TH"],
+    "features": ["субтитры", "приложение", "премиум подписка"]
+  },
+  {
+    "id": 10,
+    "name": "MyDramaList",
+    "url": "https://mydramalist.com",
+    "language": "en",
+    "type": "tracker",
+    "free": true,
+    "description": "Главный трекер и база данных дорам — рейтинги, списки, рецензии",
+    "countries": ["KR", "CN", "JP", "TH", "TW"],
+    "features": ["рейтинги", "трекинг", "рецензии", "база данных", "API"]
+  }
+]

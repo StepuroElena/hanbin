@@ -54,12 +54,6 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
           </a>
         </div>
 
-        <nav class="header__nav hide-mobile">
-          <a href="#/" class="nav-link nav-link--active">${t('header.nav.home')}</a>
-          <a href="#/search" class="nav-link">${t('header.nav.catalog')}</a>
-          <a href="#/profile" class="nav-link">${t('header.nav.my_list')}</a>
-        </nav>
-
         <div class="header__right">
           <div class="search-bar" id="search-bar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -165,8 +159,9 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
     // ── Add drama ──
     container.querySelector('#add-drama-btn').addEventListener('click', () => {
-      console.log('[UI] Add drama clicked — TODO: open modal');
-      alert(t('header.add_todo'));
+      import('./AddDramaModal.js').then(({ openAddDramaModal }) => {
+        openAddDramaModal();
+      });
     });
 
     // ── Avatar dropdown ──

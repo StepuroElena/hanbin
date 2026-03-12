@@ -576,22 +576,49 @@ export async function getMe() {
  * При ошибке getMe — очищаем сессию.
  */
 export async function getAuthState() {
-  // Достаточно наличия токена — всё остальное проверит getMe() через реальный запрос к бэку
   const token = localStorage.getItem('hanbin_token');
   if (!token) return { data: { isLoggedIn: false, user: null }, error: null };
 
   try {
     const { data: user, error } = await getMe();
-    if (error || !user) {
-      // Токен протух или бэк недоступен — сбрасываем сессию
-      localStorage.removeItem('hanbin_token');
-      localStorage.removeItem('hanbin_user');
-      return { data: { isLoggedIn: false, user: null }, error: null };
+
+    if (user) {
+      // Успешно получили данные с бэка
+      return { data: { isLoggedIn: true, user }, error: null };
     }
-    return { data: { isLoggedIn: true, user }, error: null };
-  } catch {
+
+    // Различаем: сетевая ошибка (бэк не запущен) vs 401 (невалидный токен)
+    const isNetworkError = error?.includes('подключиться') || error?.includes('connect') || error === 'no data';
+
+    if (isNetworkError) {
+      // Бэк недоступен — не сбрасываем сессию, используем данные из localStorage
+      const raw = localStorage.getItem('hanbin_user');
+      const cached = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
+      if (cached) {
+        // Отдаём кэшированные данные — пользователь остаётся залогиненным
+        const fallbackUser = {
+          ...MOCK_USER,
+          id:   cached.id   ?? MOCK_USER.id,
+          name: cached.name ?? MOCK_USER.name,
+          email: cached.email ?? '',
+        };
+        return { data: { isLoggedIn: true, user: fallbackUser }, error: null };
+      }
+    }
+
+    // 401 или другая настоящая ошибка авторизации — сбрасываем сессию
     localStorage.removeItem('hanbin_token');
     localStorage.removeItem('hanbin_user');
+    return { data: { isLoggedIn: false, user: null }, error: null };
+
+  } catch {
+    // Неожиданное исключение — не сбрасываем, чтобы не выкидывать пользователя зря
+    const raw = localStorage.getItem('hanbin_user');
+    const cached = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
+    if (cached) {
+      const fallbackUser = { ...MOCK_USER, id: cached.id ?? MOCK_USER.id, name: cached.name ?? MOCK_USER.name };
+      return { data: { isLoggedIn: true, user: fallbackUser }, error: null };
+    }
     return { data: { isLoggedIn: false, user: null }, error: null };
   }
 }
