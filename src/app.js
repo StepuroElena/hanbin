@@ -7,6 +7,7 @@ import { buildCSSVariables } from './styles/theme.js';
 import { globalCSS } from './styles/global.js';
 import { setFavicon } from './utils/favicon.js';
 import { tooltipCSS } from './utils/tooltip.js';
+import { langToggleCSS } from './components/LangToggle.js';
 
 function injectStyles() {
   const rootStyle = document.createElement('style');
@@ -16,7 +17,7 @@ function injectStyles() {
 
   const globalStyle = document.createElement('style');
   globalStyle.id = 'hanbin-global';
-  globalStyle.textContent = globalCSS + tooltipCSS + componentCSS + unauthorizedCSS;
+  globalStyle.textContent = globalCSS + tooltipCSS + langToggleCSS + componentCSS + unauthorizedCSS;
   document.head.appendChild(globalStyle);
 }
 
@@ -155,6 +156,92 @@ const componentCSS = `
 }
 .avatar--guest:hover {
   background: rgba(201,123,138,0.15); border-color: var(--color-rose); color: var(--color-rose);
+}
+
+/* ── Avatar dropdown ── */
+.avatar-wrap {
+  position: relative;
+}
+
+.avatar-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 196px;
+  background: rgba(35, 11, 33, 0.97);
+  border: 1px solid rgba(201,123,138,0.25);
+  border-radius: 16px;
+  padding: 6px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 48px rgba(0,0,0,0.45);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 200;
+}
+
+.avatar-dropdown--open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.avatar-dropdown__user {
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 4px;
+}
+
+.avatar-dropdown__name {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.avatar-dropdown__label {
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.avatar-dropdown__btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: rgba(245,230,211,0.65);
+  transition: var(--transition-fast);
+  text-align: left;
+}
+
+.avatar-dropdown__btn:hover {
+  background: rgba(255,255,255,0.07);
+  color: var(--color-text);
+}
+
+.avatar-dropdown__btn svg {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.avatar-dropdown__btn--logout {
+  color: rgba(255,107,138,0.7);
+  margin-top: 2px;
+}
+
+.avatar-dropdown__btn--logout:hover {
+  background: rgba(255,107,138,0.1);
+  color: var(--color-neon-rose);
 }
 
 /* ── Hero Stats ── */

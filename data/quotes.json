@@ -1,53 +1,308 @@
 [
-  { "emoji": "🌸", "text": "«Если любишь — люби по-настоящему. Не сдерживай себя.»", "source": "Приземление в любовь · 2019" },
-  { "emoji": "🌙", "text": "«Даже если весь мир будет против тебя — я буду на твоей стороне.»", "source": "Токкэби · 2016" },
-  { "emoji": "🏮", "text": "«Сердце человека — не дом с фиксированным числом комнат.»", "source": "Нирвана в огне · 2015" },
-  { "emoji": "🌊", "text": "«Я хочу быть тем, рядом с кем тебе не страшно в шторм.»", "source": "Потомки солнца · 2016" },
-  { "emoji": "🌺", "text": "«Судьба — это лишь имя, которое мы даём выборам, приведшим нас сюда.»", "source": "Любовь между феей и дьяволом · 2022" },
-  { "emoji": "✨", "text": "«Не старайся быть хорошим человеком. Просто будь честным.»", "source": "Мой сосед · 2018" },
-  { "emoji": "🌼", "text": "«Одни вещи стоят слёз. Другие — борьбы. Научись отличать.»", "source": "Ответи 1988 · 2015" },
-  { "emoji": "🎋", "text": "«Самое опасное на свете — сердце, которому больше нечего терять.»", "source": "Магистр дьявольского культа · 2019" },
-  { "emoji": "💫", "text": "«Если мне придётся выбирать между миром и тобой — я выберу тебя.»", "source": "Моя любовь со звезды · 2013" },
-  { "emoji": "🌹", "text": "«Не извиняйся за свои чувства. Они твои — и они настоящие.»", "source": "Королева слёз · 2024" },
-  { "emoji": "🕯️", "text": "«Даже самая долгая ночь в конце концов встречает рассвет.»", "source": "Нирвана в огне · 2015" },
-  { "emoji": "🌸", "text": "«Те, кого стоит любить, — это те, кто видит тебя даже в темноте.»", "source": "Прекрасный бегун · 2024" },
-  { "emoji": "🍂", "text": "«Можно скучать по человеку и всё равно знать, что поступил правильно.»", "source": "Двадцать пять, двадцать один · 2022" },
-  { "emoji": "⛩️", "text": "«Обещание, данное в тишине, весит больше тысячи произнесённых клятв.»", "source": "Пепел любви · 2018" },
-  { "emoji": "🌙", "text": "«Храбрость — это не отсутствие страха. Это решение, что что-то важнее.»", "source": "Винченцо · 2021" },
-  { "emoji": "🫧", "text": "«Ты не можешь контролировать чужое сердце. Но ты можешь беречь своё.»", "source": "Моя тайная жизнь · 2020" },
-  { "emoji": "🌃", "text": "«Иногда молчание — это не пустота. Это самый полный разговор.»", "source": "Тихое море · 2021" },
-  { "emoji": "🌷", "text": "«Быть рядом с тобой — единственное место, где время не имеет значения.»", "source": "Отель Дель Луна · 2019" },
-  { "emoji": "🔮", "text": "«Прошлое нельзя изменить. Но оно не должно решать, кем ты станешь.»", "source": "Выйди замуж за моего мужа · 2024" },
-  { "emoji": "🎴", "text": "«Не бойся быть слабым рядом с тем, кто стал твоей силой.»", "source": "Игра в кальмара · 2021" },
-  { "emoji": "🌿", "text": "«Люди уходят. Но то, что они дали тебе — остаётся навсегда.»", "source": "Мой мистер · 2018" },
-  { "emoji": "🏔️", "text": "«Расстояние между людьми измеряется не километрами, а желанием быть рядом.»", "source": "Приземление в любовь · 2019" },
-  { "emoji": "🌑", "text": "«Я не прошу тебя понять меня. Я прошу тебя не уходить.»", "source": "Тёмная дыра · 2020" },
-  { "emoji": "🎐", "text": "«Там, где заканчиваются слова, начинается настоящее понимание.»", "source": "Больше, чем друзья · 2020" },
-  { "emoji": "🌠", "text": "«Иногда нужно потерять себя, чтобы наконец найти.»", "source": "Итэвон Класс · 2020" },
-  { "emoji": "🍵", "text": "«Самые важные разговоры в жизни происходят за чашкой чего-нибудь тёплого.»", "source": "Кофе, принц · 2007" },
-  { "emoji": "🌬️", "text": "«Ветер не виноват, что уносит лепестки. Таково его предназначение.»", "source": "Хваю · 2016" },
-  { "emoji": "🎭", "text": "«Жизнь — не сценарий. Импровизируй с достоинством.»", "source": "Экстраординарный адвокат У · 2022" },
-  { "emoji": "🌊", "text": "«Океан не помнит каждую волну. Но каждая волна — часть океана.»", "source": "Ты смотришь на звёзды · 2023" },
-  { "emoji": "💎", "text": "«Настоящая ценность человека не в том, что он имеет, а в том, что он отдаёт.»", "source": "Игра в кальмара · 2021" },
-  { "emoji": "🌻", "text": "«Счастье — это не место назначения. Это то, как ты идёшь.»", "source": "Добро пожаловать в Самдаль-ри · 2023" },
-  { "emoji": "🎑", "text": "«Помни: даже луна прячется за облаками, но не перестаёт светить.»", "source": "Лунные влюблённые · 2016" },
-  { "emoji": "🦋", "text": "«Перемены болезненны. Но оставаться прежним — ещё больнее.»", "source": "Моя дорогая · 2020" },
-  { "emoji": "🌸", "text": "«Самые красивые цветы расцветают там, где их не ждали.»", "source": "Восемнадцать снова · 2020" },
-  { "emoji": "🏮", "text": "«Верность — это не слово. Это тысяча маленьких действий каждый день.»", "source": "Нирвана в огне · 2015" },
-  { "emoji": "🌙", "text": "«Не каждая встреча — случайность. И не каждое прощание — конец.»", "source": "Токкэби · 2016" },
-  { "emoji": "🔑", "text": "«У каждой закрытой двери есть свой ключ. Иногда этот ключ — время.»", "source": "Тридцать и девять · 2022" },
-  { "emoji": "🌺", "text": "«Говорить о любви легко. Показывать её каждый день — вот настоящий подвиг.»", "source": "Тайный сад · 2010" },
-  { "emoji": "🎋", "text": "«Гнев, который ты носишь в себе, жжёт прежде всего тебя.»", "source": "Магистр дьявольского культа · 2019" },
-  { "emoji": "🌿", "text": "«Не все раны видны снаружи. Будь добр — ты никогда не знаешь, что прячет улыбка.»", "source": "Это нормально не быть в порядке · 2020" },
-  { "emoji": "✨", "text": "«Даже если ты идёшь медленно — главное, что ты не останавливаешься.»", "source": "Стартап · 2020" },
-  { "emoji": "🌹", "text": "«Любовь — это не то, что ты чувствуешь. Это то, что ты делаешь.»", "source": "Слышишь мой голос? · 2013" },
-  { "emoji": "🌠", "text": "«Иногда правильный ответ — просто остаться рядом.»", "source": "Моя радуга · 2020" },
-  { "emoji": "🍃", "text": "«Ты не обязан быть сильным каждую минуту. Дай себе право на усталость.»", "source": "Это нормально не быть в порядке · 2020" },
-  { "emoji": "🌙", "text": "«Одиночество — не наказание. Иногда это пространство, где ты наконец слышишь себя.»", "source": "Отель Дель Луна · 2019" },
-  { "emoji": "🎐", "text": "«Сила — это не когда не страшно. Сила — это идти вперёд, несмотря на страх.»", "source": "Дорогой Мой Ноблес · 2020" },
-  { "emoji": "🌊", "text": "«Человек, который не умеет ждать, не умеет любить.»", "source": "Господи, дай мне · 2022" },
-  { "emoji": "💫", "text": "«Не все истории заканчиваются хорошо. Но каждая история чему-то учит.»", "source": "Двадцать пять, двадцать один · 2022" },
-  { "emoji": "🏔️", "text": "«Настоящая красота — это не внешность. Это то, как ты относишься к людям.»", "source": "Красавчик Рам-дон · 2023" },
-  { "emoji": "🌸", "text": "«Весна всегда возвращается — даже если зима кажется бесконечной.»", "source": "Прекрасный бегун · 2024" },
-  { "emoji": "🕯️", "text": "«Иногда нужно отпустить, чтобы понять — стоило ли держать.»", "source": "Влюблён в тебя · 2014" }
+  {
+    "emoji": "🌸",
+    "text": "«Если любишь — люби по-настоящему. Не сдерживай себя.»",
+    "source": "Приземление в любовь · 2019",
+    "en": { "text": "«If you love — love truly. Don't hold yourself back.»", "source": "Crash Landing on You · 2019" }
+  },
+  {
+    "emoji": "🌙",
+    "text": "«Даже если весь мир будет против тебя — я буду на твоей стороне.»",
+    "source": "Токкэби · 2016",
+    "en": { "text": "«Even if the whole world is against you — I will be on your side.»", "source": "Goblin · 2016" }
+  },
+  {
+    "emoji": "🏮",
+    "text": "«Сердце человека — не дом с фиксированным числом комнат.»",
+    "source": "Нирвана в огне · 2015",
+    "en": { "text": "«A person's heart is not a house with a fixed number of rooms.»", "source": "Nirvana in Fire · 2015" }
+  },
+  {
+    "emoji": "🌊",
+    "text": "«Я хочу быть тем, рядом с кем тебе не страшно в шторм.»",
+    "source": "Потомки солнца · 2016",
+    "en": { "text": "«I want to be the one beside whom you are not afraid in a storm.»", "source": "Descendants of the Sun · 2016" }
+  },
+  {
+    "emoji": "🌺",
+    "text": "«Судьба — это лишь имя, которое мы даём выборам, приведшим нас сюда.»",
+    "source": "Любовь между феей и дьяволом · 2022",
+    "en": { "text": "«Fate is just the name we give to the choices that brought us here.»", "source": "Love Between Fairy and Devil · 2022" }
+  },
+  {
+    "emoji": "✨",
+    "text": "«Не старайся быть хорошим человеком. Просто будь честным.»",
+    "source": "Мой сосед · 2018",
+    "en": { "text": "«Don't try to be a good person. Just be honest.»", "source": "My Neighbor · 2018" }
+  },
+  {
+    "emoji": "🌼",
+    "text": "«Одни вещи стоят слёз. Другие — борьбы. Научись отличать.»",
+    "source": "Ответи 1988 · 2015",
+    "en": { "text": "«Some things are worth tears. Others are worth fighting for. Learn the difference.»", "source": "Reply 1988 · 2015" }
+  },
+  {
+    "emoji": "🎋",
+    "text": "«Самое опасное на свете — сердце, которому больше нечего терять.»",
+    "source": "Магистр дьявольского культа · 2019",
+    "en": { "text": "«The most dangerous thing in the world is a heart with nothing left to lose.»", "source": "The Untamed · 2019" }
+  },
+  {
+    "emoji": "💫",
+    "text": "«Если мне придётся выбирать между миром и тобой — я выберу тебя.»",
+    "source": "Моя любовь со звезды · 2013",
+    "en": { "text": "«If I had to choose between the world and you — I would choose you.»", "source": "My Love from the Star · 2013" }
+  },
+  {
+    "emoji": "🌹",
+    "text": "«Не извиняйся за свои чувства. Они твои — и они настоящие.»",
+    "source": "Королева слёз · 2024",
+    "en": { "text": "«Don't apologize for your feelings. They are yours — and they are real.»", "source": "Queen of Tears · 2024" }
+  },
+  {
+    "emoji": "🕯️",
+    "text": "«Даже самая долгая ночь в конце концов встречает рассвет.»",
+    "source": "Нирвана в огне · 2015",
+    "en": { "text": "«Even the longest night will eventually meet the dawn.»", "source": "Nirvana in Fire · 2015" }
+  },
+  {
+    "emoji": "🌸",
+    "text": "«Те, кого стоит любить, — это те, кто видит тебя даже в темноте.»",
+    "source": "Прекрасный бегун · 2024",
+    "en": { "text": "«The ones worth loving are those who can see you even in the dark.»", "source": "Lovely Runner · 2024" }
+  },
+  {
+    "emoji": "🍂",
+    "text": "«Можно скучать по человеку и всё равно знать, что поступил правильно.»",
+    "source": "Двадцать пять, двадцать один · 2022",
+    "en": { "text": "«You can miss someone and still know you did the right thing.»", "source": "Twenty-Five Twenty-One · 2022" }
+  },
+  {
+    "emoji": "⛩️",
+    "text": "«Обещание, данное в тишине, весит больше тысячи произнесённых клятв.»",
+    "source": "Пепел любви · 2018",
+    "en": { "text": "«A promise made in silence weighs more than a thousand spoken vows.»", "source": "Ashes of Love · 2018" }
+  },
+  {
+    "emoji": "🌙",
+    "text": "«Храбрость — это не отсутствие страха. Это решение, что что-то важнее.»",
+    "source": "Винченцо · 2021",
+    "en": { "text": "«Courage is not the absence of fear. It is deciding that something matters more.»", "source": "Vincenzo · 2021" }
+  },
+  {
+    "emoji": "🫧",
+    "text": "«Ты не можешь контролировать чужое сердце. Но ты можешь беречь своё.»",
+    "source": "Моя тайная жизнь · 2020",
+    "en": { "text": "«You cannot control another's heart. But you can protect your own.»", "source": "My Secret Life · 2020" }
+  },
+  {
+    "emoji": "🌃",
+    "text": "«Иногда молчание — это не пустота. Это самый полный разговор.»",
+    "source": "Тихое море · 2021",
+    "en": { "text": "«Sometimes silence is not emptiness. It is the fullest conversation of all.»", "source": "The Silent Sea · 2021" }
+  },
+  {
+    "emoji": "🌷",
+    "text": "«Быть рядом с тобой — единственное место, где время не имеет значения.»",
+    "source": "Отель Дель Луна · 2019",
+    "en": { "text": "«Being beside you is the only place where time does not matter.»", "source": "Hotel Del Luna · 2019" }
+  },
+  {
+    "emoji": "🔮",
+    "text": "«Прошлое нельзя изменить. Но оно не должно решать, кем ты станешь.»",
+    "source": "Выйди замуж за моего мужа · 2024",
+    "en": { "text": "«The past cannot be changed. But it should not decide who you become.»", "source": "Marry My Husband · 2024" }
+  },
+  {
+    "emoji": "🎴",
+    "text": "«Не бойся быть слабым рядом с тем, кто стал твоей силой.»",
+    "source": "Игра в кальмара · 2021",
+    "en": { "text": "«Don't be afraid to be weak beside the one who became your strength.»", "source": "Squid Game · 2021" }
+  },
+  {
+    "emoji": "🌿",
+    "text": "«Люди уходят. Но то, что они дали тебе — остаётся навсегда.»",
+    "source": "Мой мистер · 2018",
+    "en": { "text": "«People leave. But what they gave you stays forever.»", "source": "My Mister · 2018" }
+  },
+  {
+    "emoji": "🏔️",
+    "text": "«Расстояние между людьми измеряется не километрами, а желанием быть рядом.»",
+    "source": "Приземление в любовь · 2019",
+    "en": { "text": "«The distance between people is not measured in kilometers, but in the will to be close.»", "source": "Crash Landing on You · 2019" }
+  },
+  {
+    "emoji": "🌑",
+    "text": "«Я не прошу тебя понять меня. Я прошу тебя не уходить.»",
+    "source": "Тёмная дыра · 2020",
+    "en": { "text": "«I'm not asking you to understand me. I'm asking you not to leave.»", "source": "Dark Hole · 2020" }
+  },
+  {
+    "emoji": "🎐",
+    "text": "«Там, где заканчиваются слова, начинается настоящее понимание.»",
+    "source": "Больше, чем друзья · 2020",
+    "en": { "text": "«Where words end, true understanding begins.»", "source": "More Than Friends · 2020" }
+  },
+  {
+    "emoji": "🌠",
+    "text": "«Иногда нужно потерять себя, чтобы наконец найти.»",
+    "source": "Итэвон Класс · 2020",
+    "en": { "text": "«Sometimes you have to lose yourself to finally find who you are.»", "source": "Itaewon Class · 2020" }
+  },
+  {
+    "emoji": "🍵",
+    "text": "«Самые важные разговоры в жизни происходят за чашкой чего-нибудь тёплого.»",
+    "source": "Кофе, принц · 2007",
+    "en": { "text": "«The most important conversations in life happen over something warm to drink.»", "source": "Coffee Prince · 2007" }
+  },
+  {
+    "emoji": "🌬️",
+    "text": "«Ветер не виноват, что уносит лепестки. Таково его предназначение.»",
+    "source": "Хваю · 2016",
+    "en": { "text": "«The wind is not to blame for carrying petals away. That is its purpose.»", "source": "Hwayu · 2016" }
+  },
+  {
+    "emoji": "🎭",
+    "text": "«Жизнь — не сценарий. Импровизируй с достоинством.»",
+    "source": "Экстраординарный адвокат У · 2022",
+    "en": { "text": "«Life is not a script. Improvise with dignity.»", "source": "Extraordinary Attorney Woo · 2022" }
+  },
+  {
+    "emoji": "🌊",
+    "text": "«Океан не помнит каждую волну. Но каждая волна — часть океана.»",
+    "source": "Ты смотришь на звёзды · 2023",
+    "en": { "text": "«The ocean does not remember every wave. But every wave is part of the ocean.»", "source": "My Dearest · 2023" }
+  },
+  {
+    "emoji": "💎",
+    "text": "«Настоящая ценность человека не в том, что он имеет, а в том, что он отдаёт.»",
+    "source": "Игра в кальмара · 2021",
+    "en": { "text": "«A person's true worth lies not in what they have, but in what they give.»", "source": "Squid Game · 2021" }
+  },
+  {
+    "emoji": "🌻",
+    "text": "«Счастье — это не место назначения. Это то, как ты идёшь.»",
+    "source": "Добро пожаловать в Самдаль-ри · 2023",
+    "en": { "text": "«Happiness is not a destination. It is the way you walk.»", "source": "Welcome to Samdal-ri · 2023" }
+  },
+  {
+    "emoji": "🎑",
+    "text": "«Помни: даже луна прячется за облаками, но не перестаёт светить.»",
+    "source": "Лунные влюблённые · 2016",
+    "en": { "text": "«Remember: even the moon hides behind clouds, but never stops shining.»", "source": "Moon Lovers: Scarlet Heart Ryeo · 2016" }
+  },
+  {
+    "emoji": "🦋",
+    "text": "«Перемены болезненны. Но оставаться прежним — ещё больнее.»",
+    "source": "Моя дорогая · 2020",
+    "en": { "text": "«Change is painful. But staying the same hurts even more.»", "source": "My Dear · 2020" }
+  },
+  {
+    "emoji": "🌸",
+    "text": "«Самые красивые цветы расцветают там, где их не ждали.»",
+    "source": "Восемнадцать снова · 2020",
+    "en": { "text": "«The most beautiful flowers bloom where they are least expected.»", "source": "18 Again · 2020" }
+  },
+  {
+    "emoji": "🏮",
+    "text": "«Верность — это не слово. Это тысяча маленьких действий каждый день.»",
+    "source": "Нирвана в огне · 2015",
+    "en": { "text": "«Loyalty is not a word. It is a thousand small actions every single day.»", "source": "Nirvana in Fire · 2015" }
+  },
+  {
+    "emoji": "🌙",
+    "text": "«Не каждая встреча — случайность. И не каждое прощание — конец.»",
+    "source": "Токкэби · 2016",
+    "en": { "text": "«Not every encounter is a coincidence. And not every goodbye is an end.»", "source": "Goblin · 2016" }
+  },
+  {
+    "emoji": "🔑",
+    "text": "«У каждой закрытой двери есть свой ключ. Иногда этот ключ — время.»",
+    "source": "Тридцать и девять · 2022",
+    "en": { "text": "«Every closed door has its key. Sometimes that key is time.»", "source": "Thirty-Nine · 2022" }
+  },
+  {
+    "emoji": "🌺",
+    "text": "«Говорить о любви легко. Показывать её каждый день — вот настоящий подвиг.»",
+    "source": "Тайный сад · 2010",
+    "en": { "text": "«Talking about love is easy. Showing it every day — that is the real feat.»", "source": "Secret Garden · 2010" }
+  },
+  {
+    "emoji": "🎋",
+    "text": "«Гнев, который ты носишь в себе, жжёт прежде всего тебя.»",
+    "source": "Магистр дьявольского культа · 2019",
+    "en": { "text": "«The anger you carry inside burns you before it burns anyone else.»", "source": "The Untamed · 2019" }
+  },
+  {
+    "emoji": "🌿",
+    "text": "«Не все раны видны снаружи. Будь добр — ты никогда не знаешь, что прячет улыбка.»",
+    "source": "Это нормально не быть в порядке · 2020",
+    "en": { "text": "«Not all wounds are visible. Be kind — you never know what a smile is hiding.»", "source": "It's Okay to Not Be Okay · 2020" }
+  },
+  {
+    "emoji": "✨",
+    "text": "«Даже если ты идёшь медленно — главное, что ты не останавливаешься.»",
+    "source": "Стартап · 2020",
+    "en": { "text": "«Even if you walk slowly — what matters is that you don't stop.»", "source": "Start-Up · 2020" }
+  },
+  {
+    "emoji": "🌹",
+    "text": "«Любовь — это не то, что ты чувствуешь. Это то, что ты делаешь.»",
+    "source": "Слышишь мой голос? · 2013",
+    "en": { "text": "«Love is not what you feel. It is what you do.»", "source": "I Hear Your Voice · 2013" }
+  },
+  {
+    "emoji": "🌠",
+    "text": "«Иногда правильный ответ — просто остаться рядом.»",
+    "source": "Моя радуга · 2020",
+    "en": { "text": "«Sometimes the right answer is simply to stay.»", "source": "My Rainbow · 2020" }
+  },
+  {
+    "emoji": "🍃",
+    "text": "«Ты не обязан быть сильным каждую минуту. Дай себе право на усталость.»",
+    "source": "Это нормально не быть в порядке · 2020",
+    "en": { "text": "«You don't have to be strong every minute. Give yourself permission to be tired.»", "source": "It's Okay to Not Be Okay · 2020" }
+  },
+  {
+    "emoji": "🌙",
+    "text": "«Одиночество — не наказание. Иногда это пространство, где ты наконец слышишь себя.»",
+    "source": "Отель Дель Луна · 2019",
+    "en": { "text": "«Solitude is not a punishment. Sometimes it is the space where you finally hear yourself.»", "source": "Hotel Del Luna · 2019" }
+  },
+  {
+    "emoji": "🎐",
+    "text": "«Сила — это не когда не страшно. Сила — это идти вперёд, несмотря на страх.»",
+    "source": "Дорогой Мой Ноблес · 2020",
+    "en": { "text": "«Strength is not when you're not afraid. Strength is moving forward in spite of fear.»", "source": "Dear My Noblesse · 2020" }
+  },
+  {
+    "emoji": "🌊",
+    "text": "«Человек, который не умеет ждать, не умеет любить.»",
+    "source": "Господи, дай мне · 2022",
+    "en": { "text": "«A person who cannot wait does not know how to love.»", "source": "Oh My God · 2022" }
+  },
+  {
+    "emoji": "💫",
+    "text": "«Не все истории заканчиваются хорошо. Но каждая история чему-то учит.»",
+    "source": "Двадцать пять, двадцать один · 2022",
+    "en": { "text": "«Not all stories end well. But every story teaches you something.»", "source": "Twenty-Five Twenty-One · 2022" }
+  },
+  {
+    "emoji": "🏔️",
+    "text": "«Настоящая красота — это не внешность. Это то, как ты относишься к людям.»",
+    "source": "Красавчик Рам-дон · 2023",
+    "en": { "text": "«True beauty is not appearance. It is how you treat people.»", "source": "Handsome Ramyeon · 2023" }
+  },
+  {
+    "emoji": "🌸",
+    "text": "«Весна всегда возвращается — даже если зима кажется бесконечной.»",
+    "source": "Прекрасный бегун · 2024",
+    "en": { "text": "«Spring always comes back — even when winter feels endless.»", "source": "Lovely Runner · 2024" }
+  },
+  {
+    "emoji": "🕯️",
+    "text": "«Иногда нужно отпустить, чтобы понять — стоило ли держать.»",
+    "source": "Влюблён в тебя · 2014",
+    "en": { "text": "«Sometimes you have to let go to find out whether it was worth holding on.»", "source": "Fated to Love You · 2014" }
+  }
 ]

@@ -9,26 +9,31 @@ import { renderDramaCards, renderDramaTable } from '../components/DramaCard.js';
 import { renderActivityFeed } from '../components/ActivityFeed.js';
 import { renderSidebar }     from '../components/Sidebar.js';
 import { getDramas, getCurrentlyWatching } from '../api/mock.js';
+import { t, onLangChange } from '../i18n/index.js';
 
 export async function renderHome(container) {
-  container.innerHTML = `
-    <div id="header-slot"></div>
-    <div class="container">
-      <div id="stats-slot"></div>
-      <div id="filters-slot"></div>
-      <section class="section">
-        <div class="section-header">
-          <div class="section-title">Сейчас смотрю</div>
-          <button class="see-all" id="see-all-watching">Все →</button>
+  function buildShell() {
+    return `
+      <div id="header-slot"></div>
+      <div class="container">
+        <div id="stats-slot"></div>
+        <div id="filters-slot"></div>
+        <section class="section">
+          <div class="section-header">
+            <div class="section-title">${t('home.currently_watching')}</div>
+            <button class="see-all" id="see-all-watching">${t('home.see_all')}</button>
+          </div>
+          <div id="watching-slot"></div>
+        </section>
+        <div class="two-col">
+          <div id="activity-slot"></div>
+          <div id="sidebar-slot"></div>
         </div>
-        <div id="watching-slot"></div>
-      </section>
-      <div class="two-col">
-        <div id="activity-slot"></div>
-        <div id="sidebar-slot"></div>
       </div>
-    </div>
-  `;
+    `;
+  }
+
+  container.innerHTML = buildShell();
 
   let currentView = 'card';
   let currentFilters = { status: 'all' };
@@ -63,7 +68,7 @@ export async function renderHome(container) {
   // ── Currently Watching ──
   async function loadWatching() {
     const slot = container.querySelector('#watching-slot');
-    slot.innerHTML = '<div class="loading-dots">Загрузка…</div>';
+    slot.innerHTML = `<div class="loading-dots">${t('loading')}</div>`;
     const { data } = await getDramas(currentFilters);
     if (currentView === 'table') {
       renderDramaTable(slot, data);
@@ -78,6 +83,14 @@ export async function renderHome(container) {
   container.querySelector('#see-all-watching')?.addEventListener('click', () => {
     console.log('[UI] See all watching');
     // TODO: navigate('#/my-list?status=watching')
+  });
+
+  // ── Update section title on lang change ──
+  onLangChange(() => {
+    const title = container.querySelector('.section-title');
+    if (title) title.textContent = t('home.currently_watching');
+    const seeAll = container.querySelector('#see-all-watching');
+    if (seeAll) seeAll.textContent = t('home.see_all');
   });
 
   // ── Activity + Sidebar (parallel) ──

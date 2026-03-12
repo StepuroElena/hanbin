@@ -23,6 +23,9 @@ export const translations = {
     'header.tooltip.login':       'Войти в аккаунт',
     'header.tooltip.lang':        'Switch to English',
     'header.add_todo':            'Форма добавления дорамы — TODO: подключить к бэку 🌸',
+    'header.dropdown.profile':     'Профиль',
+    'header.dropdown.settings':    'Настройки',
+    'header.dropdown.logout':      'Выйти из аккаунта',
     'header.search_not_found':    'Ничего не найдено по «{q}»',
 
     // Stats block
@@ -119,13 +122,13 @@ export const translations = {
     'modal.reg.name_ph':          'Как тебя зовут?',
     'modal.reg.email':            'Email',
     'modal.reg.password':         'Пароль',
-    'modal.reg.pass_ph':          'Минимум 6 символов',
+    'modal.reg.pass_ph':          'Минимум 8 символов',
     'modal.reg.btn':              'Зарегистрироваться',
     'modal.reg.or':               'или',
     'modal.reg.to_login':         'Войти',
     'modal.reg.err_name':         '⚠ Имя слишком короткое',
     'modal.reg.err_email':        '⚠ Некорректный адрес почты',
-    'modal.reg.err_pass':         '⚠ Минимум 6 символов',
+    'modal.reg.err_pass':         '⚠ Минимум 8 символов',
     'modal.reg.success':          '✓ Аккаунт создан! (TODO: подключить к API)',
   },
 
@@ -143,6 +146,9 @@ export const translations = {
     'header.tooltip.login':       'Sign in',
     'header.tooltip.lang':        'Переключить на русский',
     'header.add_todo':            'Add drama form — TODO: connect to backend 🌸',
+    'header.dropdown.profile':     'Profile',
+    'header.dropdown.settings':    'Settings',
+    'header.dropdown.logout':      'Sign out',
     'header.search_not_found':    'Nothing found for "{q}"',
 
     // Stats block
@@ -239,13 +245,13 @@ export const translations = {
     'modal.reg.name_ph':          'What’s your name?',
     'modal.reg.email':            'Email',
     'modal.reg.password':         'Password',
-    'modal.reg.pass_ph':          'At least 6 characters',
+    'modal.reg.pass_ph':          'At least 8 characters',
     'modal.reg.btn':              'Create account',
     'modal.reg.or':               'or',
     'modal.reg.to_login':         'Sign in',
     'modal.reg.err_name':         '⚠ Name is too short',
     'modal.reg.err_email':        '⚠ Invalid email address',
-    'modal.reg.err_pass':         '⚠ At least 6 characters',
+    'modal.reg.err_pass':         '⚠ At least 8 characters',
     'modal.reg.success':          '✓ Account created! (TODO: connect to API)',
   },
 };
