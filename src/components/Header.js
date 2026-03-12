@@ -165,8 +165,9 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
     // ── Add drama ──
     container.querySelector('#add-drama-btn').addEventListener('click', () => {
-      console.log('[UI] Add drama clicked — TODO: open modal');
-      alert(t('header.add_todo'));
+      import('./AddDramaModal.js').then(({ openAddDramaModal }) => {
+        openAddDramaModal();
+      });
     });
 
     // ── Avatar dropdown ──
