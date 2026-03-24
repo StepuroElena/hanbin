@@ -99,12 +99,7 @@ export const globalCSS = `
     white-space: nowrap;
   }
 
-  .badge--watching  { background: rgba(122,171,142,0.35); color: var(--color-jade);     border-color: rgba(122,171,142,0.4); }
-  .badge--completed { background: rgba(212,165,116,0.3);  color: var(--color-gold);     border-color: rgba(212,165,116,0.4); }
-  .badge--plan      { background: rgba(232,196,184,0.12); color: var(--color-blush);    border-color: rgba(232,196,184,0.3); }
-  .badge--dropped   { background: rgba(255,107,138,0.2);  color: var(--color-neon-rose);border-color: rgba(255,107,138,0.4); }
-  .badge--ongoing   { background: rgba(255,107,138,0.25); color: var(--color-neon-rose);border-color: rgba(255,107,138,0.35); }
-  .badge--ru        { background: rgba(74,25,66,0.6);     color: var(--color-blush);    border-color: rgba(232,196,184,0.25); }
+  /* badge--* colours are defined in app.js componentCSS (single source of truth) */
 
   .section-title {
     font-family: var(--font-display);

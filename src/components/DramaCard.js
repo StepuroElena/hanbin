@@ -3,7 +3,7 @@
  */
 
 import { updateDramaStatus, rateDrama, deleteDrama } from '../api/mock.js';
-import { renderStars, statusLabel } from '../utils/helpers.js';
+import { renderStars, statusLabel, fetchPoster, defaultPosterURI } from '../utils/helpers.js';
 
 /** Рендерит сетку карточек */
 export function renderDramaCards(container, dramas) {
@@ -25,6 +25,36 @@ export function renderDramaCards(container, dramas) {
       ${dramas.map((d, i) => dramaCardHTML(d, i)).join('')}
     </div>
   `;
+
+  // 1. Сразу выставляем inline SVG-плейсхолдер (никаких файлов на нашей стороне)
+  container.querySelectorAll('.card-cover img:not([src])').forEach(img => {
+    img.src = defaultPosterURI();
+  });
+
+  // 2. Асинхронно подгружаем реальные постеры с doramatv.one
+  //    Каждая карточка получает постер независимо — не блокируем рендер
+  dramas.forEach(drama => {
+    if (drama.cover) return; // постер уже есть — не трогаем
+
+    const card = container.querySelector(`.watching-card[data-id="${drama.id}"]`);
+    const img  = card?.querySelector('.card-cover img');
+    if (!img) return;
+
+    fetchPoster(drama.title, drama.watchUrl).then(posterUrl => {
+      if (!posterUrl) return; // нет результата — плейсхолдер остаётся
+      // Плавно заменяем плейсхолдер на реальный постер
+      const fresh = new Image();
+      fresh.onload = () => {
+        img.style.transition = 'opacity 0.4s ease';
+        img.style.opacity = '0';
+        setTimeout(() => {
+          img.src = posterUrl;
+          img.style.opacity = '1';
+        }, 200);
+      };
+      fresh.src = posterUrl;
+    });
+  });
 
   // Attach events
   container.querySelectorAll('.watching-card').forEach(card => {
@@ -59,11 +89,13 @@ export function renderDramaCards(container, dramas) {
 /** Рендерит одну карточку */
 function dramaCardHTML(d, index) {
   const progress = d.episodesTotal ? Math.round((d.episodesWatched / d.episodesTotal) * 100) : 0;
+  // cover выставляется через JS после вставки DOM (data-cover) чтобы не ломать HTML-атрибуты
+  const hasCover = Boolean(d.cover);
 
   return `
     <div class="watching-card" data-id="${d.id}" style="animation: fadeUp 0.5s ${0.1 + index * 0.07}s ease both">
       <div class="card-cover">
-        <img src="${d.cover}" alt="${d.title}" loading="lazy">
+        <img ${hasCover ? `src="${d.cover}"` : ''} data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
         <div class="card-cover-overlay"></div>
 
         <div class="card-badges">
@@ -126,7 +158,7 @@ export function renderDramaTable(container, dramas) {
             <tr class="drama-table__row" data-id="${d.id}">
               <td>
                 <div class="table-drama-title">
-                  <img src="${d.cover}" alt="${d.title}" class="table-thumb">
+                  <img class="table-thumb" data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
                   <span>${d.title}</span>
                 </div>
               </td>
@@ -144,6 +176,23 @@ export function renderDramaTable(container, dramas) {
       </table>
     </div>
   `;
+
+  // Плейсхолдер + асинхронная подгрузка постера для каждой строки
+  container.querySelectorAll('.table-thumb:not([src])').forEach(img => {
+    img.src = defaultPosterURI();
+    const title = img.dataset.title;
+    if (!title) return;
+    fetchPoster(title).then(posterUrl => {
+      if (!posterUrl) return;
+      const fresh = new Image();
+      fresh.onload = () => {
+        img.style.transition = 'opacity 0.35s ease';
+        img.style.opacity = '0';
+        setTimeout(() => { img.src = posterUrl; img.style.opacity = '1'; }, 150);
+      };
+      fresh.src = posterUrl;
+    });
+  });
 
   container.querySelectorAll('.drama-table__row').forEach(row => {
     row.querySelector('.table-watch-btn')?.addEventListener('click', (e) => {
