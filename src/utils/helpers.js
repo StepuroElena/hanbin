@@ -114,6 +114,7 @@ export async function fetchPoster(title, watchUrl) {
  * Никаких файлов на нашей стороне — чистый JS.
  */
 export function defaultPosterURI() {
+  const label = t('poster.no_poster');
   const svg = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">',
     '<defs>',
@@ -165,7 +166,7 @@ export function defaultPosterURI() {
     '<circle cx="100" cy="150" r="1.5" fill="#fff" fill-opacity="0.6"/>',
     '<line x1="46" y1="200" x2="154" y2="200" stroke="#c97b8a" stroke-width="0.8" stroke-opacity="0.55"/>',
     '<line x1="64" y1="205" x2="136" y2="205" stroke="#c97b8a" stroke-width="0.4" stroke-opacity="0.3"/>',
-    '<text x="100" y="224" font-family="Georgia,serif" font-size="10" fill="#f5e6d3" fill-opacity="0.65" text-anchor="middle" letter-spacing="4">НЕТ ПОСТЕРА</text>',
+    `<text x="100" y="224" font-family="Georgia,serif" font-size="10" fill="#f5e6d3" fill-opacity="0.65" text-anchor="middle" letter-spacing="4">${label}</text>`,
     '<text x="30" y="28" font-family="serif" font-size="9" fill="#c97b8a" fill-opacity="0.55" text-anchor="middle">✦</text>',
     '<text x="170" y="28" font-family="serif" font-size="9" fill="#c97b8a" fill-opacity="0.55" text-anchor="middle">✦</text>',
     '<text x="30" y="284" font-family="serif" font-size="9" fill="#7aab8e" fill-opacity="0.5" text-anchor="middle">✦</text>',

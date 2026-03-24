@@ -81,6 +81,7 @@ export const translations = {
     'status.dropped':             'Брошено',
     'status.ongoing':             'Выходит',
     'status.no_rating':           'Не оценено',
+    'poster.no_poster':            'НЕТ ПОСТЕРА',
 
     // Unauthorized page
     'unauth.eyebrow':             'Трекер дорам для настоящих ценителей ✦',
@@ -257,6 +258,7 @@ export const translations = {
     'status.dropped':             'Dropped',
     'status.ongoing':             'Ongoing',
     'status.no_rating':           'Not rated',
+    'poster.no_poster':            'NO POSTER',
 
     // Unauthorized page
     'unauth.eyebrow':             'Drama tracker for true connoisseurs ✦',
