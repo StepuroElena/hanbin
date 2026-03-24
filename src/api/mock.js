@@ -7,7 +7,7 @@
  * Задержка configurable через MOCK_DELAY.
  */
 
-import { API_BASE, authGet } from './client.js';
+import { API_BASE, authGet, authPost } from './client.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -208,30 +208,55 @@ export async function getUser() {
 
 /**
  * Адаптирует дораму с бэка в формат, который ожидают компоненты.
- * Бэк: { id, name, year, genre, country, watch_status, current_episode, total_episodes, doramatv_url, doramatv_rating, tags }
- * Фронт: { id, title, year, genres[], country, status, episodesWatched, episodesTotal, watchUrl, rating, hasSubs, ongoing, cover }
+ *
+ * Бэк (DramaOutput):
+ *   id, profile_id, title, watch_url, release_year, release_tag,
+ *   translation_tag, genre, rating (0–10 | null), watch_status,
+ *   country, created_at, updated_at
+ *
+ * Фронт:
+ *   id, title, year, genres[], country, status, episodesWatched,
+ *   episodesTotal, watchUrl, rating (1–5 | null), hasSubs, ongoing, cover
+ *
+ * watch_status маппинг:
+ *   planned   → plan
+ *   watching  → watching
+ *   completed → completed
+ *   dropped   → dropped
  */
 function adaptDramaFromApi(d) {
-  // Определяем по тегам
-  const tags = d.tags ?? [];
-  const ongoing = tags.some(t => t.toLowerCase().includes('выходит') || t.toLowerCase() === 'ongoing');
-  const hasSubs = tags.some(t => t.toLowerCase().includes('перевод') || t.toLowerCase() === 'subbed');
+  // release_tag: 'ongoing' | 'released'
+  const ongoing = d.release_tag === 'ongoing';
+
+  // translation_tag: 'translated' | 'translating'
+  const hasSubs = d.translation_tag === 'translated';
+
+  // watch_status с бэка может быть 'planned', на фронте ожидается 'plan'
+  const STATUS_MAP = {
+    planned:   'plan',
+    watching:  'watching',
+    completed: 'completed',
+    dropped:   'dropped',
+  };
+  const status = STATUS_MAP[d.watch_status] ?? d.watch_status;
+
+  // Рейтинг: бэк хранит 0–10 (float), фронт показывает 1–5 звёзд
+  const rating = d.rating != null ? Math.round(d.rating / 2) || 1 : null;
 
   return {
     id:              String(d.id),
-    title:           d.name,
-    year:            d.year || null,
+    title:           d.title,
+    year:            d.release_year || null,
     genres:          d.genre ? [d.genre] : [],
     country:         (d.country || '').toLowerCase().slice(0, 2),
-    status:          d.watch_status,
-    episodesWatched: d.current_episode ?? 0,
-    episodesTotal:   d.total_episodes ?? 0,
-    watchUrl:        d.doramatv_url || null,
-    // Рейтинг: на бэке хранится doramatv_rating (0-10), на фронте 1-5 звёзд
-    rating:          d.doramatv_rating ? Math.round(d.doramatv_rating / 2) : null,
+    status,
+    // Бэк пока не хранит прогресс по эпизодам — показываем 0/0
+    episodesWatched: 0,
+    episodesTotal:   0,
+    watchUrl:        d.watch_url || null,
+    rating,
     ongoing,
     hasSubs,
-    tags,
     cover:           null, // бэк пока не хранит обложки
   };
 }
@@ -245,7 +270,7 @@ function adaptDramaFromApi(d) {
 export async function getDramas(filters = {}) {
   // Пытаемся взять данные с бэка
   const { data: user } = await getMe();
-  if (user?._rawDramas) {
+  if (user?._rawDramas?.length) {
     let result = user._rawDramas.map(adaptDramaFromApi);
 
     if (filters.status && filters.status !== 'all') {
@@ -308,14 +333,45 @@ export async function getActivity(limit = 5) {
 }
 
 /**
- * Добавить дораму в список
+ * Добавить дораму в список.
+ * Если пользователь авторизован — реальный вызов POST /api/v1/dramas.
+ * Фаллбэк на мок если не авторизован.
+ *
  * @param {Object} drama
- * TODO: POST /api/dramas
+ * @param {string} drama.title          — название (обязательно)
+ * @param {string} drama.watchUrl       — ссылка на сайт (обязательно)
+ * @param {string[]} drama.genres       — жанры (первый отправляется на бэк; обязательно)
+ * @param {string} drama.country        — код страны (обязательно)
+ * @param {number} drama.year           — год выпуска
+ * @param {string} drama.releaseTag     — 'ongoing' | 'released'
+ * @param {string} drama.subTag         — 'translated' | 'translating'
+ * @param {number|null} drama.rating    — звёзды 1–5 (на бэк отправляется как float 0–10)
  */
 export async function addDrama(drama) {
-  await delay();
-  console.log('[MOCK] addDrama:', drama);
-  return { data: { ...drama, id: `drama_${Date.now()}` }, error: null };
+  const token = localStorage.getItem('hanbin_token');
+
+  // Фаллбэк на мок если не авторизован
+  if (!token) {
+    await delay();
+    console.log('[MOCK] addDrama (not logged in, using mock):', drama);
+    return { data: { ...drama, id: `drama_${Date.now()}` }, error: null };
+  }
+
+  // Адаптируем формат фронта в формат, который ожидает бэк
+  const payload = {
+    title:           drama.title,
+    watch_url:       drama.watchUrl ?? '',
+    release_year:    drama.year ?? new Date().getFullYear(),
+    release_tag:     drama.tags?.includes('ongoing') ? 'ongoing' : 'released',
+    translation_tag: drama.tags?.includes('translated') ? 'translated' : 'translating',
+    genre:           drama.genres?.[0] ?? '',
+    country:         drama.country ?? '',
+    // Рейтинг: звёзды 1–5 → float 0–10 (на бэке 0–10)
+    ...(drama.rating != null ? { rating: drama.rating * 2 } : {}),
+  };
+
+  console.log('[API] addDrama payload:', payload);
+  return authPost('/dramas', payload);
 }
 
 /**
@@ -497,16 +553,38 @@ export async function getViewMode() {
  *
  * Ответ бэка: { user_id, name, email, dramas[], badges[] }
  * Адаптируем в формат, который ожидают компоненты (stats, countries, badges).
+ *
+ * Кэшируется на 5 секунд чтобы не слать параллельные запросы
+ * когда несколько компонентов (StatsBlock, DramaList, Sidebar) обновляются одновременно.
+ * Инвалидируется через invalidateUserCache().
  */
+let _getMeCache = null;      // { data, ts } — результат последнего запроса
+let _getMeInflight = null;   // Promise — проброс для параллельных вызов
+const GET_ME_TTL = 5000;     // ms
+
 export async function getMe() {
+  // Возвращаем кэш если он свежий
+  if (_getMeCache && (Date.now() - _getMeCache.ts) < GET_ME_TTL) {
+    return _getMeCache.data;
+  }
+
+  // Если запрос уже летит — подключаемся к нему без нового fetch
+  if (_getMeInflight) return _getMeInflight;
+
+  _getMeInflight = (async () => {
   const { data: raw, error } = await authGet('/users/me');
   if (error || !raw) return { data: null, error: error ?? 'no data' };
 
-  // Считаем статистику из списка дорам
+  // Считаем статистику из списка дорам.
+  // Бэк не хранит прогресс по эпизодам (current_episode/total_episodes),
+  // поэтому считаем только по количеству дорам с учётом статуса.
   const dramas = raw.dramas ?? [];
-  const dramasWatched = dramas.filter(d => d.watch_status === 'completed').length;
-  const totalEpisodes = dramas.reduce((sum, d) => sum + (d.current_episode ?? 0), 0);
-  // Среднее: ~45 минут на эпизод
+  const dramasWatched  = dramas.filter(d => d.watch_status === 'completed').length;
+  const dramasWatching = dramas.filter(d => d.watch_status === 'watching').length;
+  // Суммарные «эпизоды» = завершённые дорамы (приблизительно, без данных о кол-ве серий)
+  // Засчитываем и те, что смотрим сейчас, чтобы цифра не была нулевой
+  const totalEpisodes  = dramasWatched + dramasWatching;
+  // Среднее: ~45 минут на эпизод условной «дорамы» (будет заменено когда бэк отдаст реальный прогресс)
   const totalHours = Math.round(totalEpisodes * 45 / 60);
 
   // Группировка по странам
@@ -516,10 +594,15 @@ export async function getMe() {
     countryMap[c] = (countryMap[c] ?? 0) + 1;
   }
   const total = dramas.length || 1;
+  // Бэк хранит страну как полное название на английском: 'Korea', 'China', 'Japan'
   const COUNTRY_META = {
-    Korea:  { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
-    China:  { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
-    Japan:  { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+    Korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+    China:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+    Japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+    // Страховка на случай если бэк вернёт другой регистр или вариант
+    korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+    china:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+    japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
   };
   const countries = Object.entries(countryMap)
     .map(([country, count]) => {
@@ -565,7 +648,16 @@ export async function getMe() {
     _rawDramas: dramas,
   };
 
-  return { data: adapted, error: null };
+    const result = { data: adapted, error: null };
+    // Сохраняем в кэш
+    _getMeCache = { data: result, ts: Date.now() };
+    return result;
+  })();
+
+  // После завершения (успех или ошибка) сбрасываем inflight-промис
+  _getMeInflight.finally(() => { _getMeInflight = null; });
+
+  return _getMeInflight;
 }
 
 /**
@@ -621,4 +713,22 @@ export async function getAuthState() {
     }
     return { data: { isLoggedIn: false, user: null }, error: null };
   }
+}
+
+// ─────────────────────────────────────────────
+// CACHE INVALIDATION
+// ─────────────────────────────────────────────
+
+/**
+ * Инвалидирует кэш данных пользователя:
+ * эмитит событие 'hanbin:data-changed' — компоненты (Home, StatsBlock, Sidebar)
+ * подписываются на него и перезапрашивают данные с бэка.
+ * Вызывается после addDrama, updateDrama и т.д.
+ */
+export function invalidateUserCache() {
+  // Сбрасываем оба кэша — результат и in-flight промис.
+  // Следующий вызов getMe гарантированно пойдёт на GET /users/me.
+  _getMeCache = null;
+  _getMeInflight = null;
+  window.dispatchEvent(new CustomEvent('hanbin:data-changed'));
 }

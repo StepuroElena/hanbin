@@ -80,6 +80,7 @@ export const translations = {
     'status.plan':                'Запланировано',
     'status.dropped':             'Брошено',
     'status.ongoing':             'Выходит',
+    'status.no_rating':           'Не оценено',
 
     // Unauthorized page
     'unauth.eyebrow':             'Трекер дорам для настоящих ценителей ✦',
@@ -255,6 +256,7 @@ export const translations = {
     'status.plan':                'Plan to watch',
     'status.dropped':             'Dropped',
     'status.ongoing':             'Ongoing',
+    'status.no_rating':           'Not rated',
 
     // Unauthorized page
     'unauth.eyebrow':             'Drama tracker for true connoisseurs ✦',

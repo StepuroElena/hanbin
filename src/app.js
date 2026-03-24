@@ -340,7 +340,8 @@ const componentCSS = `
 .drama-table__row:hover { background: var(--color-surface); }
 .drama-table__row td { padding: 12px; vertical-align: middle; }
 .table-drama-title { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 15px; color: var(--color-text); }
-.table-thumb { width: 28px; height: 38px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+.table-thumb { width: 26px; height: 36px; border-radius: 5px; object-fit: cover; flex-shrink: 0; opacity: 0.9; transition: opacity 0.2s; }
+.drama-table__row:hover .table-thumb { opacity: 1; }
 .table-muted { font-size: 12px; color: var(--color-text-muted); }
 .table-watch-btn { background: none; border: none; color: var(--color-rose); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: var(--transition-fast); }
 .table-watch-btn:hover { background: var(--color-accentGlow); }
@@ -401,12 +402,18 @@ const componentCSS = `
 
 /* ── Badges shared ── */
 .badge { padding: 3px 8px; border-radius: 20px; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; backdrop-filter: blur(8px); }
-.badge-watching  { background: rgba(122,171,142,0.35); color: var(--color-jade);  border: 1px solid rgba(122,171,142,0.4); }
-.badge-completed { background: rgba(212,165,116,0.3);  color: var(--color-gold);  border: 1px solid rgba(212,165,116,0.4); }
-.badge-ongoing   { background: rgba(255,107,138,0.25); color: #ff6b8a;            border: 1px solid rgba(255,107,138,0.35); }
-.badge--ongoing  { background: rgba(255,107,138,0.7);  color: #fff;               border: 1px solid rgba(255,107,138,0.85); }
-.badge--completed{ background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8);  }
-.badge-ru        { background: rgba(74,25,66,0.6);     color: var(--color-blush); border: 1px solid rgba(232,196,184,0.25); }
+/* legacy hyphen-less variants (activity feed) */
+.badge-watching  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
+.badge-completed { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }
+.badge-ongoing   { background: rgba(255,107,138,0.7);  color: #fff;               border: 1px solid rgba(255,107,138,0.85); }
+.badge-ru        { background: rgba(120,60,110,0.85);  color: #f5e6d3;            border: 1px solid rgba(232,196,184,0.45); }
+/* double-hyphen variants (card badges) */
+.badge--watching  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
+.badge--completed { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }
+.badge--ongoing   { background: rgba(255,107,138,0.7);  color: #fff;               border: 1px solid rgba(255,107,138,0.85); }
+.badge--plan      { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
+.badge--dropped   { background: rgba(180,80,80,0.6);    color: #fff;               border: 1px solid rgba(200,90,90,0.75); }
+.badge--ru        { background: rgba(120,60,110,0.85);  color: #f5e6d3;            border: 1px solid rgba(232,196,184,0.45); }
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {

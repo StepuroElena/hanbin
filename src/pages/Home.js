@@ -35,18 +35,30 @@ export async function renderHome(container) {
 
   container.innerHTML = buildShell();
 
-  let currentView = 'card';
-  let currentFilters = { status: 'all' };
+  // Читаем сохранённый вид — переживает рефреш
+  let currentView = localStorage.getItem('hanbin_view_mode') || 'card';
+  let currentFilters = { status: currentView === 'card' ? 'watching' : 'all' };
 
   // ── Header ──
   const headerSlot = container.querySelector('#header-slot');
   await renderHeader(headerSlot, {
     onSearch: (query, results) => {
       if (!query) return loadWatching();
-      if (results) renderDramaCards(container.querySelector('#watching-slot'), results);
+      if (results) {
+        if (currentView === 'table') {
+          renderDramaTable(container.querySelector('#watching-slot'), results);
+        } else {
+          renderDramaCards(container.querySelector('#watching-slot'), results);
+        }
+      }
     },
     onViewChange: (mode) => {
       currentView = mode;
+      if (mode === 'card') {
+        currentFilters = { ...currentFilters, status: 'watching' };
+      } else {
+        currentFilters = { ...currentFilters, status: 'all' };
+      }
       loadWatching();
     },
   });
@@ -58,9 +70,12 @@ export async function renderHome(container) {
   renderFilters(container.querySelector('#filters-slot'), {
     activeFilter: 'all',
     onFilter: async ({ type, value }) => {
-      if (type === 'status') currentFilters = { status: value === 'all' ? undefined : value };
-      if (type === 'genre')  currentFilters = { genre: value };
-      if (type === 'country') currentFilters = { country: value };
+      if (type === 'status') {
+        const defaultStatus = currentView === 'card' ? 'watching' : 'all';
+        currentFilters = { ...currentFilters, status: value === 'all' ? defaultStatus : value };
+      }
+      if (type === 'genre')  currentFilters = { ...currentFilters, genre: value };
+      if (type === 'country') currentFilters = { ...currentFilters, country: value };
       await loadWatching();
     },
   });
@@ -69,11 +84,20 @@ export async function renderHome(container) {
   async function loadWatching() {
     const slot = container.querySelector('#watching-slot');
     slot.innerHTML = `<div class="loading-dots">${t('loading')}</div>`;
-    const { data } = await getDramas(currentFilters);
+
+    let { data } = await getDramas(currentFilters);
+
+    // Если в карточном виде watching-фильтр вернул пустой список —
+    // показываем запланированные как фоллбэк («Следующее на очереди»)
+    if (currentView !== 'table' && currentFilters.status === 'watching' && data.length === 0) {
+      const { data: planData } = await getDramas({ ...currentFilters, status: 'plan' });
+      data = planData;
+    }
+
     if (currentView === 'table') {
       renderDramaTable(slot, data);
     } else {
-      renderDramaCards(slot, data.filter(d => d.status === 'watching'));
+      renderDramaCards(slot, data);
     }
   }
 
@@ -84,6 +108,27 @@ export async function renderHome(container) {
     console.log('[UI] See all watching');
     // TODO: navigate('#/my-list?status=watching')
   });
+
+  // ── Refresh on data change (e.g. after addDrama) ──
+  // Перезапрашиваем /users/me и обновляем все слоты
+  const onDataChanged = async () => {
+    // Обновляем список дорам
+    await loadWatching();
+    // Обновляем статистику
+    await renderStatsBlock(container.querySelector('#stats-slot'));
+    // Обновляем сайдбар
+    await renderSidebar(container.querySelector('#sidebar-slot'));
+  };
+  window.addEventListener('hanbin:data-changed', onDataChanged);
+
+  // Отписываемся при уходе со страницы (router чистит container)
+  const observer = new MutationObserver(() => {
+    if (!container.isConnected) {
+      window.removeEventListener('hanbin:data-changed', onDataChanged);
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: false });
 
   // ── Update section title on lang change ──
   onLangChange(() => {
