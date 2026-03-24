@@ -63,3 +63,49 @@ export async function authGet(path) {
     };
   }
 }
+
+/**
+ * Авторизованный POST-запрос с Bearer-токеном.
+ * @param {string} path — путь относительно API_BASE, напр. '/dramas'
+ * @param {object} body — тело запроса (будет сериализовано в JSON)
+ * @returns {Promise<{ data: any, error: string|null }>}
+ */
+export async function authPost(path, body) {
+  const token = getToken();
+  if (!token) return { data: null, error: 'not authenticated' };
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+
+    if (res.status === 401) {
+      localStorage.removeItem('hanbin_token');
+      localStorage.removeItem('hanbin_user');
+      return { data: null, error: 'unauthorized' };
+    }
+
+    if (!res.ok) {
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    return { data: json, error: null };
+  } catch (err) {
+    console.error(`[API] POST ${path} failed:`, err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
+        : 'Ошибка запроса. Попробуй позже.',
+    };
+  }
+}

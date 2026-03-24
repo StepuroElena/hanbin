@@ -5,7 +5,7 @@
  */
 
 import { closeModal, injectModalCSS } from './LoginModal.js';
-import { addDrama, getDramas } from '../api/mock.js';
+import { addDrama, getDramas, invalidateUserCache } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 // ─────────────────────────────────────────────
@@ -442,9 +442,17 @@ const ADD_DRAMA_CSS = `
   /* ── Кнопка добавить (зелёный акцент) ── */
   .hb-btn-add {
     background: linear-gradient(135deg, #7aab8e, #5d9478) !important;
+    opacity: 1;
+    transition: opacity 0.25s ease, transform 0.15s ease;
   }
   .hb-btn-add:not(:disabled):hover {
-    opacity: 0.9 !important;
+    opacity: 0.88 !important;
+    transform: translateY(-1px);
+  }
+  .hb-btn-add:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
   }
 `;
 
@@ -648,10 +656,14 @@ export function mountAddDramaContent(content, savedState = {}) {
   let selectedSiteName = savedState.selectedSiteName ?? null;
 
   // ── Хелпер: синхронизировать кнопку Submit ───
+  // Кнопка активна только когда заполнены все обязательные поля:
+  // title, watch_url (сайт из дропдауна), genre (хотя бы один жанр)
   function syncSubmit() {
-    const title = document.getElementById('hb-add-title')?.value.trim() ?? '';
-    const btn   = document.getElementById('hb-btn-add-submit');
-    if (btn) btn.disabled = title.length === 0;
+    const title    = document.getElementById('hb-add-title')?.value.trim() ?? '';
+    const hasUrl   = !!selectedSiteUrl;
+    const hasGenre = selectedGenres.length > 0;
+    const btn      = document.getElementById('hb-btn-add-submit');
+    if (btn) btn.disabled = !(title.length > 0 && hasUrl && hasGenre);
   }
 
   // ── Название ─────────────────────────────────
@@ -660,6 +672,9 @@ export function mountAddDramaContent(content, savedState = {}) {
 
   // Инициализируем счётчик если есть сохранённое значение
   if (titleInput.value) titleCounter.textContent = `${titleInput.value.length} / 120`;
+
+  // Синхронизируем кнопку сразу при маунте (актуально при восстановлении состояния)
+  syncSubmit();
 
   titleInput.addEventListener('input', () => {
     const len = titleInput.value.length;
@@ -723,6 +738,7 @@ export function mountAddDramaContent(content, savedState = {}) {
 
       closeSiteList();
       document.getElementById('hb-add-url-error').textContent = '';
+      syncSubmit();
     });
   });
 
@@ -752,6 +768,7 @@ export function mountAddDramaContent(content, savedState = {}) {
     } else {
       selectedGenres = selectedGenres.filter(g => g !== val);
     }
+    syncSubmit();
   });
 
   // ── Тег выпуска (single-select) ───────────────
@@ -810,50 +827,48 @@ export function mountAddDramaContent(content, savedState = {}) {
   const submitBtn = document.getElementById('hb-btn-add-submit');
 
   submitBtn.addEventListener('click', async () => {
-    const title  = titleInput.value.trim();
-    const url    = selectedSiteUrl ?? '';
-    const year   = parseInt(document.getElementById('hb-add-year').value, 10);
+    const title = titleInput.value.trim();
+    const year  = parseInt(document.getElementById('hb-add-year').value, 10);
 
-    // Клиентская валидация
-    let hasError = false;
-
+    // Клиентская валидация — не должна срабатывать (кнопка заблокирована), но как страховка
     if (!title) {
       titleInput.classList.add('hb-error');
       document.getElementById('hb-add-title-error').textContent = t('modal.add.field.title_err');
-      hasError = true;
-    }
-
-    // url из дропдауна всегда валиден, ошибок нет
-
-    if (hasError) return;
-
-    // Проверка дубликата
-    const { data: existing } = await getDramas();
-    const duplicate = existing.find(d =>
-      d.title.toLowerCase().trim() === title.toLowerCase()
-    );
-
-    if (duplicate) {
-      const toast = document.getElementById('hb-add-duplicate-toast');
-      const toastText = document.getElementById('hb-add-duplicate-text');
-      toastText.textContent = `«${duplicate.title}» ${t('modal.add.duplicate.text').replace('Эта дорама уже добавлена в твой список.', '').replace('This drama is already in your list.', '')} — ${statusLabel(duplicate.status)}.`;
-      toast.style.display = 'flex';
-      toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
 
-    // Собираем теги
-    const tags = [releaseTag, subTag];
+    // Проверка дубликата — только если используется мок (нет токена)
+    // При реальном бэке дубликат вернёт ошибку сам
+    const token = localStorage.getItem('hanbin_token');
+    if (!token) {
+      try {
+        const { data: existing } = await getDramas();
+        const duplicate = Array.isArray(existing) && existing.find(d =>
+          d.title.toLowerCase().trim() === title.toLowerCase()
+        );
+        if (duplicate) {
+          const toast    = document.getElementById('hb-add-duplicate-toast');
+          const toastText = document.getElementById('hb-add-duplicate-text');
+          toastText.textContent = `«${duplicate.title}» — ${statusLabel(duplicate.status)}.`;
+          toast.style.display = 'flex';
+          toast.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          return;
+        }
+      } catch (e) {
+        console.warn('[AddDramaModal] getDramas check failed, skipping duplicate check:', e);
+      }
+    }
 
+    // Собираем данные для отправки
     const dramaData = {
       title,
       year,
-      country: selectedCountry,
-      genres:  selectedGenres,
-      status:  'plan',
-      rating:  selectedRating,
+      country:  selectedCountry,
+      genres:   selectedGenres,
+      status:   'plan',
+      rating:   selectedRating,
       watchUrl: selectedSiteUrl || null,
-      tags,
+      tags:     [releaseTag, subTag],
       episodesWatched: 0,
       episodesTotal:   0,
       ongoing: releaseTag === 'ongoing',
@@ -862,20 +877,29 @@ export function mountAddDramaContent(content, savedState = {}) {
 
     submitBtn.disabled = true;
     submitBtn.textContent = t('modal.add.btn.loading');
+    document.getElementById('hb-add-global-error').textContent = '';
 
-    const { data, error } = await addDrama(dramaData);
+    try {
+      const { data, error } = await addDrama(dramaData);
 
-    if (error) {
-      document.getElementById('hb-add-global-error').textContent = error;
+      if (error) {
+        document.getElementById('hb-add-global-error').textContent = error;
+        submitBtn.disabled = false;
+        submitBtn.textContent = t('modal.add.btn');
+        return;
+      }
+
+      console.log('[AddDramaModal] Дорама добавлена:', data);
+      submitBtn.textContent = t('modal.add.btn.success');
+      // Инвалидируем кэш — компоненты на Home перезапросят /users/me
+      invalidateUserCache();
+      setTimeout(() => closeModal(), 900);
+    } catch (e) {
+      console.error('[AddDramaModal] addDrama threw:', e);
+      document.getElementById('hb-add-global-error').textContent = 'Ошибка. Попробуй ещё раз.';
       submitBtn.disabled = false;
       submitBtn.textContent = t('modal.add.btn');
-      return;
     }
-
-    submitBtn.textContent = t('modal.add.btn.success');
-    submitBtn.style.background = 'linear-gradient(135deg, #7aab8e, #5d9478)';
-    console.log('[AddDramaModal] Дорама добавлена:', data);
-    setTimeout(() => closeModal(), 900);
   });
 
   // Enter в поле названия — submit
