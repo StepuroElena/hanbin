@@ -414,6 +414,9 @@ const componentCSS = `
 .badge--plan      { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
 .badge--dropped   { background: rgba(180,80,80,0.6);    color: #fff;               border: 1px solid rgba(200,90,90,0.75); }
 .badge--ru        { background: rgba(120,60,110,0.85);  color: #f5e6d3;            border: 1px solid rgba(232,196,184,0.45); }
+.badge--released    { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }
+.badge--translated  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
+.badge--translating { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {
