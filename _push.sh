@@ -3,24 +3,21 @@ set -e
 cd "$(dirname "$0")"
 
 git add \
-  src/app.js \
-  src/i18n/index.js \
-  src/components/DramaCard.js \
-  src/components/Header.js \
-  src/pages/Home.js
+  src/api/client.js \
+  src/api/mock.js \
+  src/components/DramaCard.js
 
-git commit -m "fix(i18n): перевод хедеров таблиц + сохранение вида при смене языка
+git commit -m "feat(archive): wire PATCH /dramas/{id}/archive|unarchive to front + fix is_archived source of truth
 
-- DramaCard: хедеры таблиц через t() — переводятся при смене RU/EN
-  (Дорама/Год/Жанр/Статус/Оценка/Прогресс/Страна)
-- DramaCard: кнопки архивирования/восстановления, пустые состояния — через t()
-- i18n: добавлены ключи table.col.*, archive.unarchive_tooltip (ru + en)
-- Header: currentMode в closure — выбранный вид card/table переживает
-  перерендер хедера при смене языка, кнопка toggle не сбрасывается
-- Home: onLangChange перерендеривает watching-слот в любом виде (не только table),
-  селектор .section-title исправлен на :not(.section-title--archive)
-- app.js: цвет sticky-хедера таблиц — сливовый rgba(74,25,66,0.82)
-  вместо почти-чёрного, текст — var(--color-rose)"
+- client.js: добавлен authPatch() — авторизованный PATCH-запрос с Bearer-токеном
+- mock.js: archiveDrama() → реальный PATCH /api/v1/dramas/{id}/archive при наличии токена
+- mock.js: unarchiveDrama() → реальный PATCH /api/v1/dramas/{id}/unarchive при наличии токена
+- mock.js: adaptDramaFromApi() пробрасывает is_archived с бэка как isArchived
+- mock.js: getDramas() фильтрует архивированные по isArchived (флаг с бэка), не по localStorage
+- mock.js: getArchivedDramas() фильтрует по isArchived === true с бэка; localStorage только для мока
+- DramaCard: кнопка архива рендерится по data-action=archive|unarchive в зависимости от статуса
+- DramaCard: обработчик читает data-action и вызывает archiveDrama/unarchiveDrama соответственно
+- Работает в обоих видах: карточки и таблица"
 
 git push -u origin feature/delete_drama
 echo "✅ Готово"

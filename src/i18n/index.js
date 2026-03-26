@@ -119,6 +119,10 @@ export const translations = {
     'table.col.rating':           'Оценка',
     'table.col.progress':         'Прогресс',
     'table.col.country':          'Страна',
+    'table.col.tags':             'Теги',
+    'table.col.seasons':          'Сезоны',
+    'table.col.added_at':         'Добавлено',
+    'table.col.last_watched':     'Последний просмотр',
 
     // Login modal
     'modal.close':                'Закрыть',
@@ -313,6 +317,10 @@ export const translations = {
     'table.col.rating':           'Rating',
     'table.col.progress':         'Progress',
     'table.col.country':          'Country',
+    'table.col.tags':             'Tags',
+    'table.col.seasons':          'Seasons',
+    'table.col.added_at':         'Added',
+    'table.col.last_watched':     'Last watched',
 
     // Login modal
     'modal.close':                'Close',

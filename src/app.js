@@ -455,6 +455,46 @@ const componentCSS = `
 .drama-table__row--archived td { opacity: 0.75; }
 .drama-table__row--archived:hover td { opacity: 1; }
 
+.table-country { font-size: 13px; white-space: nowrap; }
+.table-seasons { white-space: nowrap; font-size: 12px; }
+.table-date {
+  white-space: nowrap;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.table-date-fresh {
+  color: var(--color-jade, #7aab8e);
+  font-size: 11px;
+}
+.table-tags { white-space: nowrap; }
+.table-tags .badge { margin-right: 3px; }
+.table-no-tags { color: var(--color-text-muted); opacity: 0.35; font-size: 12px; }
+
+.table-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 100px;
+}
+.table-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.table-progress-fill {
+  height: 100%;
+  background: var(--gradient-progress);
+  border-radius: 3px;
+}
+.table-progress-wrap span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 .table-archive-btn {
   background: none; border: none;
   color: rgba(245,230,211,0.35); cursor: pointer;
@@ -506,6 +546,20 @@ const componentCSS = `
   font-size: 13px;
 }
 .archive-empty__icon { font-size: 18px; }
+
+/* Прогресс в архиве — приглушённый, с процентом */
+.archive-progress-bar {
+  background: rgba(255,255,255,0.07);
+}
+.archive-progress-fill {
+  background: linear-gradient(90deg, rgba(201,123,138,0.5), rgba(255,107,138,0.4));
+}
+.archive-progress-pct {
+  font-size: 10px;
+  color: rgba(245,230,211,0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* ── Activity show more ── */
 .activity-show-more {

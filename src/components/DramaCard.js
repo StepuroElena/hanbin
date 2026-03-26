@@ -3,7 +3,7 @@
  */
 
 import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
-import { renderStars, statusLabel, fetchPoster, defaultPosterURI } from '../utils/helpers.js';
+import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
 /** Рендерит сетку карточек */
@@ -158,12 +158,38 @@ function dramaCardHTML(d, index) {
   `;
 }
 
+/** Склонение слова «сезон» под число (RU) */
+function seasonLabel(n) {
+  const { getLang } = { getLang: () => localStorage.getItem('hanbin_lang') || 'ru' };
+  if (getLang() !== 'ru') return n === 1 ? 'season' : 'seasons';
+  const abs = Math.abs(n) % 100;
+  const mod = abs % 10;
+  if (abs >= 11 && abs <= 19) return 'сезонов';
+  if (mod === 1)              return 'сезон';
+  if (mod >= 2 && mod <= 4)  return 'сезона';
+  return 'сезонов';
+}
+
+/** Форматирует дату: сегодня/вчера через timeAgo, остальное — dd.mm.yyyy */
+function formatDate(date) {
+  if (!date) return '<span class="table-no-tags">—</span>';
+  const d = new Date(date);
+  const diffDays = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (diffDays < 2) return `<span class="table-date-fresh">${timeAgo(d)}</span>`;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
 /** Рендерит табличный вид */
 export function renderDramaTable(container, dramas) {
   if (!dramas.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🌸</div><div>${t('empty.no_dramas')}</div></div>`;
     return;
   }
+
+  const countryFlag = { kr: '🇰🇷', cn: '🇨🇳', jp: '🇯🇵' };
 
   container.innerHTML = `
     <div class="drama-table-wrap">
@@ -172,15 +198,27 @@ export function renderDramaTable(container, dramas) {
           <tr>
             <th>${t('table.col.drama')}</th>
             <th>${t('table.col.year')}</th>
+            <th>${t('table.col.country')}</th>
             <th>${t('table.col.genre')}</th>
             <th>${t('table.col.status')}</th>
             <th>${t('table.col.rating')}</th>
             <th>${t('table.col.progress')}</th>
+            <th>${t('table.col.seasons')}</th>
+            <th>${t('table.col.added_at')}</th>
+            <th>${t('table.col.last_watched')}</th>
+            <th>${t('table.col.tags')}</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          ${dramas.map(d => `
+          ${dramas.map(d => {
+            const progress = d.episodesTotal ? Math.round((d.episodesWatched / d.episodesTotal) * 100) : 0;
+            const flag = countryFlag[d.country] ?? '🌏';
+            const tags = [
+              d.ongoing  ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>` : '',
+              d.hasSubs  ? `<span class="badge badge--ru">RU</span>` : '',
+            ].filter(Boolean).join(' ');
+            return `
             <tr class="drama-table__row" data-id="${d.id}">
               <td>
                 <div class="table-drama-title">
@@ -189,10 +227,20 @@ export function renderDramaTable(container, dramas) {
                 </div>
               </td>
               <td class="table-muted">${d.year}</td>
-              <td class="table-muted">${d.genres[0]}</td>
+              <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
+              <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
               <td><span class="badge badge--${d.status}">${statusLabel(d.status)}</span></td>
               <td>${renderStars(d.rating)}</td>
-              <td class="table-muted">${d.episodesWatched}/${d.episodesTotal}</td>
+              <td class="table-muted table-progress">
+                <div class="table-progress-wrap">
+                  <div class="table-progress-bar"><div class="table-progress-fill" style="width:${progress}%"></div></div>
+                  <span>${d.episodesWatched}/${d.episodesTotal}</span>
+                </div>
+              </td>
+              <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
+              <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
+              <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
+              <td class="table-tags">${tags || '<span class="table-no-tags">—</span>'}</td>
               <td style="white-space:nowrap">
                 <button class="table-watch-btn" title="${t('watch.btn')}">▶</button>
                 ${d.status === 'archived'
@@ -209,7 +257,7 @@ export function renderDramaTable(container, dramas) {
                 }
               </td>
             </tr>
-          `).join('')}
+          `}).join('')}
         </tbody>
       </table>
     </div>
@@ -279,11 +327,18 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
             <th>${t('table.col.year')}</th>
             <th>${t('table.col.genre')}</th>
             <th>${t('table.col.country')}</th>
+            <th>${t('table.col.progress')}</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
-          ${dramas.map(d => `
+          ${dramas.map(d => {
+            const watched  = d.episodesWatched ?? 0;
+            const total    = d.episodesTotal   ?? 0;
+            const progress = total > 0 ? Math.round(watched / total * 100) : 0;
+            const countryFlag = { kr: '🇰🇷', cn: '🇨🇳', jp: '🇯🇵' };
+            const flag = countryFlag[d.country] ?? '🌏';
+            return `
             <tr class="drama-table__row drama-table__row--archived" data-id="${d.id}">
               <td>
                 <div class="table-drama-title">
@@ -293,7 +348,18 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
               </td>
               <td class="table-muted">${d.year ?? '—'}</td>
               <td class="table-muted">${d.genres[0] ?? '—'}</td>
-              <td class="table-muted">${d.country?.toUpperCase() ?? '—'}</td>
+              <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
+              <td class="table-muted table-progress">
+                ${total > 0 ? `
+                  <div class="table-progress-wrap">
+                    <div class="table-progress-bar archive-progress-bar">
+                      <div class="table-progress-fill archive-progress-fill" style="width:${progress}%"></div>
+                    </div>
+                    <span>${watched}/${total}</span>
+                    <span class="archive-progress-pct">${progress}%</span>
+                  </div>
+                ` : '<span class="table-no-tags">—</span>'}
+              </td>
               <td>
                 <button class="table-unarchive-btn table-unarchive-btn--accent" data-id="${d.id}" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -304,7 +370,7 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
                 </button>
               </td>
             </tr>
-          `).join('')}
+          `}).join('')}
         </tbody>
       </table>
     </div>`;
