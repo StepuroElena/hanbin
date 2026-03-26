@@ -69,12 +69,17 @@ export function renderDramaCards(container, dramas) {
       console.log('[MOCK] Watch drama:', id);
     });
 
-    // Archive button
+    // Archive / Unarchive button
     card.querySelector('.card-archive-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
+      const action = e.currentTarget.dataset.action;
       card.style.opacity = '0.4';
       card.style.pointerEvents = 'none';
-      await archiveDrama(id);
+      if (action === 'unarchive') {
+        await unarchiveDrama(id);
+      } else {
+        await archiveDrama(id);
+      }
     });
 
     // Status change
@@ -115,11 +120,19 @@ function dramaCardHTML(d, index) {
         <button class="card-watch-btn" title="${t('archive.btn')}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
         </button>
-        <button class="card-archive-btn" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
-          </svg>
-        </button>
+        ${d.status === 'archived'
+          ? `<button class="card-archive-btn card-archive-btn--unarchive" data-action="unarchive" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 1 0 .49-3.75"/>
+              </svg>
+            </button>`
+          : `<button class="card-archive-btn" data-action="archive" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+              </svg>
+            </button>`
+        }
       </div>
 
       <div class="card-info">
@@ -181,12 +194,19 @@ export function renderDramaTable(container, dramas) {
               <td>${renderStars(d.rating)}</td>
               <td class="table-muted">${d.episodesWatched}/${d.episodesTotal}</td>
               <td style="white-space:nowrap">
-                <button class="table-watch-btn" title="${t('archive.btn')}">▶</button>
-                <button class="table-archive-btn" data-id="${d.id}" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
-                  </svg>
-                </button>
+                <button class="table-watch-btn" title="${t('watch.btn')}">▶</button>
+                ${d.status === 'archived'
+                  ? `<button class="table-archive-btn table-archive-btn--unarchive" data-id="${d.id}" data-action="unarchive" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.75"/>
+                      </svg>
+                    </button>`
+                  : `<button class="table-archive-btn" data-id="${d.id}" data-action="archive" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                      </svg>
+                    </button>`
+                }
               </td>
             </tr>
           `).join('')}
@@ -223,9 +243,14 @@ export function renderDramaTable(container, dramas) {
     row.querySelector('.table-archive-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = row.dataset.id;
+      const action = e.currentTarget.dataset.action;
       row.style.opacity = '0.4';
       row.style.pointerEvents = 'none';
-      await archiveDrama(id);
+      if (action === 'unarchive') {
+        await unarchiveDrama(id);
+      } else {
+        await archiveDrama(id);
+      }
     });
 
     row.addEventListener('click', () => {

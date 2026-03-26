@@ -7,7 +7,7 @@
  * Задержка configurable через MOCK_DELAY.
  */
 
-import { API_BASE, authGet, authPost } from './client.js';
+import { API_BASE, authGet, authPost, authPatch } from './client.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -257,6 +257,7 @@ function adaptDramaFromApi(d) {
     rating,
     ongoing,
     hasSubs,
+    isArchived:      Boolean(d.is_archived),
     cover:           null, // бэк пока не хранит обложки
   };
 }
@@ -272,8 +273,9 @@ export async function getDramas(filters = {}) {
   // Пытаемся взять данные с бэка
   const { data: user } = await getMe();
   if (user?._rawDramas?.length) {
-    const _archivedIds = _getArchivedIds();
-    let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !_archivedIds.includes(d.id));
+    // Используем флаг is_archived с бэка как источник правды.
+    // localStorage-список нужен только для мока (когда бэк недоступен).
+    let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !d.isArchived);
 
     if (filters.status && filters.status !== 'all') {
       result = result.filter(d => d.status === filters.status);
@@ -525,32 +527,57 @@ export async function deleteDrama(id) {
 }
 
 /**
- * Архивировать дораму (перевести в статус 'archived').
- * Архив — дорамы, которые не начали смотреть и передумали.
- * Данные сохраняются но не влияют на статистику.
- * TODO: PATCH /api/dramas/:id { watch_status: 'archived' }
+ * Архивировать дораму.
+ * Если пользователь авторизован — реальный PATCH /api/v1/dramas/{id}/archive.
+ * Фаллбэк на localStorage-мок если не авторизован.
  */
 export async function archiveDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}/archive`);
+    if (!result.error) {
+      invalidateUserCache();
+      return result;
+    }
+    // Если бэк недоступен — падаем на мок
+    console.warn('[API] archiveDrama: fallback to mock, error:', result.error);
+  }
+
+  // Мок: храним архив в localStorage
   await delay();
-  // В моке сохраняем архив в localStorage
-  const key = 'hanbin_archived';
   const archived = _getArchivedIds();
   if (!archived.includes(id)) archived.push(id);
-  localStorage.setItem(key, JSON.stringify(archived));
+  localStorage.setItem('hanbin_archived', JSON.stringify(archived));
   console.log('[MOCK] archiveDrama:', id);
   invalidateUserCache();
   return { data: { id, status: 'archived' }, error: null };
 }
 
 /**
- * Вернуть дораму из архива обратно в список (статус 'plan').
- * TODO: PATCH /api/dramas/:id { watch_status: 'planned' }
+ * Вернуть дораму из архива обратно в список.
+ * Если пользователь авторизован — реальный PATCH /api/v1/dramas/{id}/archive (с флагом unarchive).
+ * Фаллбэк на localStorage-мок если не авторизован.
  */
 export async function unarchiveDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}/unarchive`);
+    if (!result.error) {
+      // Также чистим локальный мок-архив на случай если он был заполнен
+      const archived = _getArchivedIds().filter(x => x !== id);
+      localStorage.setItem('hanbin_archived', JSON.stringify(archived));
+      invalidateUserCache();
+      return result;
+    }
+    console.warn('[API] unarchiveDrama: fallback to mock, error:', result.error);
+  }
+
+  // Мок
   await delay();
-  const key = 'hanbin_archived';
   const archived = _getArchivedIds().filter(x => x !== id);
-  localStorage.setItem(key, JSON.stringify(archived));
+  localStorage.setItem('hanbin_archived', JSON.stringify(archived));
   console.log('[MOCK] unarchiveDrama:', id);
   invalidateUserCache();
   return { data: { id, status: 'plan' }, error: null };
@@ -558,23 +585,25 @@ export async function unarchiveDrama(id) {
 
 /**
  * Получить заархивированные дорамы.
- * TODO: GET /api/dramas?status=archived
+ * Если пользователь авторизован — фильтруем по is_archived === true с бэка.
+ * Фаллбэк на localStorage-список если не авторизован.
  */
 export async function getArchivedDramas() {
+  const { data: user } = await getMe();
+
+  // Авторизован: берём дорамы с флагом is_archived=true с бэка
+  if (user?._rawDramas?.length !== undefined) {
+    const result = user._rawDramas
+      .map(adaptDramaFromApi)
+      .filter(d => d.isArchived);
+    return { data: result, error: null };
+  }
+
+  // Фаллбэк: мок — читаем архив из localStorage
   await delay();
   const archivedIds = _getArchivedIds();
   if (!archivedIds.length) return { data: [], error: null };
-
-  // Берём данные напрямую, минуя фильтрацию архива в getDramas
-  const { data: user } = await getMe();
-  let allDramas;
-  if (user?._rawDramas?.length) {
-    allDramas = user._rawDramas.map(adaptDramaFromApi);
-  } else {
-    allDramas = [...MOCK_DRAMAS];
-  }
-
-  const result = allDramas.filter(d => archivedIds.includes(d.id));
+  const result = MOCK_DRAMAS.filter(d => archivedIds.includes(d.id));
   return { data: result, error: null };
 }
 
