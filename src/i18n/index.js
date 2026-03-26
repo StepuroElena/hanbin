@@ -103,6 +103,23 @@ export const translations = {
     'empty.add_btn':              '+ Добавить дораму',
     'loading':                    'Загрузка…',
 
+    // Archive
+    'archive.title':              'Архив',
+    'archive.empty':              'Архив пуст — здесь будут дорамы, от которых ты отказалась',
+    'archive.btn':                'Архивировать',
+    'archive.unarchive_btn':      'Вернуть',
+    'archive.unarchive_tooltip':  'Вернуть в список',
+    'archive.hint':               'Не начала смотреть и передумала — перенеси в архив',
+
+    // Table headers
+    'table.col.drama':            'Дорама',
+    'table.col.year':             'Год',
+    'table.col.genre':            'Жанр',
+    'table.col.status':           'Статус',
+    'table.col.rating':           'Оценка',
+    'table.col.progress':         'Прогресс',
+    'table.col.country':          'Страна',
+
     // Login modal
     'modal.close':                'Закрыть',
     'modal.login.title':          'Добро пожаловать домой',
@@ -279,6 +296,23 @@ export const translations = {
     'empty.no_dramas':            'Your list is empty. Add your first drama!',
     'empty.add_btn':              '+ Add drama',
     'loading':                    'Loading…',
+
+    // Archive
+    'archive.title':              'Archive',
+    'archive.empty':              'Archive is empty — dramas you decided not to watch will appear here',
+    'archive.btn':                'Archive',
+    'archive.unarchive_btn':      'Restore',
+    'archive.unarchive_tooltip':  'Restore to list',
+    'archive.hint':               'Never started and changed your mind — move to archive',
+
+    // Table headers
+    'table.col.drama':            'Drama',
+    'table.col.year':             'Year',
+    'table.col.genre':            'Genre',
+    'table.col.status':           'Status',
+    'table.col.rating':           'Rating',
+    'table.col.progress':         'Progress',
+    'table.col.country':          'Country',
 
     // Login modal
     'modal.close':                'Close',

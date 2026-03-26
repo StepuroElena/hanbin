@@ -2,8 +2,9 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, rateDrama, deleteDrama } from '../api/mock.js';
+import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI } from '../utils/helpers.js';
+import { t } from '../i18n/index.js';
 
 /** Рендерит сетку карточек */
 export function renderDramaCards(container, dramas) {
@@ -11,9 +12,9 @@ export function renderDramaCards(container, dramas) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state__icon">🌸</div>
-        <div class="empty-state__text">Здесь пока пусто</div>
+        <div class="empty-state__text">${t('empty.no_dramas')}</div>
         <button class="btn-add-empty" onclick="document.querySelector('#add-drama-btn').click()">
-          + Добавить первую дораму
+          ${t('empty.add_btn')}
         </button>
       </div>
     `;
@@ -64,9 +65,16 @@ export function renderDramaCards(container, dramas) {
     // Watch button
     card.querySelector('.card-watch-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      // TODO: открыть ссылку на сайт с дорамой
       if (drama?.watchUrl) window.open(drama.watchUrl, '_blank');
       console.log('[MOCK] Watch drama:', id);
+    });
+
+    // Archive button
+    card.querySelector('.card-archive-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      card.style.opacity = '0.4';
+      card.style.pointerEvents = 'none';
+      await archiveDrama(id);
     });
 
     // Status change
@@ -100,12 +108,17 @@ function dramaCardHTML(d, index) {
 
         <div class="card-badges">
           <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
-          ${d.ongoing ? '<span class="badge badge--ongoing">Выходит</span>' : ''}
+          ${d.ongoing ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>` : ''}
           ${d.hasSubs ? '<span class="badge badge--ru">RU Озвучка</span>' : ''}
         </div>
 
-        <button class="card-watch-btn" title="Смотреть">
+        <button class="card-watch-btn" title="${t('archive.btn')}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
+        </button>
+        <button class="card-archive-btn" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
         </button>
       </div>
 
@@ -135,7 +148,7 @@ function dramaCardHTML(d, index) {
 /** Рендерит табличный вид */
 export function renderDramaTable(container, dramas) {
   if (!dramas.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🌸</div><div>Здесь пока пусто</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🌸</div><div>${t('empty.no_dramas')}</div></div>`;
     return;
   }
 
@@ -144,12 +157,12 @@ export function renderDramaTable(container, dramas) {
       <table class="drama-table">
         <thead>
           <tr>
-            <th>Дорама</th>
-            <th>Год</th>
-            <th>Жанр</th>
-            <th>Статус</th>
-            <th>Оценка</th>
-            <th>Прогресс</th>
+            <th>${t('table.col.drama')}</th>
+            <th>${t('table.col.year')}</th>
+            <th>${t('table.col.genre')}</th>
+            <th>${t('table.col.status')}</th>
+            <th>${t('table.col.rating')}</th>
+            <th>${t('table.col.progress')}</th>
             <th></th>
           </tr>
         </thead>
@@ -167,8 +180,13 @@ export function renderDramaTable(container, dramas) {
               <td><span class="badge badge--${d.status}">${statusLabel(d.status)}</span></td>
               <td>${renderStars(d.rating)}</td>
               <td class="table-muted">${d.episodesWatched}/${d.episodesTotal}</td>
-              <td>
-                <button class="table-watch-btn" title="Смотреть">▶</button>
+              <td style="white-space:nowrap">
+                <button class="table-watch-btn" title="${t('archive.btn')}">▶</button>
+                <button class="table-archive-btn" data-id="${d.id}" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>
+                  </svg>
+                </button>
               </td>
             </tr>
           `).join('')}
@@ -202,9 +220,94 @@ export function renderDramaTable(container, dramas) {
       if (drama?.watchUrl) window.open(drama.watchUrl, '_blank');
     });
 
+    row.querySelector('.table-archive-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = row.dataset.id;
+      row.style.opacity = '0.4';
+      row.style.pointerEvents = 'none';
+      await archiveDrama(id);
+    });
+
     row.addEventListener('click', () => {
       console.log('[UI] Open drama detail:', row.dataset.id);
-      // TODO: navigate(`#/drama/${row.dataset.id}`)
+    });
+  });
+}
+
+/** Рендерит таблицу архива — всегда табличный вид, кнопка «Вернуть» */
+export function renderArchiveTable(container, dramas, onUnarchive) {
+  if (!dramas.length) {
+    container.innerHTML = `
+      <div class="archive-empty">
+        <span class="archive-empty__icon">🗄️</span>
+        <span class="archive-empty__text">${t('archive.empty')}</span>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="drama-table-wrap">
+      <table class="drama-table">
+        <thead>
+          <tr>
+            <th>${t('table.col.drama')}</th>
+            <th>${t('table.col.year')}</th>
+            <th>${t('table.col.genre')}</th>
+            <th>${t('table.col.country')}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${dramas.map(d => `
+            <tr class="drama-table__row drama-table__row--archived" data-id="${d.id}">
+              <td>
+                <div class="table-drama-title">
+                  <img class="table-thumb" data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
+                  <span>${d.title}</span>
+                </div>
+              </td>
+              <td class="table-muted">${d.year ?? '—'}</td>
+              <td class="table-muted">${d.genres[0] ?? '—'}</td>
+              <td class="table-muted">${d.country?.toUpperCase() ?? '—'}</td>
+              <td>
+                <button class="table-unarchive-btn table-unarchive-btn--accent" data-id="${d.id}" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 .49-3.75"/>
+                  </svg>
+                  ${t('archive.unarchive_btn')}
+                </button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  container.querySelectorAll('.table-thumb').forEach(img => {
+    img.src = defaultPosterURI();
+    const title = img.dataset.title;
+    if (!title) return;
+    fetchPoster(title).then(posterUrl => {
+      if (!posterUrl) return;
+      const fresh = new Image();
+      fresh.onload = () => {
+        img.style.transition = 'opacity 0.35s ease';
+        img.style.opacity = '0';
+        setTimeout(() => { img.src = posterUrl; img.style.opacity = '1'; }, 150);
+      };
+      fresh.src = posterUrl;
+    });
+  });
+
+  container.querySelectorAll('.table-unarchive-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const row = btn.closest('tr');
+      row.style.opacity = '0.4';
+      row.style.pointerEvents = 'none';
+      await unarchiveDrama(btn.dataset.id);
+      if (onUnarchive) onUnarchive();
     });
   });
 }
