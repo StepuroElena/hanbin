@@ -134,10 +134,18 @@ export const globalCSS = `
   }
 
   /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 6px; }
+  /* Вертикальный скролл страницы */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(201,123,138,0.3); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(201,123,138,0.5); }
+  /* Горизонтальный скролл — стиль совпадает с вертикальным */
+  ::-webkit-scrollbar:horizontal { height: 4px; }
+  ::-webkit-scrollbar-track:horizontal { background: rgba(45,15,42,0.3); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:horizontal { background: rgba(201,123,138,0.25); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:horizontal:hover { background: rgba(201,123,138,0.45); }
+  /* Уголок на пересечении — прозрачный */
+  ::-webkit-scrollbar-corner { background: transparent; }
 
   /* ── Responsive ── */
   @media (max-width: 1024px) {

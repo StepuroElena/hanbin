@@ -2,25 +2,25 @@
 set -e
 cd "$(dirname "$0")"
 
-# Удаляем старые скриптовые костыли из репозитория
-git rm --cached _screenshots.sh install_screenshot.py save_screenshots.py 2>/dev/null || true
-rm -f _screenshots.sh install_screenshot.py save_screenshots.py
-
 git add \
-  src/components/LoginModal.js \
-  src/components/RegisterModal.js \
-  README.md
+  src/app.js \
+  src/i18n/index.js \
+  src/components/DramaCard.js \
+  src/components/Header.js \
+  src/pages/Home.js
 
-git commit -m "feat(auth): модалка регистрации + плавные переходы между модалками
+git commit -m "fix(i18n): перевод хедеров таблиц + сохранение вида при смене языка
 
-- RegisterModal: имя + email + пароль, валидация, счётчик символов
-- LoginModal: рефактор — единый оверлей (#hb-modal-overlay) для обеих модалок
-- Переход логин ↔ регистрация: slide-left / slide-right анимация контента
-  без пересоздания оверлея (нет моргания фона)
-- Закрытие: fade-out анимация вместо мгновенного remove()
-- Декоративный блик меняет цвет при переключении форм (rose → jade)
-- CSS унифицирован: .hb-btn-primary / .hb-btn-secondary, общий hb-modal-css
-- README: секция Auth Modals с архитектурой, анимациями, API и TODO для бэка"
+- DramaCard: хедеры таблиц через t() — переводятся при смене RU/EN
+  (Дорама/Год/Жанр/Статус/Оценка/Прогресс/Страна)
+- DramaCard: кнопки архивирования/восстановления, пустые состояния — через t()
+- i18n: добавлены ключи table.col.*, archive.unarchive_tooltip (ru + en)
+- Header: currentMode в closure — выбранный вид card/table переживает
+  перерендер хедера при смене языка, кнопка toggle не сбрасывается
+- Home: onLangChange перерендеривает watching-слот в любом виде (не только table),
+  селектор .section-title исправлен на :not(.section-title--archive)
+- app.js: цвет sticky-хедера таблиц — сливовый rgba(74,25,66,0.82)
+  вместо почти-чёрного, текст — var(--color-rose)"
 
-git push -u origin feature/register
+git push -u origin feature/delete_drama
 echo "✅ Готово"

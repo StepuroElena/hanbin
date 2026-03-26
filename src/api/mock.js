@@ -265,13 +265,15 @@ function adaptDramaFromApi(d) {
  * Получить список всех дорам.
  * Если пользователь залогинен — берёт дорамы с бэка через /users/me.
  * Фаллбэк на MOCK_DRAMAS если не авторизован.
- * @param {Object} filters — { status, country, genre, search }
+ * @param {Object} filters — { status, country, genre, search, limit }
  */
 export async function getDramas(filters = {}) {
+  const limit = filters.limit ?? 50; // по дефолту 50 строк
   // Пытаемся взять данные с бэка
   const { data: user } = await getMe();
   if (user?._rawDramas?.length) {
-    let result = user._rawDramas.map(adaptDramaFromApi);
+    const _archivedIds = _getArchivedIds();
+    let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !_archivedIds.includes(d.id));
 
     if (filters.status && filters.status !== 'all') {
       result = result.filter(d => d.status === filters.status);
@@ -287,12 +289,14 @@ export async function getDramas(filters = {}) {
       result = result.filter(d => d.title.toLowerCase().includes(q));
     }
 
-    return { data: result, error: null };
+    return { data: result.slice(0, limit), error: null };
   }
 
   // Фаллбэк: мок
   await delay();
-  let result = [...MOCK_DRAMAS];
+  // Исключаем архивированные из обычного списка
+  const _archived = _getArchivedIds();
+  let result = MOCK_DRAMAS.filter(d => !_archived.includes(d.id));
 
   if (filters.status && filters.status !== 'all') {
     result = result.filter(d => d.status === filters.status);
@@ -518,6 +522,66 @@ export async function deleteDrama(id) {
   await delay();
   console.log('[MOCK] deleteDrama:', id);
   return { data: { id, deleted: true }, error: null };
+}
+
+/**
+ * Архивировать дораму (перевести в статус 'archived').
+ * Архив — дорамы, которые не начали смотреть и передумали.
+ * Данные сохраняются но не влияют на статистику.
+ * TODO: PATCH /api/dramas/:id { watch_status: 'archived' }
+ */
+export async function archiveDrama(id) {
+  await delay();
+  // В моке сохраняем архив в localStorage
+  const key = 'hanbin_archived';
+  const archived = _getArchivedIds();
+  if (!archived.includes(id)) archived.push(id);
+  localStorage.setItem(key, JSON.stringify(archived));
+  console.log('[MOCK] archiveDrama:', id);
+  invalidateUserCache();
+  return { data: { id, status: 'archived' }, error: null };
+}
+
+/**
+ * Вернуть дораму из архива обратно в список (статус 'plan').
+ * TODO: PATCH /api/dramas/:id { watch_status: 'planned' }
+ */
+export async function unarchiveDrama(id) {
+  await delay();
+  const key = 'hanbin_archived';
+  const archived = _getArchivedIds().filter(x => x !== id);
+  localStorage.setItem(key, JSON.stringify(archived));
+  console.log('[MOCK] unarchiveDrama:', id);
+  invalidateUserCache();
+  return { data: { id, status: 'plan' }, error: null };
+}
+
+/**
+ * Получить заархивированные дорамы.
+ * TODO: GET /api/dramas?status=archived
+ */
+export async function getArchivedDramas() {
+  await delay();
+  const archivedIds = _getArchivedIds();
+  if (!archivedIds.length) return { data: [], error: null };
+
+  // Берём данные напрямую, минуя фильтрацию архива в getDramas
+  const { data: user } = await getMe();
+  let allDramas;
+  if (user?._rawDramas?.length) {
+    allDramas = user._rawDramas.map(adaptDramaFromApi);
+  } else {
+    allDramas = [...MOCK_DRAMAS];
+  }
+
+  const result = allDramas.filter(d => archivedIds.includes(d.id));
+  return { data: result, error: null };
+}
+
+function _getArchivedIds() {
+  try {
+    return JSON.parse(localStorage.getItem('hanbin_archived') || '[]');
+  } catch { return []; }
 }
 
 /**
