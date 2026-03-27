@@ -242,7 +242,7 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
               <td class="table-tags">${tags || '<span class="table-no-tags">—</span>'}</td>
               <td style="white-space:nowrap">
-                <button class="table-watch-btn" title="${t('watch.btn')}">▶</button>
+                <button class="table-watch-btn" data-tooltip="${t('table.watch_tooltip')}" data-tooltip-pos="left" data-id="${d.id}">▶</button>
                 ${d.status === 'archived'
                   ? `<button class="table-archive-btn table-archive-btn--unarchive" data-id="${d.id}" data-action="unarchive" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -284,8 +284,26 @@ export function renderDramaTable(container, dramas) {
     row.querySelector('.table-watch-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
       const id = row.dataset.id;
-      const drama = dramas.find(d => d.id === id);
-      if (drama?.watchUrl) window.open(drama.watchUrl, '_blank');
+      const drama = dramas.find(d => String(d.id) === String(id));
+      if (!drama) return;
+
+      // sourceUrl — URL страницы дорамы от скрейпера (точный)
+      // watchUrl — URL сайта (может быть просто хост)
+      const url = drama.sourceUrl || drama.source_url;
+      if (url) {
+        window.open(url, '_blank');
+        return;
+      }
+      // Если есть только watchUrl (хост) — строим поиск по названию
+      if (drama.watchUrl) {
+        try {
+          const base = new URL(drama.watchUrl);
+          const searchUrl = `${base.origin}/search?q=${encodeURIComponent(drama.title)}`;
+          window.open(searchUrl, '_blank');
+        } catch {
+          window.open(drama.watchUrl, '_blank');
+        }
+      }
     });
 
     row.querySelector('.table-archive-btn')?.addEventListener('click', async (e) => {
@@ -360,7 +378,7 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
                   </div>
                 ` : '<span class="table-no-tags">—</span>'}
               </td>
-              <td>
+              <td style="white-space:nowrap;display:flex;align-items:center;gap:6px;border-bottom:none">
                 <button class="table-unarchive-btn table-unarchive-btn--accent" data-id="${d.id}" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="1 4 1 10 7 10"/>
@@ -368,6 +386,7 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
                   </svg>
                   ${t('archive.unarchive_btn')}
                 </button>
+                <button class="table-delete-btn" data-id="${d.id}" data-tooltip="${t('archive.delete_tooltip')}" data-tooltip-pos="left">${t('archive.delete_btn')}</button>
               </td>
             </tr>
           `}).join('')}
@@ -399,6 +418,35 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
       row.style.pointerEvents = 'none';
       await unarchiveDrama(btn.dataset.id);
       if (onUnarchive) onUnarchive();
+    });
+  });
+
+  container.querySelectorAll('.table-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const row = btn.closest('tr');
+      // Показываем мини-подтверждение внутри бутона
+      if (!btn.dataset.confirm) {
+        btn.dataset.confirm = '1';
+        const confirmText = document.documentElement.lang === 'en' ? 'Sure?' : 'Точно?';
+        const deleteText  = document.documentElement.lang === 'en' ? 'Delete' : 'Удалить';
+        btn.textContent = confirmText;
+        btn.style.color = 'rgba(255,107,138,0.9)';
+        setTimeout(() => {
+          delete btn.dataset.confirm;
+          btn.textContent = deleteText;
+          btn.style.color = '';
+        }, 2000);
+        return;
+      }
+      // Второй клик — удаляем
+      row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(20px)';
+      row.style.pointerEvents = 'none';
+      setTimeout(() => row.remove(), 300);
+      // Эндпоинт подключим позже
+      // await deleteDrama(btn.dataset.id);
     });
   });
 }

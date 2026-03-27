@@ -109,6 +109,9 @@ export const translations = {
     'archive.btn':                'Архивировать',
     'archive.unarchive_btn':      'Вернуть',
     'archive.unarchive_tooltip':  'Вернуть в список',
+    'archive.delete_btn':          'Удалить',
+    'archive.delete_tooltip':      'Удалить навсегда',
+    'table.watch_tooltip':         'Смотреть дораму',
     'archive.hint':               'Не начала смотреть и передумала — перенеси в архив',
 
     // Table headers
@@ -307,6 +310,9 @@ export const translations = {
     'archive.btn':                'Archive',
     'archive.unarchive_btn':      'Restore',
     'archive.unarchive_tooltip':  'Restore to list',
+    'archive.delete_btn':          'Delete',
+    'archive.delete_tooltip':      'Delete permanently',
+    'table.watch_tooltip':         'Watch drama',
     'archive.hint':               'Never started and changed your mind — move to archive',
 
     // Table headers

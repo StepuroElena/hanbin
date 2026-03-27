@@ -504,6 +504,22 @@ const componentCSS = `
 }
 .table-archive-btn:hover { color: var(--color-rose); background: var(--color-accentGlow); }
 
+.table-delete-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,107,138,0.1);
+  border: 1px solid rgba(255,107,138,0.45);
+  color: rgba(255,107,138,0.9); cursor: pointer;
+  padding: 4px 10px; border-radius: 20px;
+  font-family: var(--font-body); font-size: 11px;
+  transition: var(--transition-fast);
+  vertical-align: middle;
+}
+.table-delete-btn:hover {
+  color: rgba(255,107,138,1);
+  border-color: rgba(255,107,138,0.7);
+  background: rgba(255,107,138,0.18);
+}
+
 .table-unarchive-btn {
   display: inline-flex; align-items: center; gap: 5px;
   background: none; border: 1px solid rgba(232,196,184,0.15);
