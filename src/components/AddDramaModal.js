@@ -12,6 +12,7 @@
 import { closeModal, injectModalCSS } from './LoginModal.js';
 import { addDrama, getDramas, invalidateUserCache, scrapeDrama } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
+import { fetchPoster, defaultPosterURI } from '../utils/helpers.js';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -275,6 +276,34 @@ const ADD_DRAMA_CSS = `
   .hb-field-select:focus { border-color: rgba(201,123,138,0.55); box-shadow: 0 0 0 3px rgba(201,123,138,0.08); }
   .hb-field-select option { background: #2d0f2a; color: #f5e6d3; }
 
+  /* ── Постер + жанры ── */
+  .hb-poster-genre-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 4px;
+  }
+  #hb-poster-preview {
+    flex-shrink: 0;
+    width: 160px;
+  }
+  .hb-poster-preview__img {
+    width: 160px;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+    background: rgba(255,255,255,0.05);
+    transition: opacity 0.3s ease;
+    border: 1px solid rgba(201,123,138,0.35);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  .hb-poster-genre-right {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+  }
+
   .hb-btn-add {
     background: linear-gradient(135deg, #7aab8e, #5d9478) !important;
     opacity: 1; transition: opacity 0.25s ease, transform 0.15s ease;
@@ -384,7 +413,7 @@ function buildHTML(savedState = {}) {
       <div class="hb-field-error" id="hb-add-url-error"></div>
     </div>
 
-    <!-- Баннер «найдено» -->
+    <!-- Баннер «найдено» — отдельная строка -->
     <div id="hb-scrape-banner" class="hb-scrape-banner" style="display:none">
       <div class="hb-scrape-banner-icon">✦</div>
       <div class="hb-scrape-banner-body">
@@ -393,7 +422,7 @@ function buildHTML(savedState = {}) {
       </div>
     </div>
 
-    <!-- Баннер «не найдено» — с кнопкой -->
+    <!-- Баннер «не найдено» — отдельно, на всю ширину -->
     <div id="hb-scrape-not-found" class="hb-scrape-not-found" style="display:none">
       <div class="hb-scrape-not-found-icon">🔍</div>
       <div class="hb-scrape-not-found-body">
@@ -405,7 +434,7 @@ function buildHTML(savedState = {}) {
       </div>
     </div>
 
-    <!-- Баннер «ошибка» -->
+    <!-- Баннер «ошибка» — отдельно, на всю ширину -->
     <div id="hb-scrape-error" class="hb-scrape-error" style="display:none">
       <div class="hb-scrape-error-icon">⚠️</div>
       <div class="hb-scrape-error-body">
@@ -416,6 +445,19 @@ function buildHTML(savedState = {}) {
 
     <!-- ── ФАЗА 2: детали (скрыты до скрейпа или ручного заполнения) ── -->
     <div id="hb-details-block" class="hb-details-block ${showDetails ? '' : 'hb-hidden'}">
+
+      <!-- Постер + жанры — первая строка деталей -->
+      <div class="hb-poster-genre-row" id="hb-poster-genre-row">
+        <div id="hb-poster-preview"></div>
+        <div class="hb-poster-genre-right">
+          <div class="hb-field-label" style="margin-bottom:8px"><span>${t('modal.add.field.genre')}</span></div>
+          <div class="hb-chips" id="hb-add-genre-chips">
+            ${GENRE_KEYS.map(g => `
+              <div class="hb-chip ${selectedGenres.includes(g.value) ? 'hb-chip--active' : ''}" data-value="${g.value}">${t(g.key)}</div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
 
       <div class="hb-section-label">${t('modal.add.section.details')}</div>
 
@@ -431,15 +473,6 @@ function buildHTML(savedState = {}) {
               <div class="hb-chip hb-chip--country ${c.code === selectedCountry ? 'hb-chip--active' : ''}" data-value="${c.code}">${t(c.key)}</div>
             `).join('')}
           </div>
-        </div>
-      </div>
-
-      <div class="hb-field" style="margin-top:16px">
-        <div class="hb-field-label"><span>${t('modal.add.field.genre')}</span></div>
-        <div class="hb-chips" id="hb-add-genre-chips">
-          ${GENRE_KEYS.map(g => `
-            <div class="hb-chip ${selectedGenres.includes(g.value) ? 'hb-chip--active' : ''}" data-value="${g.value}">${t(g.key)}</div>
-          `).join('')}
         </div>
       </div>
 
@@ -511,6 +544,31 @@ function hideBanners() {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+
+}
+
+/**
+ * Записывает постер в #hb-poster-preview внутри блока деталей.
+ * Сначала SVG-плейсхолдер, потом асинхронно реальный постер.
+ */
+async function showPosterPreview(title, siteName, watchUrl) {
+  const wrap = document.getElementById('hb-poster-preview');
+  if (!wrap) return;
+
+  wrap.innerHTML = `<img class="hb-poster-preview__img" id="hb-poster-img" src="${defaultPosterURI()}" alt="${title}">`;
+
+  const posterUrl = await fetchPoster(title, watchUrl);
+  const img = document.getElementById('hb-poster-img');
+  if (!img) return;
+
+  if (posterUrl) {
+    const fresh = new Image();
+    fresh.onload = () => {
+      img.style.opacity = '0';
+      setTimeout(() => { img.src = posterUrl; img.style.opacity = '1'; }, 150);
+    };
+    fresh.src = posterUrl;
+  }
 }
 
 function showBannerFound(scraped, originalTitle) {
@@ -669,6 +727,9 @@ export function mountAddDramaContent(content, savedState = {}) {
   const titleInput   = document.getElementById('hb-add-title');
   const titleCounter = document.getElementById('hb-add-title-counter');
 
+  // Дебаунс для скрейпа при вводе названия
+  let _scrapeTimer = null;
+
   titleInput.addEventListener('input', () => {
     titleCounter.textContent = `${titleInput.value.length} / 120`;
     titleCounter.classList.toggle('warn', titleInput.value.length > 105);
@@ -676,6 +737,43 @@ export function mountAddDramaContent(content, savedState = {}) {
     document.getElementById('hb-add-title-error').textContent = '';
     document.getElementById('hb-add-duplicate-toast').style.display = 'none';
     syncSubmit();
+
+    // Если сайт уже выбран — запускаем скрейп с дебаунсом 600ms
+    clearTimeout(_scrapeTimer);
+    const title = titleInput.value.trim();
+    if (!title || !selectedSiteUrl) return;
+
+    _scrapeTimer = setTimeout(async () => {
+      // Сбрасываем предыдущий результат
+      if (showDetails) closeDetails();
+      hideBanners();
+
+      loader.style.display = 'flex';
+      try {
+        const { data: scraped, error, notFound } = await scrapeDrama(title, selectedSiteUrl);
+        if (notFound || error) {
+          showBannerNotFound(selectedSiteName);
+        } else if (scraped) {
+          const originalTitle = titleInput.value.trim();
+          lastScraped = scraped;
+          openDetails();
+          applyScrapeData(scraped, {
+            setCountry:    v => { selectedCountry = v; },
+            setGenres:     v => { selectedGenres  = v; },
+            setReleaseTag: v => { releaseTag = v; },
+            setSubTag:     v => { subTag = v; },
+            syncSubmit,
+          });
+          showBannerFound(scraped, originalTitle);
+          showPosterPreview(scraped.title || originalTitle, selectedSiteName, selectedSiteUrl);
+          persistState();
+        }
+      } catch (e) {
+        console.warn('[AddDramaModal] scrape on input error:', e);
+      } finally {
+        loader.style.display = 'none';
+      }
+    }, 600);
   });
 
   // ── Дропдаун сайтов ──────────────────────────────────────────────────────
@@ -767,14 +865,10 @@ export function mountAddDramaContent(content, savedState = {}) {
         const { data: scraped, error, notFound } = await scrapeDrama(title, url);
 
         if (notFound || error) {
-          // Показываем баннер «не найдено» — детали остаются скрытыми
           showBannerNotFound(name);
         } else if (scraped) {
-          // Сохраняем оригинальное название до того как applyScrapeData его изменит
           const originalTitle = titleInput.value.trim();
           lastScraped = scraped;
-
-          // Открываем детали и заполняем их
           openDetails();
           applyScrapeData(scraped, {
             setCountry:    v => { selectedCountry = v; },
@@ -784,6 +878,7 @@ export function mountAddDramaContent(content, savedState = {}) {
             syncSubmit,
           });
           showBannerFound(scraped, originalTitle);
+          showPosterPreview(scraped.title || originalTitle, name, url);
           persistState();
         }
       } catch (e) {

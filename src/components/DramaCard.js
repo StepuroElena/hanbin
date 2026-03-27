@@ -444,9 +444,8 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
       row.style.opacity = '0';
       row.style.transform = 'translateX(20px)';
       row.style.pointerEvents = 'none';
+      await deleteDrama(btn.dataset.id);
       setTimeout(() => row.remove(), 300);
-      // Эндпоинт подключим позже
-      // await deleteDrama(btn.dataset.id);
     });
   });
 }

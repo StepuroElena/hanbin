@@ -7,7 +7,7 @@
  * Задержка configurable через MOCK_DELAY.
  */
 
-import { API_BASE, authGet, authPost, authPatch } from './client.js';
+import { API_BASE, authGet, authPost, authPatch, authDelete } from './client.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -436,8 +436,26 @@ export async function loginUser({ email, password }) {
 }
 
 export async function deleteDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authDelete(`/dramas/${id}`);
+    if (!result.error) {
+      // Убираем из mock-архива на случай fallback-режима
+      const archived = _getArchivedIds().filter(x => x !== id);
+      localStorage.setItem('hanbin_archived', JSON.stringify(archived));
+      invalidateUserCache();
+      return result;
+    }
+    console.warn('[API] deleteDrama: fallback to mock, error:', result.error);
+  }
+
+  // Mock fallback
   await delay();
+  const archived = _getArchivedIds().filter(x => x !== id);
+  localStorage.setItem('hanbin_archived', JSON.stringify(archived));
   console.log('[MOCK] deleteDrama:', id);
+  invalidateUserCache();
   return { data: { id, deleted: true }, error: null };
 }
 

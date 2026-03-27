@@ -111,6 +111,54 @@ export async function authPatch(path, body = {}) {
 }
 
 /**
+ * Авторизованный DELETE-запрос с Bearer-токеном.
+ * @param {string} path — путь относительно API_BASE, напр. '/dramas/1'
+ * @returns {Promise<{ data: any, error: string|null }>}
+ */
+export async function authDelete(path) {
+  const token = getToken();
+  if (!token) return { data: null, error: 'not authenticated' };
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (res.status === 401) {
+      localStorage.removeItem('hanbin_token');
+      localStorage.removeItem('hanbin_user');
+      return { data: null, error: 'unauthorized' };
+    }
+
+    if (res.status === 204) {
+      return { data: null, error: null };
+    }
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok) {
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    return { data: json, error: null };
+  } catch (err) {
+    console.error(`[API] DELETE ${path} failed:`, err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу. Убедись, что бэк запущен на порту 8080.'
+        : 'Ошибка запроса. Попробуй позже.',
+    };
+  }
+}
+
+/**
  * Авторизованный POST-запрос с Bearer-токеном.
  * @param {string} path — путь относительно API_BASE, напр. '/dramas'
  * @param {object} body — тело запроса (будет сериализовано в JSON)
