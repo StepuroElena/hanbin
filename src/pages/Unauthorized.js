@@ -273,9 +273,13 @@ function _cardHTML(d, i) {
        </div>`
     : '';
 
-  const statusBadge = d.ongoing
-    ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>`
-    : `<span class="badge badge--completed">${t('status.completed')}</span>`;
+  const releaseBadge = d.ongoing
+    ? `<span class="badge badge--ongoing">${t('modal.add.tag.ongoing')}</span>`
+    : `<span class="badge badge--completed">${t('modal.add.tag.released')}</span>`;
+
+  const translationBadge = d.ongoing
+    ? `<span class="badge badge--ru">${t('modal.add.tag.translating')}</span>`
+    : `<span class="badge badge--ru">${t('modal.add.tag.translated')}</span>`;
 
   const genre = d.genres?.[0] || '';
 
@@ -285,7 +289,7 @@ function _cardHTML(d, i) {
         <img src="${cover}" alt="${d.title}" loading="lazy"
              onerror="this.onerror=null;this.src='${fallback}'">
         <div class="unauth-card__overlay"></div>
-        <div class="unauth-card__badges">${statusBadge}</div>
+        <div class="unauth-card__badges">${releaseBadge}${translationBadge}</div>
         <button class="unauth-card__ext-btn" title="↗">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M7 17L17 7M17 7H7M17 7v10"/>

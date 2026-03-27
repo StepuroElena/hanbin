@@ -2,25 +2,22 @@
 set -e
 cd "$(dirname "$0")"
 
-# Удаляем старые скриптовые костыли из репозитория
-git rm --cached _screenshots.sh install_screenshot.py save_screenshots.py 2>/dev/null || true
-rm -f _screenshots.sh install_screenshot.py save_screenshots.py
-
 git add \
-  src/components/LoginModal.js \
-  src/components/RegisterModal.js \
-  README.md
+  src/api/client.js \
+  src/api/mock.js \
+  src/components/DramaCard.js
 
-git commit -m "feat(auth): модалка регистрации + плавные переходы между модалками
+git commit -m "feat(archive): wire PATCH /dramas/{id}/archive|unarchive to front + fix is_archived source of truth
 
-- RegisterModal: имя + email + пароль, валидация, счётчик символов
-- LoginModal: рефактор — единый оверлей (#hb-modal-overlay) для обеих модалок
-- Переход логин ↔ регистрация: slide-left / slide-right анимация контента
-  без пересоздания оверлея (нет моргания фона)
-- Закрытие: fade-out анимация вместо мгновенного remove()
-- Декоративный блик меняет цвет при переключении форм (rose → jade)
-- CSS унифицирован: .hb-btn-primary / .hb-btn-secondary, общий hb-modal-css
-- README: секция Auth Modals с архитектурой, анимациями, API и TODO для бэка"
+- client.js: добавлен authPatch() — авторизованный PATCH-запрос с Bearer-токеном
+- mock.js: archiveDrama() → реальный PATCH /api/v1/dramas/{id}/archive при наличии токена
+- mock.js: unarchiveDrama() → реальный PATCH /api/v1/dramas/{id}/unarchive при наличии токена
+- mock.js: adaptDramaFromApi() пробрасывает is_archived с бэка как isArchived
+- mock.js: getDramas() фильтрует архивированные по isArchived (флаг с бэка), не по localStorage
+- mock.js: getArchivedDramas() фильтрует по isArchived === true с бэка; localStorage только для мока
+- DramaCard: кнопка архива рендерится по data-action=archive|unarchive в зависимости от статуса
+- DramaCard: обработчик читает data-action и вызывает archiveDrama/unarchiveDrama соответственно
+- Работает в обоих видах: карточки и таблица"
 
-git push -u origin feature/register
+git push -u origin feature/delete_drama
 echo "✅ Готово"

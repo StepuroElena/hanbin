@@ -5,28 +5,25 @@
 import { getActivity, getDramas } from '../api/mock.js';
 import { timeAgo, fetchPoster, defaultPosterURI } from '../utils/helpers.js';
 
+const ACTIVITY_PREVIEW = 3; // сколько показываем по умолчанию
+
 export async function renderActivityFeed(container) {
   // Сначала показываем skeleton
   container.innerHTML = `
     <section class="section">
       <div class="section-header">
         <div class="section-title">Последние действия</div>
-        <button class="see-all" id="see-all-activity">Все →</button>
       </div>
       <div class="activity-list" id="activity-list-inner">
         <div class="loading-dots">Загрузка…</div>
       </div>
+      <div id="activity-show-more-wrap"></div>
     </section>
   `;
 
-  container.querySelector('#see-all-activity')?.addEventListener('click', () => {
-    console.log('[UI] See all activity');
-    // TODO: navigate('#/activity')
-  });
-
   // Загружаем активность + дорамы параллельно
   const [{ data: activity }, { data: allDramas }] = await Promise.all([
-    getActivity(5),
+    getActivity(10),
     getDramas(),
   ]);
 
@@ -57,7 +54,13 @@ export async function renderActivityFeed(container) {
     return;
   }
 
-  list.innerHTML = activity.map((act, i) => {
+  let showAll = false;
+
+  function renderItems() {
+    const items = showAll ? activity : activity.slice(0, ACTIVITY_PREVIEW);
+    const hasMore = activity.length > ACTIVITY_PREVIEW;
+
+    list.innerHTML = items.map((act, i) => {
     const drama = dramaById.get(act.dramaId) ?? act.drama;
     const title = drama?.title || 'Неизвестная дорама';
     const year = drama?.year || '';
@@ -82,27 +85,48 @@ export async function renderActivityFeed(container) {
         <div class="activity-time">${timeAgo(act.timestamp)}</div>
       </div>
     `;
-  }).join('');
+    }).join('');
 
-  // Сразу выставляем inline SVG-плейсхолдер, затем асинхронно заменяем на реальный постер
-  list.querySelectorAll('.activity-thumb:not([src])').forEach(img => {
+    // Кнопка «Показать ещё» / «Свернуть»
+    const moreWrap = container.querySelector('#activity-show-more-wrap');
+    if (moreWrap) {
+      if (hasMore) {
+        moreWrap.innerHTML = `
+          <button class="activity-show-more" id="activity-toggle-btn">
+            ${showAll
+              ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg> Свернуть'
+              : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg> Ещё ${activity.length - ACTIVITY_PREVIEW} действий`
+            }
+          </button>`;
+        moreWrap.querySelector('#activity-toggle-btn').addEventListener('click', () => {
+          showAll = !showAll;
+          renderItems();
+        });
+      } else {
+        moreWrap.innerHTML = '';
+      }
+    }
+
+    // Сразу выставляем inline SVG-плейсхолдер, затем асинхронно заменяем на реальный постер
+    list.querySelectorAll('.activity-thumb:not([src])').forEach(img => {
     img.src = defaultPosterURI();
     const title = img.dataset.title;
     if (!title) return;
-    fetchPoster(title).then(posterUrl => {
-      if (!posterUrl) return;
-      img.style.transition = 'opacity 0.3s ease';
-      img.style.opacity = '0';
-      setTimeout(() => { img.src = posterUrl; img.style.opacity = '1'; }, 150);
+      fetchPoster(title).then(posterUrl => {
+        if (!posterUrl) return;
+        img.style.transition = 'opacity 0.3s ease';
+        img.style.opacity = '0';
+        setTimeout(() => { img.src = posterUrl; img.style.opacity = '1'; }, 150);
+      });
     });
-  });
 
-  // Events
-  list.querySelectorAll('.activity-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const id = item.dataset.id;
-      console.log('[UI] Open drama from activity:', id);
-      // TODO: navigate(`#/drama/${id}`)
+    // Events
+    list.querySelectorAll('.activity-item').forEach(item => {
+      item.addEventListener('click', () => {
+        console.log('[UI] Open drama from activity:', item.dataset.id);
+      });
     });
-  });
+  }
+
+  renderItems();
 }

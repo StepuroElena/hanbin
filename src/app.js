@@ -333,9 +333,32 @@ const componentCSS = `
 .progress-text { font-size: 10px; color: var(--color-text-muted); white-space: nowrap; }
 
 /* ── Table view ── */
-.drama-table-wrap { overflow-x: auto; }
-.drama-table { width: 100%; border-collapse: collapse; }
-.drama-table thead th { text-align: left; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-text-muted); padding: 0 12px 12px; border-bottom: 1px solid var(--color-border); }
+.drama-table-wrap {
+  /* Скролл на всю страницу — без внутреннего скролла чтобы тултипы не обрезались */
+  overflow: visible;
+  position: relative;
+}
+.drama-table {
+  width: 100%;
+  border-collapse: collapse;
+  /* Горизонтальный скролл на самой таблице не нужен — она растягивается на весь блок */
+}
+.drama-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-rose);
+  padding: 12px 12px 12px;
+  border-bottom: 1px solid rgba(201,123,138,0.2);
+  /* Фон хедера — стеклянный с оттенком сливы, в тон цветовой гамме */
+  background: rgba(74, 25, 66, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
 .drama-table__row { border-bottom: 1px solid var(--color-border); cursor: pointer; transition: var(--transition-fast); }
 .drama-table__row:hover { background: var(--color-surface); }
 .drama-table__row td { padding: 12px; vertical-align: middle; }
@@ -414,6 +437,167 @@ const componentCSS = `
 .badge--plan      { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
 .badge--dropped   { background: rgba(180,80,80,0.6);    color: #fff;               border: 1px solid rgba(200,90,90,0.75); }
 .badge--ru        { background: rgba(120,60,110,0.85);  color: #f5e6d3;            border: 1px solid rgba(232,196,184,0.45); }
+.badge--released    { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }
+.badge--translated  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
+.badge--translating { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
+
+/* ── Archive section ── */
+.section--archive {
+  margin-top: 44px;
+  opacity: 0.72;
+  transition: opacity 0.25s ease;
+}
+.section--archive:hover { opacity: 1; }
+
+.section-title--archive::before { background: rgba(232,196,184,0.35); }
+.section-title--archive { color: var(--color-text-muted); font-size: 18px; }
+
+.drama-table__row--archived td { opacity: 0.75; }
+.drama-table__row--archived:hover td { opacity: 1; }
+
+.table-country { font-size: 13px; white-space: nowrap; }
+.table-seasons { white-space: nowrap; font-size: 12px; }
+.table-date {
+  white-space: nowrap;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.table-date-fresh {
+  color: var(--color-jade, #7aab8e);
+  font-size: 11px;
+}
+.table-tags { white-space: nowrap; }
+.table-tags .badge { margin-right: 3px; }
+.table-no-tags { color: var(--color-text-muted); opacity: 0.35; font-size: 12px; }
+
+.table-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 100px;
+}
+.table-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.table-progress-fill {
+  height: 100%;
+  background: var(--gradient-progress);
+  border-radius: 3px;
+}
+.table-progress-wrap span {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.table-archive-btn {
+  background: none; border: none;
+  color: rgba(245,230,211,0.35); cursor: pointer;
+  padding: 4px 6px; border-radius: 6px;
+  transition: var(--transition-fast);
+  vertical-align: middle;
+}
+.table-archive-btn:hover { color: var(--color-rose); background: var(--color-accentGlow); }
+
+.table-delete-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(255,107,138,0.1);
+  border: 1px solid rgba(255,107,138,0.45);
+  color: rgba(255,107,138,0.9); cursor: pointer;
+  padding: 4px 10px; border-radius: 20px;
+  font-family: var(--font-body); font-size: 11px;
+  transition: var(--transition-fast);
+  vertical-align: middle;
+}
+.table-delete-btn:hover {
+  color: rgba(255,107,138,1);
+  border-color: rgba(255,107,138,0.7);
+  background: rgba(255,107,138,0.18);
+}
+
+.table-unarchive-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 1px solid rgba(232,196,184,0.15);
+  color: rgba(245,230,211,0.45); cursor: pointer;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-family: var(--font-body);
+  letter-spacing: 0.05em;
+  transition: var(--transition-fast);
+}
+.table-unarchive-btn:hover {
+  border-color: rgba(122,171,142,0.5); color: #7aab8e;
+  background: rgba(122,171,142,0.08);
+}
+.table-unarchive-btn--accent {
+  border-color: rgba(122,171,142,0.45);
+  color: #7aab8e;
+  background: rgba(122,171,142,0.1);
+}
+.table-unarchive-btn--accent:hover {
+  border-color: rgba(122,171,142,0.8);
+  background: rgba(122,171,142,0.2);
+  color: #a8d8be;
+  box-shadow: 0 0 10px rgba(122,171,142,0.2);
+}
+
+.card-archive-btn {
+  position: absolute; bottom: 48px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(45,15,42,0.7); border: 1px solid rgba(232,196,184,0.2);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0.7);
+  transition: var(--transition-fast); cursor: pointer;
+}
+.watching-card:hover .card-archive-btn { opacity: 1; transform: scale(1); }
+.card-archive-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); }
+
+.archive-empty {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 0; color: rgba(245,230,211,0.3);
+  font-size: 13px;
+}
+.archive-empty__icon { font-size: 18px; }
+
+/* Прогресс в архиве — приглушённый, с процентом */
+.archive-progress-bar {
+  background: rgba(255,255,255,0.07);
+}
+.archive-progress-fill {
+  background: linear-gradient(90deg, rgba(201,123,138,0.5), rgba(255,107,138,0.4));
+}
+.archive-progress-pct {
+  font-size: 10px;
+  color: rgba(245,230,211,0.3);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Activity show more ── */
+.activity-show-more {
+  display: flex; align-items: center; gap: 7px;
+  margin-top: 10px;
+  padding: 8px 18px;
+  background: none;
+  border: 1px solid rgba(232,196,184,0.12);
+  border-radius: 30px;
+  color: rgba(245,230,211,0.4);
+  font-size: 12px; font-family: var(--font-body);
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  width: 100%;
+  justify-content: center;
+}
+.activity-show-more:hover {
+  border-color: rgba(201,123,138,0.35);
+  color: var(--color-rose);
+  background: rgba(201,123,138,0.06);
+}
 
 /* ── Responsive ── */
 @media (max-width: 1100px) {

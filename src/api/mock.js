@@ -7,7 +7,7 @@
  * Задержка configurable через MOCK_DELAY.
  */
 
-import { API_BASE, authGet, authPost } from './client.js';
+import { API_BASE, authGet, authPost, authPatch } from './client.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -54,9 +54,12 @@ const MOCK_DRAMAS = [
     rating: 4,
     episodesWatched: 10,
     episodesTotal: 16,
+    seasons: 1,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1535016120720-40c646be5580?w=400&q=80',
     watchUrl: 'https://example.com/my-demon',
+    addedAt: new Date(Date.now() - 12 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 1 * 3600000),
   },
   {
     id: 'drama_002',
@@ -69,9 +72,12 @@ const MOCK_DRAMAS = [
     rating: 5,
     episodesWatched: 12,
     episodesTotal: 40,
+    seasons: 1,
     hasSubs: true,
     cover: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=80',
     watchUrl: 'https://example.com/hua-zhi',
+    addedAt: new Date(Date.now() - 8 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 6 * 3600000),
   },
   {
     id: 'drama_003',
@@ -84,9 +90,12 @@ const MOCK_DRAMAS = [
     rating: 5,
     episodesWatched: 14,
     episodesTotal: 16,
+    seasons: 1,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1490730141103-6cac27aaab94?w=400&q=80',
     watchUrl: 'https://example.com/lovely-runner',
+    addedAt: new Date(Date.now() - 5 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 30 * 60000),
   },
   {
     id: 'drama_004',
@@ -99,9 +108,12 @@ const MOCK_DRAMAS = [
     rating: 4,
     episodesWatched: 7,
     episodesTotal: 16,
+    seasons: 1,
     hasSubs: true,
     cover: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80',
     watchUrl: 'https://example.com/marry-my-husband',
+    addedAt: new Date(Date.now() - 20 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 2 * 24 * 3600000),
   },
   {
     id: 'drama_005',
@@ -114,9 +126,12 @@ const MOCK_DRAMAS = [
     rating: 5,
     episodesWatched: 16,
     episodesTotal: 16,
+    seasons: 1,
     hasSubs: true,
     cover: 'https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=100&q=80',
     watchUrl: 'https://example.com/queen-of-tears',
+    addedAt: new Date(Date.now() - 30 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 2 * 3600000),
   },
   {
     id: 'drama_006',
@@ -129,9 +144,12 @@ const MOCK_DRAMAS = [
     rating: 5,
     episodesWatched: 16,
     episodesTotal: 16,
+    seasons: 1,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=100&q=80',
     watchUrl: 'https://example.com/cloy',
+    addedAt: new Date(Date.now() - 90 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 26 * 3600000),
   },
   {
     id: 'drama_007',
@@ -144,9 +162,12 @@ const MOCK_DRAMAS = [
     rating: 4,
     episodesWatched: 36,
     episodesTotal: 36,
+    seasons: 1,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1551269901-5c5e14c25df7?w=100&q=80',
     watchUrl: 'https://example.com/fairy-devil',
+    addedAt: new Date(Date.now() - 60 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 48 * 3600000),
   },
   {
     id: 'drama_008',
@@ -159,9 +180,12 @@ const MOCK_DRAMAS = [
     rating: null,
     episodesWatched: 0,
     episodesTotal: 16,
+    seasons: 2,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1519895709498-ce3c5fa1a100?w=100&q=80',
     watchUrl: 'https://example.com/2521',
+    addedAt: new Date(Date.now() - 3 * 24 * 3600000),
+    lastWatchedAt: null,
   },
   {
     id: 'drama_009',
@@ -174,9 +198,12 @@ const MOCK_DRAMAS = [
     rating: 5,
     episodesWatched: 54,
     episodesTotal: 54,
+    seasons: 2,
     hasSubs: false,
     cover: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=100&q=80',
     watchUrl: 'https://example.com/nirvana-in-fire',
+    addedAt: new Date(Date.now() - 120 * 24 * 3600000),
+    lastWatchedAt: new Date(Date.now() - 96 * 3600000),
   },
 ];
 
@@ -190,48 +217,18 @@ const MOCK_ACTIVITY = [
 
 // ─────────────────────────────────────────────
 // API METHODS
-// TODO: заменить тело каждой функции на реальный fetch когда будет готов бэк
 // ─────────────────────────────────────────────
 
-/**
- * Получить профиль и статистику пользователя.
- * Теперь идёт через реальный GET /api/v1/users/me.
- * Если не авторизован — фаллбэк на MOCK_USER.
- */
 export async function getUser() {
   const { data, error } = await getMe();
   if (data) return { data, error: null };
-  // Фаллбэк: пользователь не залогинен или бэк недоступен
   await delay();
   return { data: MOCK_USER, error: null };
 }
 
-/**
- * Адаптирует дораму с бэка в формат, который ожидают компоненты.
- *
- * Бэк (DramaOutput):
- *   id, profile_id, title, watch_url, release_year, release_tag,
- *   translation_tag, genre, rating (0–10 | null), watch_status,
- *   country, created_at, updated_at
- *
- * Фронт:
- *   id, title, year, genres[], country, status, episodesWatched,
- *   episodesTotal, watchUrl, rating (1–5 | null), hasSubs, ongoing, cover
- *
- * watch_status маппинг:
- *   planned   → plan
- *   watching  → watching
- *   completed → completed
- *   dropped   → dropped
- */
 function adaptDramaFromApi(d) {
-  // release_tag: 'ongoing' | 'released'
   const ongoing = d.release_tag === 'ongoing';
-
-  // translation_tag: 'translated' | 'translating'
   const hasSubs = d.translation_tag === 'translated';
-
-  // watch_status с бэка может быть 'planned', на фронте ожидается 'plan'
   const STATUS_MAP = {
     planned:   'plan',
     watching:  'watching',
@@ -239,8 +236,6 @@ function adaptDramaFromApi(d) {
     dropped:   'dropped',
   };
   const status = STATUS_MAP[d.watch_status] ?? d.watch_status;
-
-  // Рейтинг: бэк хранит 0–10 (float), фронт показывает 1–5 звёзд
   const rating = d.rating != null ? Math.round(d.rating / 2) || 1 : null;
 
   return {
@@ -250,28 +245,26 @@ function adaptDramaFromApi(d) {
     genres:          d.genre ? [d.genre] : [],
     country:         (d.country || '').toLowerCase().slice(0, 2),
     status,
-    // Бэк пока не хранит прогресс по эпизодам — показываем 0/0
-    episodesWatched: 0,
-    episodesTotal:   0,
+    episodesWatched: d.current_episode ?? 0,
+    episodesTotal:   d.total_episodes  ?? 0,
     watchUrl:        d.watch_url || null,
+    sourceUrl:       d.source_url || null,
     rating,
     ongoing,
     hasSubs,
-    cover:           null, // бэк пока не хранит обложки
+    isArchived:      Boolean(d.is_archived),
+    cover:           null,
+    seasons:         d.seasons ?? null,
+    addedAt:         d.created_at ? new Date(d.created_at) : null,
+    lastWatchedAt:   d.updated_at ? new Date(d.updated_at) : null,
   };
 }
 
-/**
- * Получить список всех дорам.
- * Если пользователь залогинен — берёт дорамы с бэка через /users/me.
- * Фаллбэк на MOCK_DRAMAS если не авторизован.
- * @param {Object} filters — { status, country, genre, search }
- */
 export async function getDramas(filters = {}) {
-  // Пытаемся взять данные с бэка
+  const limit = filters.limit ?? 50;
   const { data: user } = await getMe();
   if (user?._rawDramas?.length) {
-    let result = user._rawDramas.map(adaptDramaFromApi);
+    let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !d.isArchived);
 
     if (filters.status && filters.status !== 'all') {
       result = result.filter(d => d.status === filters.status);
@@ -287,12 +280,12 @@ export async function getDramas(filters = {}) {
       result = result.filter(d => d.title.toLowerCase().includes(q));
     }
 
-    return { data: result, error: null };
+    return { data: result.slice(0, limit), error: null };
   }
 
-  // Фаллбэк: мок
   await delay();
-  let result = [...MOCK_DRAMAS];
+  const _archived = _getArchivedIds();
+  let result = MOCK_DRAMAS.filter(d => !_archived.includes(d.id));
 
   if (filters.status && filters.status !== 'all') {
     result = result.filter(d => d.status === filters.status);
@@ -311,18 +304,10 @@ export async function getDramas(filters = {}) {
   return { data: result, error: null };
 }
 
-/**
- * Получить дорамы со статусом "watching".
- * Идёт через getDramas({ status: 'watching' }), т.е. автоматически использует бэк если залогинен.
- */
 export async function getCurrentlyWatching() {
   return getDramas({ status: 'watching' });
 }
 
-/**
- * Получить ленту активности
- * TODO: GET /api/activity?limit=10
- */
 export async function getActivity(limit = 5) {
   await delay();
   const enriched = MOCK_ACTIVITY.slice(0, limit).map(act => ({
@@ -332,41 +317,24 @@ export async function getActivity(limit = 5) {
   return { data: enriched, error: null };
 }
 
-/**
- * Добавить дораму в список.
- * Если пользователь авторизован — реальный вызов POST /api/v1/dramas.
- * Фаллбэк на мок если не авторизован.
- *
- * @param {Object} drama
- * @param {string} drama.title          — название (обязательно)
- * @param {string} drama.watchUrl       — ссылка на сайт (обязательно)
- * @param {string[]} drama.genres       — жанры (первый отправляется на бэк; обязательно)
- * @param {string} drama.country        — код страны (обязательно)
- * @param {number} drama.year           — год выпуска
- * @param {string} drama.releaseTag     — 'ongoing' | 'released'
- * @param {string} drama.subTag         — 'translated' | 'translating'
- * @param {number|null} drama.rating    — звёзды 1–5 (на бэк отправляется как float 0–10)
- */
 export async function addDrama(drama) {
   const token = localStorage.getItem('hanbin_token');
 
-  // Фаллбэк на мок если не авторизован
   if (!token) {
     await delay();
     console.log('[MOCK] addDrama (not logged in, using mock):', drama);
     return { data: { ...drama, id: `drama_${Date.now()}` }, error: null };
   }
 
-  // Адаптируем формат фронта в формат, который ожидает бэк
   const payload = {
     title:           drama.title,
     watch_url:       drama.watchUrl ?? '',
+    source_url:      drama.sourceUrl ?? '',
     release_year:    drama.year ?? new Date().getFullYear(),
     release_tag:     drama.tags?.includes('ongoing') ? 'ongoing' : 'released',
     translation_tag: drama.tags?.includes('translated') ? 'translated' : 'translating',
     genre:           drama.genres?.[0] ?? '',
     country:         drama.country ?? '',
-    // Рейтинг: звёзды 1–5 → float 0–10 (на бэке 0–10)
     ...(drama.rating != null ? { rating: drama.rating * 2 } : {}),
   };
 
@@ -374,34 +342,18 @@ export async function addDrama(drama) {
   return authPost('/dramas', payload);
 }
 
-/**
- * Обновить статус дорамы
- * @param {string} id
- * @param {string} status — watching | completed | plan | dropped
- * TODO: PATCH /api/dramas/:id
- */
 export async function updateDramaStatus(id, status) {
   await delay();
   console.log('[MOCK] updateDramaStatus:', id, '->', status);
   return { data: { id, status }, error: null };
 }
 
-/**
- * Поставить оценку дораме
- * @param {string} id
- * @param {number} rating — 1-5
- * TODO: PATCH /api/dramas/:id/rating
- */
 export async function rateDrama(id, rating) {
   await delay();
   console.log('[MOCK] rateDrama:', id, '->', rating);
   return { data: { id, rating }, error: null };
 }
 
-/**
- * Получить последние дорамы с сайта (для незалогиненной страницы)
- * TODO: GET /api/dramas/latest?source=doramyclub
- */
 export async function getLatestDramas(limit = 10) {
   await delay();
   const latestDramas = [
@@ -423,13 +375,6 @@ export async function getLatestDramas(limit = 10) {
 // AUTH
 // ─────────────────────────────────────────────
 
-/**
- * Зарегистрировать нового пользователя.
- * @param {{ name: string, email: string, password: string }} input
- * @returns {{ data: { user_id: number, name: string, email: string } | null, error: string | null }}
- *
- * POST /api/v1/auth/register
- */
 export async function registerUser({ name, email, password }) {
   try {
     const res = await fetch(`${API_BASE}/auth/register`, {
@@ -438,20 +383,15 @@ export async function registerUser({ name, email, password }) {
       body: JSON.stringify({ name, email, password }),
     });
 
-    // Бэк может вернуть text/plain при 404 — безопасно читаем текст, потом парсим
     const text = await res.text();
     let json = null;
-    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+    try { json = JSON.parse(text); } catch (_) {}
 
     if (!res.ok) {
-      if (res.status === 404) {
-        return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
-      }
-      // Бэк возвращает { error: '...' }
+      if (res.status === 404) return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
       return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
     }
 
-    // Успех → { user_id, name, email }
     return { data: json, error: null };
   } catch (err) {
     console.error('[API] registerUser network error:', err);
@@ -464,13 +404,6 @@ export async function registerUser({ name, email, password }) {
   }
 }
 
-/**
- * Войти в аккаунт.
- * @param {{ email: string, password: string }} input
- * @returns {{ data: { user_id: number, email: string, token: string } | null, error: string | null }}
- *
- * POST /api/v1/auth/login
- */
 export async function loginUser({ email, password }) {
   try {
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -481,22 +414,15 @@ export async function loginUser({ email, password }) {
 
     const text = await res.text();
     let json = null;
-    try { json = JSON.parse(text); } catch (_) { /* не JSON */ }
+    try { json = JSON.parse(text); } catch (_) {}
 
     if (!res.ok) {
-      if (res.status === 401) {
-        return { data: null, error: 'Неверная почта или пароль.' };
-      }
-      if (res.status === 400) {
-        return { data: null, error: json?.error ?? 'Заполни все поля.' };
-      }
-      if (res.status === 404) {
-        return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
-      }
+      if (res.status === 401) return { data: null, error: 'Неверная почта или пароль.' };
+      if (res.status === 400) return { data: null, error: json?.error ?? 'Заполни все поля.' };
+      if (res.status === 404) return { data: null, error: 'Что-то пошло не так. Попробуй позже.' };
       return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
     }
 
-    // Успех → { user_id, email, token }
     return { data: json, error: null };
   } catch (err) {
     console.error('[API] loginUser network error:', err);
@@ -509,22 +435,78 @@ export async function loginUser({ email, password }) {
   }
 }
 
-/**
- * Удалить дораму из списка
- * @param {string} id
- * TODO: DELETE /api/dramas/:id
- */
 export async function deleteDrama(id) {
   await delay();
   console.log('[MOCK] deleteDrama:', id);
   return { data: { id, deleted: true }, error: null };
 }
 
-/**
- * Поиск дорам
- * @param {string} query
- * TODO: GET /api/dramas/search?q=query
- */
+export async function archiveDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}/archive`);
+    if (!result.error) {
+      invalidateUserCache();
+      return result;
+    }
+    console.warn('[API] archiveDrama: fallback to mock, error:', result.error);
+  }
+
+  await delay();
+  const archived = _getArchivedIds();
+  if (!archived.includes(id)) archived.push(id);
+  localStorage.setItem('hanbin_archived', JSON.stringify(archived));
+  console.log('[MOCK] archiveDrama:', id);
+  invalidateUserCache();
+  return { data: { id, status: 'archived' }, error: null };
+}
+
+export async function unarchiveDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}/unarchive`);
+    if (!result.error) {
+      const archived = _getArchivedIds().filter(x => x !== id);
+      localStorage.setItem('hanbin_archived', JSON.stringify(archived));
+      invalidateUserCache();
+      return result;
+    }
+    console.warn('[API] unarchiveDrama: fallback to mock, error:', result.error);
+  }
+
+  await delay();
+  const archived = _getArchivedIds().filter(x => x !== id);
+  localStorage.setItem('hanbin_archived', JSON.stringify(archived));
+  console.log('[MOCK] unarchiveDrama:', id);
+  invalidateUserCache();
+  return { data: { id, status: 'plan' }, error: null };
+}
+
+export async function getArchivedDramas() {
+  const { data: user } = await getMe();
+
+  if (user?._rawDramas?.length !== undefined) {
+    const result = user._rawDramas
+      .map(adaptDramaFromApi)
+      .filter(d => d.isArchived);
+    return { data: result, error: null };
+  }
+
+  await delay();
+  const archivedIds = _getArchivedIds();
+  if (!archivedIds.length) return { data: [], error: null };
+  const result = MOCK_DRAMAS.filter(d => archivedIds.includes(d.id));
+  return { data: result, error: null };
+}
+
+function _getArchivedIds() {
+  try {
+    return JSON.parse(localStorage.getItem('hanbin_archived') || '[]');
+  } catch { return []; }
+}
+
 export async function searchDramas(query) {
   await delay(150);
   const q = query.toLowerCase();
@@ -532,10 +514,6 @@ export async function searchDramas(query) {
   return { data: result, error: null };
 }
 
-/**
- * Переключить вид (card/table) — сохраняется в localStorage
- * TODO: PATCH /api/user/preferences
- */
 export async function setViewMode(mode) {
   await delay(50);
   localStorage.setItem('hanbin_view_mode', mode);
@@ -547,126 +525,92 @@ export async function getViewMode() {
   return { data: { mode: localStorage.getItem('hanbin_view_mode') || 'card' }, error: null };
 }
 
-/**
- * Получить данные текущего пользователя с бэка.
- * GET /api/v1/users/me — требует Authorization: Bearer <token>
- *
- * Ответ бэка: { user_id, name, email, dramas[], badges[] }
- * Адаптируем в формат, который ожидают компоненты (stats, countries, badges).
- *
- * Кэшируется на 5 секунд чтобы не слать параллельные запросы
- * когда несколько компонентов (StatsBlock, DramaList, Sidebar) обновляются одновременно.
- * Инвалидируется через invalidateUserCache().
- */
-let _getMeCache = null;      // { data, ts } — результат последнего запроса
-let _getMeInflight = null;   // Promise — проброс для параллельных вызов
-const GET_ME_TTL = 5000;     // ms
+let _getMeCache = null;
+let _getMeInflight = null;
+const GET_ME_TTL = 5000;
 
 export async function getMe() {
-  // Возвращаем кэш если он свежий
   if (_getMeCache && (Date.now() - _getMeCache.ts) < GET_ME_TTL) {
     return _getMeCache.data;
   }
 
-  // Если запрос уже летит — подключаемся к нему без нового fetch
   if (_getMeInflight) return _getMeInflight;
 
   _getMeInflight = (async () => {
-  const { data: raw, error } = await authGet('/users/me');
-  if (error || !raw) return { data: null, error: error ?? 'no data' };
+    const { data: raw, error } = await authGet('/users/me');
+    if (error || !raw) return { data: null, error: error ?? 'no data' };
 
-  // Считаем статистику из списка дорам.
-  // Бэк не хранит прогресс по эпизодам (current_episode/total_episodes),
-  // поэтому считаем только по количеству дорам с учётом статуса.
-  const dramas = raw.dramas ?? [];
-  const dramasWatched  = dramas.filter(d => d.watch_status === 'completed').length;
-  const dramasWatching = dramas.filter(d => d.watch_status === 'watching').length;
-  // Суммарные «эпизоды» = завершённые дорамы (приблизительно, без данных о кол-ве серий)
-  // Засчитываем и те, что смотрим сейчас, чтобы цифра не была нулевой
-  const totalEpisodes  = dramasWatched + dramasWatching;
-  // Среднее: ~45 минут на эпизод условной «дорамы» (будет заменено когда бэк отдаст реальный прогресс)
-  const totalHours = Math.round(totalEpisodes * 45 / 60);
+    const dramas = raw.dramas ?? [];
+    const dramasWatched  = dramas.filter(d => d.watch_status === 'completed').length;
+    const dramasWatching = dramas.filter(d => d.watch_status === 'watching').length;
+    const totalEpisodes  = dramasWatched + dramasWatching;
+    const totalHours = Math.round(totalEpisodes * 45 / 60);
 
-  // Группировка по странам
-  const countryMap = {};
-  for (const d of dramas) {
-    const c = d.country || 'unknown';
-    countryMap[c] = (countryMap[c] ?? 0) + 1;
-  }
-  const total = dramas.length || 1;
-  // Бэк хранит страну как полное название на английском: 'Korea', 'China', 'Japan'
-  const COUNTRY_META = {
-    Korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
-    China:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
-    Japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
-    // Страховка на случай если бэк вернёт другой регистр или вариант
-    korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
-    china:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
-    japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
-  };
-  const countries = Object.entries(countryMap)
-    .map(([country, count]) => {
-      const meta = COUNTRY_META[country] ?? { flag: '🌏', name: country, colorClass: 'fill-korea' };
-      return { code: country.toLowerCase().slice(0, 2), flag: meta.flag, name: meta.name, count, percent: Math.round(count / total * 100), colorClass: meta.colorClass };
-    })
-    .sort((a, b) => b.count - a.count);
+    const countryMap = {};
+    for (const d of dramas) {
+      const c = d.country || 'unknown';
+      countryMap[c] = (countryMap[c] ?? 0) + 1;
+    }
+    const total = dramas.length || 1;
+    const COUNTRY_META = {
+      Korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+      China:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+      Japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+      korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+      china:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+      japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+    };
+    const countries = Object.entries(countryMap)
+      .map(([country, count]) => {
+        const meta = COUNTRY_META[country] ?? { flag: '🌏', name: country, colorClass: 'fill-korea' };
+        return { code: country.toLowerCase().slice(0, 2), flag: meta.flag, name: meta.name, count, percent: Math.round(count / total * 100), colorClass: meta.colorClass };
+      })
+      .sort((a, b) => b.count - a.count);
 
-  // Бэйджи
-  const BADGE_ICONS = {
-    drama_queen: '👑', k_drama_fan: '🌸', c_drama_explorer: '🏮',
-    '2000h_club': '⏱️', night_owl: '🌙', '100_dramas': '🔒',
-  };
-  const badges = (raw.badges ?? []).map(b => ({
-    id:       b.code,
-    icon:     b.icon || BADGE_ICONS[b.code] || '🏅',
-    name:     b.name,
-    unlocked: true,
-  }));
+    const BADGE_ICONS = {
+      drama_queen: '👑', k_drama_fan: '🌸', c_drama_explorer: '🏮',
+      '2000h_club': '⏱️', night_owl: '🌙', '100_dramas': '🔒',
+    };
+    const badges = (raw.badges ?? []).map(b => ({
+      id:       b.code,
+      icon:     b.icon || BADGE_ICONS[b.code] || '🏅',
+      name:     b.name,
+      unlocked: true,
+    }));
 
-  // Добавляем заблокированные бэйджи-ориентиры, которых ещё нет у пользователя
-  const LOCKED_BADGES = [
-    { id: '100_dramas', icon: '🔒', name: '100 дорам', unlocked: false },
-  ];
-  for (const locked of LOCKED_BADGES) {
-    if (!badges.find(b => b.id === locked.id)) badges.push(locked);
-  }
+    const LOCKED_BADGES = [
+      { id: '100_dramas', icon: '🔒', name: '100 дорам', unlocked: false },
+    ];
+    for (const locked of LOCKED_BADGES) {
+      if (!badges.find(b => b.id === locked.id)) badges.push(locked);
+    }
 
-  const adapted = {
-    id:     String(raw.user_id),
-    name:   raw.name,
-    email:  raw.email,
-    avatar: raw.name?.slice(0, 2) ?? '소',
-    stats: {
-      dramasWatched,
-      totalEpisodes,
-      totalHours,
-      milestone: 'Drama Queen',
-    },
-    badges,
-    countries: countries.length ? countries : MOCK_USER.countries,
-    // Сырые дорамы для getDramas()
-    _rawDramas: dramas,
-  };
+    const adapted = {
+      id:     String(raw.user_id),
+      name:   raw.name,
+      email:  raw.email,
+      avatar: raw.name?.slice(0, 2) ?? '소',
+      stats: {
+        dramasWatched,
+        totalEpisodes,
+        totalHours,
+        milestone: 'Drama Queen',
+      },
+      badges,
+      countries: countries.length ? countries : MOCK_USER.countries,
+      _rawDramas: dramas,
+    };
 
     const result = { data: adapted, error: null };
-    // Сохраняем в кэш
     _getMeCache = { data: result, ts: Date.now() };
     return result;
   })();
 
-  // После завершения (успех или ошибка) сбрасываем inflight-промис
   _getMeInflight.finally(() => { _getMeInflight = null; });
 
   return _getMeInflight;
 }
 
-/**
- * Получить состояние авторизации.
- *
- * Если в localStorage есть токен + user — считаем залогиненным
- * и подтягиваем актуальные данные через getMe().
- * При ошибке getMe — очищаем сессию.
- */
 export async function getAuthState() {
   const token = localStorage.getItem('hanbin_token');
   if (!token) return { data: { isLoggedIn: false, user: null }, error: null };
@@ -675,19 +619,15 @@ export async function getAuthState() {
     const { data: user, error } = await getMe();
 
     if (user) {
-      // Успешно получили данные с бэка
       return { data: { isLoggedIn: true, user }, error: null };
     }
 
-    // Различаем: сетевая ошибка (бэк не запущен) vs 401 (невалидный токен)
     const isNetworkError = error?.includes('подключиться') || error?.includes('connect') || error === 'no data';
 
     if (isNetworkError) {
-      // Бэк недоступен — не сбрасываем сессию, используем данные из localStorage
       const raw = localStorage.getItem('hanbin_user');
       const cached = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
       if (cached) {
-        // Отдаём кэшированные данные — пользователь остаётся залогиненным
         const fallbackUser = {
           ...MOCK_USER,
           id:   cached.id   ?? MOCK_USER.id,
@@ -698,13 +638,11 @@ export async function getAuthState() {
       }
     }
 
-    // 401 или другая настоящая ошибка авторизации — сбрасываем сессию
     localStorage.removeItem('hanbin_token');
     localStorage.removeItem('hanbin_user');
     return { data: { isLoggedIn: false, user: null }, error: null };
 
   } catch {
-    // Неожиданное исключение — не сбрасываем, чтобы не выкидывать пользователя зря
     const raw = localStorage.getItem('hanbin_user');
     const cached = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
     if (cached) {
@@ -719,16 +657,59 @@ export async function getAuthState() {
 // CACHE INVALIDATION
 // ─────────────────────────────────────────────
 
-/**
- * Инвалидирует кэш данных пользователя:
- * эмитит событие 'hanbin:data-changed' — компоненты (Home, StatsBlock, Sidebar)
- * подписываются на него и перезапрашивают данные с бэка.
- * Вызывается после addDrama, updateDrama и т.д.
- */
 export function invalidateUserCache() {
-  // Сбрасываем оба кэша — результат и in-flight промис.
-  // Следующий вызов getMe гарантированно пойдёт на GET /users/me.
   _getMeCache = null;
   _getMeInflight = null;
   window.dispatchEvent(new CustomEvent('hanbin:data-changed'));
+}
+
+// ─────────────────────────────────────────────
+// SCRAPER
+// ─────────────────────────────────────────────
+
+/**
+ * Спарсить информацию о дораме с внешнего сайта.
+ * GET /api/v1/dramas/scrape?title=...&site_url=...
+ *
+ * Публичный эндпоинт — не требует авторизации.
+ *
+ * @returns {Promise<{
+ *   data: object | null,
+ *   error: string | null,
+ *   notFound: boolean   ← true если дорама не найдена на этом сайте (HTTP 404)
+ * }>}
+ */
+export async function scrapeDrama(title, siteUrl) {
+  try {
+    const params = new URLSearchParams({ title, site_url: siteUrl });
+    const res = await fetch(`${API_BASE}/dramas/scrape?${params}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    // Дорама не найдена или сайт заблокировал запрос (403/503) — бэк вернёт not_found:true
+    if (res.status === 404 || json?.not_found === true) {
+      return { data: null, error: json?.error ?? 'Дорама не найдена на этом сайте', notFound: true };
+    }
+
+    if (!res.ok) {
+      // Любая другая ошибка — сайт недоступен, молча игнорируем на фронте
+      return { data: null, error: json?.error ?? 'Не удалось получить данные с сайта', notFound: false };
+    }
+
+    return { data: json, error: null, notFound: false };
+  } catch (err) {
+    console.error('[API] scrapeDrama failed:', err);
+    return {
+      data: null,
+      notFound: false,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка парсинга. Попробуй позже.',
+    };
+  }
 }

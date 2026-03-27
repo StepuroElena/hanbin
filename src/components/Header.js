@@ -9,12 +9,16 @@ import { t, onLangChange } from '../i18n/index.js';
 import { renderLangToggle } from './LangToggle.js';
 
 export async function renderHeader(container, { onSearch, onViewChange }) {
-  const [{ data: { mode } }, { data: auth }] = await Promise.all([
+  const [{ data: { mode: initialMode } }, { data: auth }] = await Promise.all([
     getViewMode(),
     getAuthState(),
   ]);
 
+  // Храним текущий вид в мутабельной переменной — переживает перерендер при смене языка
+  let currentMode = localStorage.getItem('hanbin_view_mode') || initialMode || 'card';
+
   function buildHTML() {
+    const mode = currentMode;
     const avatarHTML = auth.isLoggedIn
       ? `<div class="avatar-wrap" id="avatar-wrap">
           <div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>
@@ -152,6 +156,7 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
         container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const viewMode = btn.dataset.view;
+        currentMode = viewMode; // Сохраняем в closure — переживет перерендер при смене языка
         await setViewMode(viewMode);
         onViewChange?.(viewMode);
       });
