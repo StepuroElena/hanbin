@@ -263,7 +263,7 @@ function adaptDramaFromApi(d) {
 export async function getDramas(filters = {}) {
   const limit = filters.limit ?? 50;
   const { data: user } = await getMe();
-  if (user?._rawDramas?.length) {
+  if (user?._rawDramas !== undefined) {
     let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !d.isArchived);
 
     if (filters.status && filters.status !== 'all') {
@@ -309,6 +309,11 @@ export async function getCurrentlyWatching() {
 }
 
 export async function getActivity(limit = 5) {
+  const { data: user } = await getMe();
+  if (user?._rawDramas !== undefined) {
+    // Реальный пользователь — активность пока не приходит с бэка, возвращаем пустой массив
+    return { data: [], error: null };
+  }
   await delay();
   const enriched = MOCK_ACTIVITY.slice(0, limit).map(act => ({
     ...act,
@@ -351,6 +356,31 @@ export async function updateDramaStatus(id, status) {
 export async function rateDrama(id, rating) {
   await delay();
   console.log('[MOCK] rateDrama:', id, '->', rating);
+  return { data: { id, rating }, error: null };
+}
+
+/**
+ * Обновляет рейтинг дорамы через PATCH /dramas/{id}.
+ * rating — звёзды 1–5 (фронт), переводится в 0–10 для бэка. null = сбросить рейтинг.
+ */
+export async function updateDramaRating(id, rating) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const body = rating != null
+      ? { rating: rating * 2 }       // 1–5 → 2–10
+      : { clear_rating: true };
+    const result = await authPatch(`/dramas/${id}`, body);
+    if (!result.error) {
+      invalidateUserCache();
+      return result;
+    }
+    console.warn('[API] updateDramaRating: fallback to mock, error:', result.error);
+  }
+
+  await delay();
+  console.log('[MOCK] updateDramaRating:', id, '->', rating);
+  invalidateUserCache();
   return { data: { id, rating }, error: null };
 }
 

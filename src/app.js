@@ -495,6 +495,24 @@ const componentCSS = `
   white-space: nowrap;
 }
 
+.table-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+.table-star {
+  font-size: 14px;
+  color: rgba(212,165,116,0.2);
+  transition: color 0.12s ease, transform 0.1s ease;
+  line-height: 1;
+}
+.table-star--active { color: var(--color-gold); }
+.table-stars:hover .table-star { color: rgba(212,165,116,0.4); }
+.table-star:hover { transform: scale(1.2); }
+
 .table-archive-btn {
   background: none; border: none;
   color: rgba(245,230,211,0.35); cursor: pointer;

@@ -2,7 +2,7 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama, updateDramaRating } from '../api/mock.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -230,7 +230,11 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
               <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
               <td><span class="badge badge--${d.status}">${statusLabel(d.status)}</span></td>
-              <td>${renderStars(d.rating)}</td>
+              <td>
+                <div class="table-stars" data-id="${d.id}" data-rating="${d.rating ?? 0}">
+                  ${[1,2,3,4,5].map(v => `<span class="table-star${(d.rating ?? 0) >= v ? ' table-star--active' : ''}" data-value="${v}">★</span>`).join('')}
+                </div>
+              </td>
               <td class="table-muted table-progress">
                 <div class="table-progress-wrap">
                   <div class="table-progress-bar"><div class="table-progress-fill" style="width:${progress}%"></div></div>
@@ -321,6 +325,42 @@ export function renderDramaTable(container, dramas) {
 
     row.addEventListener('click', () => {
       console.log('[UI] Open drama detail:', row.dataset.id);
+    });
+  });
+
+  // ── Интерактивные звёзды рейтинга ──
+  container.querySelectorAll('.table-stars').forEach(wrap => {
+    const id = wrap.dataset.id;
+    const stars = wrap.querySelectorAll('.table-star');
+    let currentRating = parseInt(wrap.dataset.rating, 10) || 0;
+
+    function paintStars(active) {
+      stars.forEach(s => s.classList.toggle('table-star--active', parseInt(s.dataset.value, 10) <= active));
+    }
+
+    wrap.addEventListener('mouseover', e => {
+      const s = e.target.closest('.table-star');
+      if (!s) return;
+      paintStars(parseInt(s.dataset.value, 10));
+    });
+
+    wrap.addEventListener('mouseleave', () => paintStars(currentRating));
+
+    wrap.addEventListener('click', async e => {
+      e.stopPropagation();
+      const s = e.target.closest('.table-star');
+      if (!s) return;
+      const clicked = parseInt(s.dataset.value, 10);
+      // повторный клик по той же звезде — сбрасываем
+      const newRating = clicked === currentRating ? 0 : clicked;
+      currentRating = newRating;
+      wrap.dataset.rating = newRating;
+      paintStars(newRating);
+      wrap.style.opacity = '0.5';
+      wrap.style.pointerEvents = 'none';
+      await updateDramaRating(id, newRating || null);
+      wrap.style.opacity = '1';
+      wrap.style.pointerEvents = '';
     });
   });
 }
