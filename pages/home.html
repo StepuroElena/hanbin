@@ -46,6 +46,12 @@
 </head>
 <body>
   <div id="app"></div>
+  <script>
+    // Локально (localhost) бьём в локальный бэк на 8080, в проде — в Render.
+    window.HANBIN_API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:8080/api/v1'
+      : 'https://hanbin-back.onrender.com/api/v1';
+  </script>
   <script type="module" src="../src/app.js"></script>
 </body>
 </html>
