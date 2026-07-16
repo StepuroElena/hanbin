@@ -143,6 +143,8 @@ function dramaCardHTML(d, index) {
           ${d.genres.slice(0, 1).map(g => `<span class="card-genre">${g}</span>`).join('')}
         </div>
 
+        ${d.voiceover ? `<div class="card-voiceover">🎙️ ${d.voiceover}</div>` : ''}
+
         <div class="card-stars">${renderStars(d.rating)}</div>
 
         ${d.status === 'watching' ? `
@@ -200,6 +202,7 @@ export function renderDramaTable(container, dramas) {
             <th>${t('table.col.year')}</th>
             <th>${t('table.col.country')}</th>
             <th>${t('table.col.genre')}</th>
+            <th>${t('table.col.voiceover')}</th>
             <th>${t('table.col.status')}</th>
             <th>${t('table.col.rating')}</th>
             <th>${t('table.col.progress')}</th>
@@ -229,6 +232,7 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted">${d.year}</td>
               <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
               <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
+              <td class="table-muted">${d.voiceover ? d.voiceover : '<span class="table-no-tags">—</span>'}</td>
               <td><span class="badge badge--${d.status}">${statusLabel(d.status)}</span></td>
               <td>${renderStars(d.rating)}</td>
               <td class="table-muted table-progress">

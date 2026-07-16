@@ -326,6 +326,7 @@ const componentCSS = `
 .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .card-year { font-size: 11px; color: var(--color-text-muted); }
 .card-genre { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: rgba(255,255,255,0.07); color: var(--color-text-muted); }
+.card-voiceover { font-size: 11px; color: var(--color-text-muted); margin-bottom: 8px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-stars { font-size: 11px; letter-spacing: 0.05em; }
 .progress-wrap { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
