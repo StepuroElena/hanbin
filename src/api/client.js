@@ -7,9 +7,21 @@
  * или из дефолта localhost:8080.
  */
 
-export const API_BASE = (typeof window !== 'undefined' && window.HANBIN_API_BASE)
-  ? window.HANBIN_API_BASE
-  : 'http://localhost:8080/api/v1';
+// Единственный источник истины для адреса бэкенда.
+// window.HANBIN_API_BASE (если задан где-то ещё) имеет приоритет,
+// иначе решаем сами по hostname — не зависим от того, какая страница
+// и какая её версия сейчас загружена.
+function resolveApiBase() {
+  if (typeof window === 'undefined') return 'http://localhost:8080/api/v1';
+  if (window.HANBIN_API_BASE) return window.HANBIN_API_BASE;
+
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocal
+    ? 'http://localhost:8080/api/v1'
+    : 'https://hanbin-back.onrender.com/api/v1';
+}
+
+export const API_BASE = resolveApiBase();
 
 /**
  * Получить JWT-токен из localStorage.
