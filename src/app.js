@@ -402,6 +402,32 @@ const componentCSS = `
 
 /* ── Badges shared ── */
 .badge { padding: 3px 8px; border-radius: 20px; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; backdrop-filter: blur(8px); }
+
+/* ── Статус в таблице — кликабельный, открывает выпадающее меню с остальными статусами ── */
+.status-select-wrap { display: inline-flex; cursor: pointer; user-select: none; }
+.status-select-wrap:hover .badge { filter: brightness(1.15); }
+.status-dropdown-menu {
+  position: fixed;
+  background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));
+  border: 1px solid rgba(201,123,138,0.25);
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  z-index: 10000;
+  overflow: hidden;
+  min-width: 160px;
+  animation: fadeUp 0.15s ease;
+}
+.status-dropdown-option {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(232,196,184,0.06);
+}
+.status-dropdown-option:last-child { border-bottom: none; }
+.status-dropdown-option:hover { background: rgba(201,123,138,0.15); }
 /* legacy hyphen-less variants (activity feed) */
 .badge-watching  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
 .badge-completed { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }

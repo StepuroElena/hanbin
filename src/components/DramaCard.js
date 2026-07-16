@@ -6,6 +6,77 @@ import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
+const STATUS_OPTIONS = [
+  { value: 'watching',  key: 'status.watching' },
+  { value: 'completed', key: 'status.completed' },
+  { value: 'plan',      key: 'status.plan' },
+  { value: 'dropped',   key: 'status.dropped' },
+];
+
+let _statusMenuEl = null;
+
+function closeStatusMenu() {
+  _statusMenuEl?.remove();
+  _statusMenuEl = null;
+}
+
+/**
+ * Навешивает клик-обработчик на ячейки со статусом в таблице (.status-select-wrap).
+ * Клик открывает плавающее меню с остальными статусами (текущий исключён),
+ * выбор шлёт PATCH на бэк через updateDramaStatus — он сам инвалидирует кэш и через
+ * событие hanbin:data-changed вся страница (Home.js) сама перерисует таблицу с новым статусом.
+ */
+function attachStatusDropdown(container) {
+  container.querySelectorAll('.status-select-wrap').forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _statusMenuEl?.dataset.forId === wrap.dataset.id;
+      closeStatusMenu();
+      if (alreadyOpenForThis) return; // второй клик по той же ячейке — просто закрываем
+
+      const id = wrap.dataset.id;
+      const current = wrap.dataset.current;
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.dataset.forId = id;
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+
+      STATUS_OPTIONS.filter(opt => opt.value !== current).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'status-dropdown-option';
+        item.textContent = t(opt.key);
+        item.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          closeStatusMenu();
+          wrap.style.opacity = '0.5';
+          wrap.style.pointerEvents = 'none';
+          const { error } = await updateDramaStatus(id, opt.value);
+          if (error) {
+            console.warn('[Table] status update failed:', error);
+            wrap.style.opacity = '';
+            wrap.style.pointerEvents = '';
+          }
+          // При успехе updateDramaStatus сам вызовет invalidateUserCache() ->
+          // Home.js перерисует таблицу с актуальным статусом — локально строку не перерисовываем.
+        });
+        menu.appendChild(item);
+      });
+
+      document.body.appendChild(menu);
+      _statusMenuEl = menu;
+
+      // Закрытие по клику снаружи — вешаем на следующий тик, чтобы не поймать текущий клик
+      setTimeout(() => {
+        document.addEventListener('click', closeStatusMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
 /** Рендерит сетку карточек */
 export function renderDramaCards(container, dramas) {
   if (!dramas.length) {
@@ -233,7 +304,11 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
               <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
               <td class="table-muted">${d.voiceover ? d.voiceover : '<span class="table-no-tags">—</span>'}</td>
-              <td><span class="badge badge--${d.status}">${statusLabel(d.status)}</span></td>
+              <td>
+                <div class="status-select-wrap" data-id="${d.id}" data-current="${d.status}">
+                  <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
+                </div>
+              </td>
               <td>${renderStars(d.rating)}</td>
               <td class="table-muted table-progress">
                 <div class="table-progress-wrap">
@@ -283,6 +358,9 @@ export function renderDramaTable(container, dramas) {
       fresh.src = posterUrl;
     });
   });
+
+  // —— Смена статуса из таблицы: клик по badge —> выпадающий список из остальных статусов
+  attachStatusDropdown(container);
 
   container.querySelectorAll('.drama-table__row').forEach(row => {
     row.querySelector('.table-watch-btn')?.addEventListener('click', (e) => {

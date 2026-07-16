@@ -373,7 +373,23 @@ export async function addDrama(drama) {
   return authPost('/dramas', payload);
 }
 
+// Фронтенд-код статуса -> бэкенд-код (обратное STATUS_MAP из adaptDramaFromApi)
+const REVERSE_STATUS_MAP = { plan: 'planned', watching: 'watching', completed: 'completed', dropped: 'dropped' };
+
 export async function updateDramaStatus(id, status) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const backendStatus = REVERSE_STATUS_MAP[status] ?? status;
+    const result = await authPatch(`/dramas/${id}`, { watch_status: backendStatus });
+    if (!result.error) {
+      invalidateUserCache();
+      return { data: { id, status }, error: null };
+    }
+    console.warn('[API] updateDramaStatus failed:', result.error);
+    return result;
+  }
+
   await delay();
   console.log('[MOCK] updateDramaStatus:', id, '->', status);
   return { data: { id, status }, error: null };
