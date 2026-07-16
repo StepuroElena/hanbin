@@ -58,11 +58,7 @@ export async function renderHome(container) {
     },
     onViewChange: (mode) => {
       currentView = mode;
-      if (mode === 'card') {
-        currentFilters = { ...currentFilters, status: 'watching' };
-      } else {
-        currentFilters = { ...currentFilters, status: 'all' };
-      }
+      currentFilters = { status: mode === 'card' ? 'watching' : 'all' };
       loadWatching();
     },
   });
@@ -74,12 +70,18 @@ export async function renderHome(container) {
   renderFilters(container.querySelector('#filters-slot'), {
     activeFilter: 'all',
     onFilter: async ({ type, value }) => {
+      // Фильтры взаимоисключающие — как и визуально в чипах (активен только один).
+      // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',
+      // из-за чего клик по жанру/стране показывал только «сейчас смотрю + жанр» и часто выглядел как «не работает».
       if (type === 'status') {
-        const defaultStatus = currentView === 'card' ? 'watching' : 'all';
-        currentFilters = { ...currentFilters, status: value === 'all' ? defaultStatus : value };
+        currentFilters = value === 'all'
+          ? { status: currentView === 'card' ? 'watching' : 'all' }
+          : { status: value };
+      } else if (type === 'genre') {
+        currentFilters = { genre: value };
+      } else if (type === 'country') {
+        currentFilters = { country: value };
       }
-      if (type === 'genre')  currentFilters = { ...currentFilters, genre: value };
-      if (type === 'country') currentFilters = { ...currentFilters, country: value };
       await loadWatching();
     },
   });
