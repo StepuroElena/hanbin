@@ -42,6 +42,22 @@ const MOCK_USER = {
   ],
 };
 
+// Честный "пустой" профиль — показываем, если пользователь залогинен,
+// но его данные почему-то не загрузились. Никаких выдуманных цифр.
+const EMPTY_USER = {
+  id: null,
+  name: '',
+  avatar: '',
+  stats: {
+    dramasWatched: 0,
+    totalEpisodes: 0,
+    totalHours: 0,
+    milestone: '',
+  },
+  badges: [],
+  countries: [],
+};
+
 const MOCK_DRAMAS = [
   {
     id: 'drama_001',
@@ -222,6 +238,13 @@ const MOCK_ACTIVITY = [
 export async function getUser() {
   const { data, error } = await getMe();
   if (data) return { data, error: null };
+
+  // Залогинен, но getMe() не смог загрузить данные (сбой/холодный старт бэка) —
+  // НЕ подменяем реального пользователя фейковыми демо-данными, отдаём честный пустой профиль.
+  if (localStorage.getItem('hanbin_token')) {
+    return { data: EMPTY_USER, error };
+  }
+
   await delay();
   return { data: MOCK_USER, error: null };
 }
@@ -263,7 +286,7 @@ function adaptDramaFromApi(d) {
 export async function getDramas(filters = {}) {
   const limit = filters.limit ?? 50;
   const { data: user } = await getMe();
-  if (user?._rawDramas?.length) {
+  if (user && Array.isArray(user._rawDramas)) {
     let result = user._rawDramas.map(adaptDramaFromApi).filter(d => !d.isArchived);
 
     if (filters.status && filters.status !== 'all') {
@@ -281,6 +304,11 @@ export async function getDramas(filters = {}) {
     }
 
     return { data: result.slice(0, limit), error: null };
+  }
+
+  // Залогинен, но getMe() не вернул данные — не подсовываем выдуманные дорамы, отдаём пустой список.
+  if (localStorage.getItem('hanbin_token')) {
+    return { data: [], error: null };
   }
 
   await delay();
@@ -494,6 +522,10 @@ export async function getArchivedDramas() {
     return { data: result, error: null };
   }
 
+  if (localStorage.getItem('hanbin_token')) {
+    return { data: [], error: null };
+  }
+
   await delay();
   const archivedIds = _getArchivedIds();
   if (!archivedIds.length) return { data: [], error: null };
@@ -546,26 +578,18 @@ export async function getMe() {
     const totalEpisodes  = dramasWatched + dramasWatching;
     const totalHours = Math.round(totalEpisodes * 45 / 60);
 
-    const countryMap = {};
-    for (const d of dramas) {
-      const c = d.country || 'unknown';
-      countryMap[c] = (countryMap[c] ?? 0) + 1;
-    }
-    const total = dramas.length || 1;
+    // Разбивка по странам считается на бэке (raw.countries) — здесь только
+    // презентационный маппинг кода страны на флаг/название/цвет.
     const COUNTRY_META = {
-      Korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
-      China:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
-      Japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
-      korea:   { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
-      china:   { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
-      japan:   { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
+      kr: { flag: '🇰🇷', name: 'Корея',  colorClass: 'fill-korea' },
+      cn: { flag: '🇨🇳', name: 'Китай',  colorClass: 'fill-china' },
+      jp: { flag: '🇯🇵', name: 'Япония', colorClass: 'fill-japan' },
     };
-    const countries = Object.entries(countryMap)
-      .map(([country, count]) => {
-        const meta = COUNTRY_META[country] ?? { flag: '🌏', name: country, colorClass: 'fill-korea' };
-        return { code: country.toLowerCase().slice(0, 2), flag: meta.flag, name: meta.name, count, percent: Math.round(count / total * 100), colorClass: meta.colorClass };
-      })
-      .sort((a, b) => b.count - a.count);
+    const countries = (raw.countries ?? []).map(c => {
+      const key = (c.country || '').toLowerCase().slice(0, 2);
+      const meta = COUNTRY_META[key] ?? { flag: '🌏', name: c.country || 'Другое', colorClass: 'fill-korea' };
+      return { code: key, flag: meta.flag, name: meta.name, count: c.count, percent: c.percent, colorClass: meta.colorClass };
+    });
 
     const BADGE_ICONS = {
       drama_queen: '👑', k_drama_fan: '🌸', c_drama_explorer: '🏮',
@@ -597,7 +621,7 @@ export async function getMe() {
         milestone: 'Drama Queen',
       },
       badges,
-      countries: countries.length ? countries : MOCK_USER.countries,
+      countries,
       _rawDramas: dramas,
     };
 
