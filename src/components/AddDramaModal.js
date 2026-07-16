@@ -485,6 +485,13 @@ function buildHTML(savedState = {}) {
         </div>
       </div>
 
+      <div class="hb-field" style="margin-top:16px">
+        <div class="hb-field-label"><span>${t('modal.add.field.voiceover')}</span></div>
+        <input class="hb-field-input" id="hb-add-voiceover" type="text"
+          placeholder="${t('modal.add.field.voiceover_ph')}" maxlength="255" autocomplete="off"
+          value="${savedState.voiceover ?? ''}">
+      </div>
+
       <div class="hb-section-label">${t('modal.add.section.tags')}</div>
 
       <div class="hb-add-row" style="margin-bottom:14px">
@@ -767,6 +774,10 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
       c.classList.toggle('hb-chip--active', c.dataset.value === scraped.translation_tag));
     setSubTag(scraped.translation_tag);
   }
+  if (scraped.voiceover) {
+    const voiceoverInput = document.getElementById('hb-add-voiceover');
+    if (voiceoverInput) voiceoverInput.value = scraped.voiceover.slice(0, 255);
+  }
   syncSubmit();
 }
 
@@ -824,6 +835,8 @@ export function mountAddDramaContent(content, savedState = {}) {
     subTag = 'translated';
     selectedRating = null;
     lastScraped = null;
+    const voiceoverInput = document.getElementById('hb-add-voiceover');
+    if (voiceoverInput) voiceoverInput.value = '';
     persistState();
   }
 
@@ -1123,6 +1136,7 @@ export function mountAddDramaContent(content, savedState = {}) {
         episodesWatched: 0, episodesTotal: 0,
         ongoing: releaseTag === 'ongoing',
         hasSubs: subTag === 'translated',
+        voiceover: document.getElementById('hb-add-voiceover')?.value.trim() || null,
       };
 
       submitBtn.disabled = true;
@@ -1163,6 +1177,7 @@ export function mountAddDramaContent(content, savedState = {}) {
     el.dataset.selectedSiteUrl  = selectedSiteUrl  ?? '';
     el.dataset.selectedSiteName = selectedSiteName ?? '';
     el.dataset.showDetails      = JSON.stringify(showDetails);
+    el.dataset.voiceover        = document.getElementById('hb-add-voiceover')?.value ?? '';
   }
 
   persistState();
@@ -1221,6 +1236,7 @@ export function openAddDramaModal() {
       selectedSiteUrl:  _getState('selectedSiteUrl'),
       selectedSiteName: _getState('selectedSiteName'),
       showDetails:      _getState('showDetails'),
+      voiceover:        _getState('voiceover'),
     };
     mountAddDramaContent(content, state);
   });

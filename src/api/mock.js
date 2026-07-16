@@ -272,6 +272,7 @@ function adaptDramaFromApi(d) {
     episodesTotal:   d.total_episodes  ?? 0,
     watchUrl:        d.watch_url || null,
     sourceUrl:       d.source_url || null,
+    voiceover:       d.voiceover || null,
     rating,
     ongoing,
     hasSubs,
@@ -363,6 +364,7 @@ export async function addDrama(drama) {
     translation_tag: drama.tags?.includes('translated') ? 'translated' : 'translating',
     genre:           drama.genres?.[0] ?? '',
     country:         drama.country ?? '',
+    voiceover:       drama.voiceover ?? '',
     ...(drama.rating != null ? { rating: drama.rating * 2 } : {}),
   };
 
