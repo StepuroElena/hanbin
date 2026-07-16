@@ -277,7 +277,7 @@ function adaptDramaFromApi(d) {
     ongoing,
     hasSubs,
     isArchived:      Boolean(d.is_archived),
-    cover:           null,
+    cover:           d.poster_url ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(d.poster_url)}` : null,
     seasons:         d.seasons ?? null,
     addedAt:         d.created_at ? new Date(d.created_at) : null,
     lastWatchedAt:   d.updated_at ? new Date(d.updated_at) : null,
@@ -365,6 +365,7 @@ export async function addDrama(drama) {
     genre:           drama.genres?.[0] ?? '',
     country:         drama.country ?? '',
     voiceover:       drama.voiceover ?? '',
+    poster_url:      drama.posterUrl ?? '',
     ...(drama.rating != null ? { rating: drama.rating * 2 } : {}),
   };
 

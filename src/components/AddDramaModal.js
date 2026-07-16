@@ -1137,6 +1137,7 @@ export function mountAddDramaContent(content, savedState = {}) {
         ongoing: releaseTag === 'ongoing',
         hasSubs: subTag === 'translated',
         voiceover: document.getElementById('hb-add-voiceover')?.value.trim() || null,
+        posterUrl: lastScraped?.poster_url || null,
       };
 
       submitBtn.disabled = true;

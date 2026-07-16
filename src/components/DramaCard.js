@@ -225,7 +225,7 @@ export function renderDramaTable(container, dramas) {
             <tr class="drama-table__row" data-id="${d.id}">
               <td>
                 <div class="table-drama-title">
-                  <img class="table-thumb" data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
+                  <img class="table-thumb" ${d.cover ? `src="${d.cover}"` : ''} data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
                   <span>${d.title}</span>
                 </div>
               </td>
@@ -364,7 +364,7 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
             <tr class="drama-table__row drama-table__row--archived" data-id="${d.id}">
               <td>
                 <div class="table-drama-title">
-                  <img class="table-thumb" data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
+                  <img class="table-thumb" ${d.cover ? `src="${d.cover}"` : ''} data-title="${d.title.replace(/"/g, '&quot;')}" alt="${d.title.replace(/"/g, '&quot;')}" loading="lazy">
                   <span>${d.title}</span>
                 </div>
               </td>
@@ -398,7 +398,7 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
       </table>
     </div>`;
 
-  container.querySelectorAll('.table-thumb').forEach(img => {
+  container.querySelectorAll('.table-thumb:not([src])').forEach(img => {
     img.src = defaultPosterURI();
     const title = img.dataset.title;
     if (!title) return;
