@@ -444,13 +444,23 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
         return;
       }
       // Второй клик — удаляем
+      btn.disabled = true;
+      row.style.pointerEvents = 'none';
+      const { error } = await deleteDrama(btn.dataset.id);
+      if (error) {
+        // Не удалось — возвращаем кнопку в исходное состояние, строку не трогаем
+        console.warn('[Archive] delete failed:', error);
+        delete btn.dataset.confirm;
+        btn.disabled = false;
+        btn.textContent = t('archive.delete_btn');
+        btn.style.color = '';
+        row.style.pointerEvents = '';
+        return;
+      }
       row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
       row.style.opacity = '0';
       row.style.transform = 'translateX(20px)';
-      row.style.pointerEvents = 'none';
       setTimeout(() => row.remove(), 300);
-      // Эндпоинт подключим позже
-      // await deleteDrama(btn.dataset.id);
     });
   });
 }
