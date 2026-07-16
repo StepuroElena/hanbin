@@ -6,40 +6,29 @@
 import { openLoginModal } from '../components/LoginModal.js';
 import { t, getLang, onLangChange } from '../i18n/index.js';
 import { renderLangToggle } from '../components/LangToggle.js';
+import { API_BASE } from '../api/client.js';
 
 const SITE_URL = 'https://m.doramatv.one/';
-const PROXY    = (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`;
 const LIMIT    = 10;
 
 // ─── Парсинг горячих новинок ──────────────────
 async function fetchHotDramas() {
-  const res  = await fetch(PROXY(SITE_URL), { signal: AbortSignal.timeout(12000) });
+  // Раньше это шло через corsproxy.io прямо из браузера, но его бесплатный тариф
+  // теперь работает только с localhost — на проде всегда 403. Спрашиваем
+  // у своего бэкенда — он сам ходит на doramatv.one серверно, без CORS вообще.
+  const res = await fetch(`${API_BASE}/dramas/hot?limit=${LIMIT}`, { signal: AbortSignal.timeout(12000) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const html = await res.text();
+  const list = await res.json();
+  if (!Array.isArray(list)) throw new Error('unexpected response shape');
 
-  const doc     = new DOMParser().parseFromString(html, 'text/html');
-  const section = Array.from(doc.querySelectorAll('.feed-section'))
-    .find(s => s.querySelector('[data-tab-text="Горячие новинки"]'));
-
-  if (!section) throw new Error('Section "Горячие новинки" not found');
-
-  return Array.from(section.querySelectorAll('.entity-card-tile')).slice(0, LIMIT).map(card => {
-    const href  = card.getAttribute('href') || '';
-    const link  = href.startsWith('http') ? href : 'https://m.doramatv.one' + href;
-    const title = card.querySelector('.entity-card-tile__title')?.textContent?.trim() || '—';
-    const img   = card.querySelector('img');
-    const cover = img?.getAttribute('data-original') || img?.getAttribute('src') || '';
-
-    const rating = parseFloat(card.querySelector('.compact-rate')?.getAttribute('title')) || null;
-
-    const genres = Array.from(card.querySelectorAll('.elem_genre'))
-      .map(b => b.textContent.trim()).slice(0, 2);
-
-    const popText = card.querySelector('.html-popover-holder')?.textContent || '';
-    const ongoing = /выходит|аирится/i.test(popText);
-
-    return { title, link, cover, rating, genres, ongoing };
-  });
+  return list.map(d => ({
+    title:   d.title,
+    link:    d.link,
+    cover:   d.cover,
+    rating:  d.rating,
+    genres:  d.genres || [],
+    ongoing: Boolean(d.ongoing),
+  }));
 }
 
 // ─── Цитата дня ──────────────────────────────
@@ -264,7 +253,7 @@ async function _renderDramas(el) {
 // ─── HTML карточки ────────────────────────────
 function _cardHTML(d, i) {
   const fallback = `https://picsum.photos/seed/${encodeURIComponent(d.title)}/300/450`;
-  const cover    = d.cover || fallback;
+  const cover    = d.cover ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(d.cover)}` : fallback;
 
   const ratingHTML = d.rating != null
     ? `<div class="unauth-card__rating">
