@@ -6,7 +6,6 @@ import { renderHeader }      from '../components/Header.js';
 import { renderStatsBlock }  from '../components/StatsBlock.js';
 import { renderFilters }     from '../components/Filters.js';
 import { renderDramaCards, renderDramaTable, renderArchiveTable } from '../components/DramaCard.js';
-import { renderActivityFeed } from '../components/ActivityFeed.js';
 import { renderSidebar }     from '../components/Sidebar.js';
 import { getDramas, getCurrentlyWatching, getArchivedDramas } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
@@ -25,8 +24,7 @@ export async function renderHome(container) {
           </div>
           <div id="watching-slot"></div>
         </section>
-        <div class="two-col">
-          <div id="activity-slot"></div>
+        <div class="two-col two-col--sidebar-only">
           <div id="sidebar-slot"></div>
         </div>
         <section class="section section--archive" id="archive-section">
@@ -162,9 +160,6 @@ export async function renderHome(container) {
     await loadArchive();
   });
 
-  // ── Activity + Sidebar (parallel) ──
-  await Promise.all([
-    renderActivityFeed(container.querySelector('#activity-slot')),
-    renderSidebar(container.querySelector('#sidebar-slot')),
-  ]);
+  // ── Sidebar ──
+  await renderSidebar(container.querySelector('#sidebar-slot'));
 }

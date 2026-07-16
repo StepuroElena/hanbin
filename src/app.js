@@ -369,25 +369,13 @@ const componentCSS = `
 .table-watch-btn { background: none; border: none; color: var(--color-rose); cursor: pointer; font-size: 14px; padding: 4px 8px; border-radius: 6px; transition: var(--transition-fast); }
 .table-watch-btn:hover { background: var(--color-accentGlow); }
 
-/* ── Activity ── */
-.activity-list { display: flex; flex-direction: column; gap: 12px; }
-.activity-item {
-  display: flex; align-items: center; gap: 14px; padding: 14px 18px;
-  background: var(--color-glass); border: 1px solid var(--color-border);
-  border-radius: 14px; transition: var(--transition-fast); cursor: pointer; backdrop-filter: blur(8px);
-}
-.activity-item:hover { background: rgba(255,255,255,0.09); border-color: var(--color-border-hover); transform: translateX(4px); }
-.activity-thumb { width: 44px; height: 60px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-.activity-info { flex: 1; min-width: 0; }
-.activity-title { font-family: var(--font-display); font-size: 16px; font-weight: 400; color: var(--color-text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.activity-detail { font-size: 12px; color: var(--color-text-muted); display: flex; gap: 8px; align-items: center; }
-.activity-time { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
-
 /* ── Two col ── */
 .two-col { display: grid; grid-template-columns: 1fr 380px; gap: 28px; animation: fadeUp 0.7s 0.3s ease both; }
+.two-col--sidebar-only { grid-template-columns: 380px; justify-content: flex-start; }
 
 /* ── Sidebar ── */
-.sidebar-card { border-radius: 18px; padding: 22px; margin-bottom: 16px; }
+.sidebar-card { border-radius: 18px; padding: 22px; margin-bottom: 16px; cursor: default; }
+.sidebar-card:hover { border-color: var(--color-border) !important; }
 .sidebar-title { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 16px; }
 .country-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .country-name { font-size: 13px; color: var(--color-text); width: 70px; flex-shrink: 0; }
@@ -397,18 +385,6 @@ const componentCSS = `
 .fill-china { background: var(--gradient-china, linear-gradient(90deg, #7aab8e, #a8d8be)); }
 .fill-japan { background: var(--gradient-japan, linear-gradient(90deg, #d4a574, #e8c87a)); }
 .country-count { font-size: 12px; color: var(--color-text-muted); width: 28px; text-align: right; }
-
-.badges-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.badge-item {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 8px; background: rgba(255,255,255,0.04);
-  border: 1px solid var(--color-border); border-radius: 14px;
-  text-align: center; transition: var(--transition-fast); cursor: pointer;
-}
-.badge-item:hover { border-color: rgba(201,123,138,0.3); background: rgba(201,123,138,0.08); }
-.badge-item--locked { border-style: dashed; opacity: 0.4; }
-.badge-icon { font-size: 26px; }
-.badge-name { font-size: 10px; color: var(--color-text-muted); letter-spacing: 0.05em; line-height: 1.3; }
 
 /* ── Empty & Loading ── */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--color-text-muted); }
@@ -577,34 +553,13 @@ const componentCSS = `
   flex-shrink: 0;
 }
 
-/* ── Activity show more ── */
-.activity-show-more {
-  display: flex; align-items: center; gap: 7px;
-  margin-top: 10px;
-  padding: 8px 18px;
-  background: none;
-  border: 1px solid rgba(232,196,184,0.12);
-  border-radius: 30px;
-  color: rgba(245,230,211,0.4);
-  font-size: 12px; font-family: var(--font-body);
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  width: 100%;
-  justify-content: center;
-}
-.activity-show-more:hover {
-  border-color: rgba(201,123,138,0.35);
-  color: var(--color-rose);
-  background: rgba(201,123,138,0.06);
-}
-
 /* ── Responsive ── */
 @media (max-width: 1100px) {
   .stats-grid { grid-template-columns: 1fr 1fr 1fr; }
   .quote-card { grid-column: 1 / -1; }
   .watching-row { grid-template-columns: repeat(3, 1fr); }
   .two-col { grid-template-columns: 1fr; }
+  .two-col--sidebar-only { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
   .watching-row { grid-template-columns: repeat(2, 1fr); }

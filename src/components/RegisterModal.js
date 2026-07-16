@@ -55,8 +55,20 @@ function registerContentHTML() {
         <span>${t('modal.reg.password')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-reg-pass-counter">0 / 64</span>
       </div>
-      <input class="hb-field-input" id="hb-reg-pass" type="password"
-        placeholder="${t('modal.reg.pass_ph')}" maxlength="64" autocomplete="new-password">
+      <div class="hb-field-password-wrap">
+        <input class="hb-field-input hb-field-input--password" id="hb-reg-pass" type="password"
+          placeholder="${t('modal.reg.pass_ph')}" maxlength="64" autocomplete="new-password">
+        <button type="button" class="hb-eye-toggle" id="hb-reg-pass-toggle" aria-label="Показать пароль">
+          <svg class="hb-eye-icon hb-eye-icon--show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg class="hb-eye-icon hb-eye-icon--hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
       <div class="hb-field-error" id="hb-reg-pass-error"></div>
     </div>
 
@@ -134,6 +146,11 @@ async function validateAndRegister() {
   setLoadingState(btn, false);
 
   if (error) {
+    // Сначала чистим все старые ошибки (и глобальную, и полевую), чтобы не накапливались с прошлых попыток
+    document.getElementById('hb-reg-global-error').textContent = '';
+    document.getElementById('hb-reg-email-error').textContent = '';
+    emailEl.classList.remove('hb-error');
+
     const isEmailError = error.includes('email') || error.includes('taken') || error.includes('занят');
     if (isEmailError) {
       emailEl.classList.add('hb-error');
@@ -183,6 +200,20 @@ function setLoadingState(btn, loading) {
   btn.style.opacity = loading ? '0.7' : '';
 }
 
+// Показать/скрыть пароль по клику на иконку-глазик
+function setupPasswordToggle(inputId, toggleId) {
+  const input  = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  if (!input || !toggle) return;
+
+  toggle.addEventListener('click', () => {
+    const willShow = input.type === 'password';
+    input.type = willShow ? 'text' : 'password';
+    toggle.classList.toggle('hb-eye-toggle--active', willShow);
+    toggle.setAttribute('aria-label', willShow ? 'Скрыть пароль' : 'Показать пароль');
+  });
+}
+
 // ─── Смонтировать содержимое регистрации ─────
 export function mountRegisterContent(content, enterClass) {
   // Сохраняем значения полей перед перерисовкой (при смене языка)
@@ -218,6 +249,7 @@ export function mountRegisterContent(content, enterClass) {
     updateRegCounter('hb-reg-pass', 'hb-reg-pass-counter', 64, 'hb-reg-pass-error'));
 
   document.getElementById('hb-btn-reg-submit').addEventListener('click', validateAndRegister);
+  setupPasswordToggle('hb-reg-pass', 'hb-reg-pass-toggle');
   ['hb-reg-name', 'hb-reg-email', 'hb-reg-pass'].forEach(id =>
     document.getElementById(id).addEventListener('keydown', e => {
       if (e.key === 'Enter') validateAndRegister();

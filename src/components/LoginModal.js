@@ -119,6 +119,23 @@ const MODAL_CSS = `
   }
   .hb-field-error { margin-top: 5px; font-size: 11px; color: #ff6b8a; min-height: 16px; }
 
+  .hb-field-password-wrap { position: relative; }
+  .hb-field-input--password { padding-right: 46px; }
+  .hb-eye-toggle {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: rgba(245,230,211,0.4); border-radius: 8px;
+    transition: color 0.2s, background 0.2s;
+  }
+  .hb-eye-toggle:hover { color: #c97b8a; background: rgba(201,123,138,0.1); }
+  .hb-eye-toggle:focus-visible { outline: 1px solid rgba(201,123,138,0.5); outline-offset: 1px; }
+  .hb-eye-toggle svg { width: 18px; height: 18px; display: block; }
+  .hb-eye-toggle .hb-eye-icon--hide { display: none; }
+  .hb-eye-toggle.hb-eye-toggle--active { color: #c97b8a; }
+  .hb-eye-toggle.hb-eye-toggle--active .hb-eye-icon--show { display: none; }
+  .hb-eye-toggle.hb-eye-toggle--active .hb-eye-icon--hide { display: block; }
+
   .hb-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 14px; }
   .hb-divider-line { flex: 1; height: 1px; background: rgba(232,196,184,0.1); }
   .hb-divider-text { font-size: 11px; color: rgba(245,230,211,0.25); letter-spacing: 0.1em; }

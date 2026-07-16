@@ -11,6 +11,7 @@
 
 import { closeModal, injectModalCSS } from './LoginModal.js';
 import { addDrama, getDramas, invalidateUserCache, scrapeDrama } from '../api/mock.js';
+import { API_BASE } from '../api/client.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 // ─────────────────────────────────────────────
@@ -281,6 +282,37 @@ const ADD_DRAMA_CSS = `
   }
   .hb-btn-add:not(:disabled):hover { opacity: 0.88 !important; transform: translateY(-1px); }
   .hb-btn-add:disabled { opacity: 0.35 !important; cursor: not-allowed !important; transform: none !important; }
+
+  /* ── Постер + поле «где смотреть» бок о бок ── */
+  .hb-add-top-row {
+    display: flex; gap: 18px; align-items: flex-start;
+    margin-bottom: 4px;
+  }
+
+  .hb-poster-col { width: 44%; flex-shrink: 0; transition: opacity 0.25s ease; }
+  .hb-poster-col.hb-hidden { display: none; }
+
+  .hb-poster-frame {
+    position: relative; width: 100%; aspect-ratio: 2 / 3;
+    border-radius: 16px; overflow: hidden;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(232,196,184,0.15);
+    animation: hb-slideUp 0.3s ease;
+  }
+  .hb-poster-frame__img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: opacity 0.35s ease;
+  }
+  .hb-poster-frame__img--loading { opacity: 0.5; }
+  .hb-poster-frame__label {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 18px 12px 10px; text-align: center;
+    font-size: 11px; color: rgba(245,230,211,0.55);
+    background: linear-gradient(to top, rgba(45,15,42,0.92), transparent);
+  }
+  .hb-poster-frame__label--missing { color: rgba(212,165,116,0.8); }
+
+  .hb-form-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .hb-form-col .hb-field { margin-bottom: 0; }
 `;
 
 // ─────────────────────────────────────────────
@@ -373,15 +405,25 @@ function buildHTML(savedState = {}) {
       <div class="hb-field-error" id="hb-add-title-error"></div>
     </div>
 
-    <!-- Сайт -->
-    <div class="hb-field">
-      <div class="hb-field-label"><span>${t('modal.add.field.where')}</span></div>
-      ${buildSiteDropdown(savedState.selectedSiteUrl ?? null, savedState.selectedSiteName ?? null)}
-      <div id="hb-scrape-loader" class="hb-scrape-loader" style="display:none">
-        <div class="hb-scrape-spinner"></div>
-        <span>Ищем информацию о дораме…</span>
+    <!-- Постер (слева, ~половина модалки) + поле «где смотреть» (справа) — бок о бок. Постер скрыт, пока нет ни названия, ни выбранного сайта -->
+    <div class="hb-add-top-row">
+      <div class="hb-poster-col ${(savedState.title && savedState.selectedSiteUrl) ? '' : 'hb-hidden'}" id="hb-poster-col">
+        <div class="hb-poster-frame" id="hb-poster-frame">
+          <img class="hb-poster-frame__img" id="hb-poster-img" src="" alt="">
+          <div class="hb-poster-frame__label" id="hb-poster-source">Нет постера</div>
+        </div>
       </div>
-      <div class="hb-field-error" id="hb-add-url-error"></div>
+      <div class="hb-form-col">
+        <div class="hb-field">
+          <div class="hb-field-label"><span>${t('modal.add.field.where')}</span></div>
+          ${buildSiteDropdown(savedState.selectedSiteUrl ?? null, savedState.selectedSiteName ?? null)}
+          <div id="hb-scrape-loader" class="hb-scrape-loader" style="display:none">
+            <div class="hb-scrape-spinner"></div>
+            <span>Ищем информацию о дораме…</span>
+          </div>
+          <div class="hb-field-error" id="hb-add-url-error"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Баннер «найдено» -->
@@ -560,6 +602,128 @@ function showBannerError(msg) {
   banner.style.display = 'flex';
 }
 
+// ── Постер ─────────────────────────────────────────────────────────────────
+
+const POSTER_PROXY = (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+
+// Строит URL для загрузки картинки через бэкенд вместо напрямого запроса в чужой CDN.
+// Многие сайты-источники защищают картинки hotlink-защитой (проверяют Referer) —
+// прямой <img src> из браузера на localhost получит 403, хотя тот же URL открывается с самого сайта.
+// Бэкенд уже умеет ходить на эти сайты (спуфит заголовки для HTML-скрейпа),
+// поэтому картинку тоже тянем через него — см. GET /dramas/poster-proxy.
+function posterProxyURL(imgUrl) {
+  return `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(imgUrl)}`;
+}
+
+// Генеративный SVG-плейсхолдер: инициал названия на градиентном фоне
+function defaultPosterURI(title = '') {
+  const label = t('poster.no_poster');
+  const initial = (title || '?').trim().charAt(0).toUpperCase() || '?';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="96" viewBox="0 0 64 96">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+    `<stop offset="0%" stop-color="#4a1942"/><stop offset="100%" stop-color="#2d0f2a"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="64" height="96" rx="8" fill="url(#g)"/>` +
+    `<text x="32" y="50" font-family="Georgia, serif" font-size="26" fill="rgba(245,230,211,0.4)" text-anchor="middle">${initial}</text>` +
+    `<text x="32" y="80" font-family="sans-serif" font-size="6.5" letter-spacing="0.5" fill="rgba(245,230,211,0.3)" text-anchor="middle">${label}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+// Обновляет плейсхолдер постера (пока нет реального изображения — например, при вводе названия)
+function updatePosterPlaceholder(title) {
+  const img = document.getElementById('hb-poster-img');
+  const sourceEl = document.getElementById('hb-poster-source');
+  if (!img) return;
+  img.src = defaultPosterURI(title);
+  img.classList.remove('hb-poster-frame__img--loading');
+  if (sourceEl) {
+    sourceEl.textContent = t('poster.no_poster');
+    sourceEl.classList.remove('hb-poster-frame__label--missing');
+  }
+}
+
+// Показывает/скрывает колонку с постером целиком — она скрыта, пока нет ни названия, ни выбранного сайта
+function togglePosterColumn(show) {
+  const col = document.getElementById('hb-poster-col');
+  if (col) col.classList.toggle('hb-hidden', !show);
+}
+
+// Ставит плейсхолдер в состояние «загружаем» сразу после успешного скрейпа
+function showPosterPreview(title, siteName) {
+  const img  = document.getElementById('hb-poster-img');
+  const sourceEl = document.getElementById('hb-poster-source');
+  if (!img) return;
+
+  img.src = defaultPosterURI(title);
+  img.classList.add('hb-poster-frame__img--loading');
+  if (sourceEl) {
+    sourceEl.textContent = 'Подгружаем…';
+    sourceEl.classList.remove('hb-poster-frame__label--missing');
+  }
+}
+
+// Сбрасывает постер обратно к плейсхолдеру (например, при смене сайта или сбросе деталей)
+function hidePosterPreview() {
+  const titleInput = document.getElementById('hb-add-title');
+  updatePosterPlaceholder(titleInput?.value.trim() ?? '');
+}
+
+// Тянет og:image со страницы источника через CORS-прокси и подменяет плейсхолдер.
+// Fallback-путь на случай, если бэкенд не смог вытащить poster_url сам — в большинстве случаев
+// этот путь больше не нужен, т.к. бэкенд сам вытаскивает картинку из og:image при скрейпе.
+async function fetchPoster(pageUrl, siteName) {
+  const img = document.getElementById('hb-poster-img');
+  const sourceEl = document.getElementById('hb-poster-source');
+  if (!img || !pageUrl) {
+    if (sourceEl) {
+      sourceEl.textContent = t('poster.no_poster');
+      sourceEl.classList.add('hb-poster-frame__label--missing');
+    }
+    return false;
+  }
+
+  try {
+    const res = await fetch(POSTER_PROXY(pageUrl), { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const html = json.contents || '';
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const ogImage = doc.querySelector('meta[property="og:image"]')?.content
+      || doc.querySelector('meta[name="twitter:image"]')?.content
+      || doc.querySelector('.film-poster img, .poster img, .short-poster img')?.src
+      || null;
+
+    if (!ogImage) throw new Error('no image found');
+
+    // Плавно подменяем плейсхолдер на реальный постер — тоже через бэкенд-прокси (hotlink-защита сайтов)
+    await new Promise((resolve, reject) => {
+      const real = new Image();
+      real.onload = () => {
+        img.src = posterProxyURL(ogImage);
+        img.classList.remove('hb-poster-frame__img--loading');
+        if (sourceEl) {
+          sourceEl.textContent = siteName || 'Найдено';
+          sourceEl.classList.remove('hb-poster-frame__label--missing');
+        }
+        resolve();
+      };
+      real.onerror = () => reject(new Error('image failed to load'));
+      real.src = posterProxyURL(ogImage);
+    });
+    return true;
+  } catch (err) {
+    console.warn('[AddDramaModal] fetchPoster failed:', err.message);
+    img.classList.remove('hb-poster-frame__img--loading');
+    if (sourceEl) {
+      sourceEl.textContent = t('poster.no_poster');
+      sourceEl.classList.add('hb-poster-frame__label--missing');
+    }
+    return false;
+  }
+}
+
 function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSubTag, syncSubmit }) {
   // ── Название ──────────────────────────────────────────────────────────────
   // Если сай႐ вернул другое название — обновляем поле
@@ -631,6 +795,11 @@ export function mountAddDramaContent(content, savedState = {}) {
   let selectedSiteName = savedState.selectedSiteName ?? null;
   let showDetails      = savedState.showDetails     ?? false;
   let lastScraped      = null; // последний успешный результат скрейпера
+  let hasRealPoster    = false; // true, когда в hb-poster-img загружено реальное изображение, а не плейсхолдер
+
+  // Плейсхолдер постера виден сразу, ещё до любого скрейпа — но сама колонка скрыта, пока не заполнено и название, и сайт (только тогда запускается скрейп)
+  updatePosterPlaceholder(savedState.title ?? '');
+  togglePosterColumn(!!(savedState.title && selectedSiteUrl));
 
   // ── Фаза деталей ─────────────────────────────────────────────────────────
   function openDetails() {
@@ -646,6 +815,8 @@ export function mountAddDramaContent(content, savedState = {}) {
     const block = document.getElementById('hb-details-block');
     if (block) block.classList.add('hb-hidden');
     hideBanners();
+    hasRealPoster = false;
+    hidePosterPreview();
     // Сбрасываем поля деталей к дефолту
     selectedGenres = [];
     selectedCountry = 'kr';
@@ -675,6 +846,8 @@ export function mountAddDramaContent(content, savedState = {}) {
     titleInput.classList.remove('hb-error');
     document.getElementById('hb-add-title-error').textContent = '';
     document.getElementById('hb-add-duplicate-toast').style.display = 'none';
+    if (!hasRealPoster) updatePosterPlaceholder(titleInput.value.trim());
+    togglePosterColumn(!!(titleInput.value.trim() && selectedSiteUrl));
     syncSubmit();
   });
 
@@ -742,9 +915,13 @@ export function mountAddDramaContent(content, savedState = {}) {
       if (showDetails) {
         closeDetails();
       }
+      hasRealPoster = false;
+      hidePosterPreview();
 
       selectedSiteUrl  = url;
       selectedSiteName = name;
+
+      togglePosterColumn(!!(titleInput.value.trim() && selectedSiteUrl));
 
       trigLabel.textContent = name;
       trigLabel.classList.remove('hb-site-trigger--placeholder');
@@ -784,6 +961,35 @@ export function mountAddDramaContent(content, savedState = {}) {
             syncSubmit,
           });
           showBannerFound(scraped, originalTitle);
+
+          // Постер: бэкенд уже вытащил poster_url из og:image при скрейпе — не нужно второй раз тянуть
+          // картинку через публичный CORS-прокси из браузера (часто блокируется антибот-защитой целевого сайта)
+          const finalTitle = scraped.title || originalTitle;
+          hasRealPoster = false;
+          showPosterPreview(finalTitle, name);
+          if (scraped.poster_url) {
+            const img = document.getElementById('hb-poster-img');
+            const sourceEl = document.getElementById('hb-poster-source');
+            const real = new Image();
+            real.onload = () => {
+              img.src = posterProxyURL(scraped.poster_url);
+              img.classList.remove('hb-poster-frame__img--loading');
+              if (sourceEl) {
+                sourceEl.textContent = name || 'Найдено';
+                sourceEl.classList.remove('hb-poster-frame__label--missing');
+              }
+              hasRealPoster = true;
+            };
+            real.onerror = () => {
+              // картинка по ссылке не загрузилась — пробуем fallback через прокси
+              fetchPoster(scraped.source_url, name).then(ok => { hasRealPoster = ok; });
+            };
+            real.src = posterProxyURL(scraped.poster_url);
+          } else {
+            // Бэкенд не нашёл poster_url в og:image — пробуем старый путь через прокси как fallback
+            fetchPoster(scraped.source_url, name).then(ok => { hasRealPoster = ok; });
+          }
+
           persistState();
         }
       } catch (e) {
