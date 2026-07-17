@@ -457,7 +457,7 @@ export async function rateDrama(id, rating) {
     const body = rating == null ? { clear_rating: true } : { rating: rating * 2 };
     const result = await authPatch(`/dramas/${id}`, body);
     if (!result.error) {
-      invalidateUserCache();
+      invalidateUserCacheSilent();
       return { data: { id, rating }, error: null };
     }
     console.warn('[API] rateDrama failed:', result.error);
@@ -786,6 +786,14 @@ export function invalidateUserCache() {
   _getMeCache = null;
   _getMeInflight = null;
   window.dispatchEvent(new CustomEvent('hanbin:data-changed'));
+}
+
+// Та же инвалидация кэша, но БЕЗ глобального события hanbin:data-changed — используется там,
+// где изменение не влияет на состав списка/статистику (например, оценка) —
+// вызывающий код сам обновляет DOM локально, без мигания всей секции в «Zagruzka…».
+export function invalidateUserCacheSilent() {
+  _getMeCache = null;
+  _getMeInflight = null;
 }
 
 // ─────────────────────────────────────────────

@@ -462,7 +462,8 @@ const componentCSS = `
 .table-seasons { white-space: nowrap; font-size: 12px; }
 .table-episodes { white-space: nowrap; font-size: 12px; }
 
-.table-stars-wrap { display: inline-flex; gap: 2px; cursor: pointer; }
+.table-stars-wrap { display: inline-flex; gap: 2px; cursor: pointer; transition: opacity 0.15s ease; }
+.table-stars-wrap--loading { opacity: 0.45; pointer-events: none; }
 .table-star {
   font-size: 13px;
   line-height: 1;

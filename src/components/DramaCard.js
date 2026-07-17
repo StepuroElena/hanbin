@@ -108,16 +108,22 @@ function attachRatingControls(container) {
         const current = Number(wrap.dataset.current) || 0;
         const newRating = value === current ? null : value;
 
-        wrap.style.opacity = '0.5';
-        wrap.style.pointerEvents = 'none';
+        wrap.classList.add('table-stars-wrap--loading');
         const { error } = await rateDrama(id, newRating);
+        wrap.classList.remove('table-stars-wrap--loading');
+
         if (error) {
           console.warn('[Table] rate failed:', error);
-          wrap.style.opacity = '';
-          wrap.style.pointerEvents = '';
+          return;
         }
-        // При успехе rateDrama сам вызовет invalidateUserCache() ->
-        // Home.js перерисует таблицу с актуальной оценкой — локально строку не перерисовываем.
+
+        // Обновляем только эту ячейку локально — rateDrama инвалидирует кэш тихо,
+        // без глобального события — остальная таблица не мигает в «Загрузка…».
+        const newValue = newRating ?? 0;
+        wrap.dataset.current = newValue;
+        stars.forEach(s => {
+          s.classList.toggle('table-star--filled', Number(s.dataset.value) <= newValue);
+        });
       });
 
       // Превью оценки при наведении мыши
