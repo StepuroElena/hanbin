@@ -243,6 +243,29 @@ function seasonLabel(n) {
   return 'сезонов';
 }
 
+/** Склонение слова «серия» под число (RU) */
+function episodeLabel(n) {
+  const getLang = () => localStorage.getItem('hanbin_lang') || 'ru';
+  if (getLang() !== 'ru') return n === 1 ? 'episode' : 'episodes';
+  const abs = Math.abs(n) % 100;
+  const mod = abs % 10;
+  if (abs >= 11 && abs <= 19) return 'серий';
+  if (mod === 1)              return 'серия';
+  if (mod >= 2 && mod <= 4)  return 'серии';
+  return 'серий';
+}
+
+/** Форматирует ячейку «Кол-во серий»: «16 серий · 60 мин/серия» или просто «16 серий», если длительность не указана. */
+function formatEpisodes(d) {
+  const count = d.episodesTotal;
+  if (!count) return '<span class="table-no-tags">—</span>';
+  const label = episodeLabel(count);
+  if (d.episodeDurationMin) {
+    return t('table.episodes.with_duration', { n: count, label, min: d.episodeDurationMin });
+  }
+  return t('table.episodes.count_only', { n: count, label });
+}
+
 /** Форматирует дату: сегодня/вчера через timeAgo, остальное — dd.mm.yyyy */
 function formatDate(date) {
   if (!date) return '<span class="table-no-tags">—</span>';
@@ -276,7 +299,7 @@ export function renderDramaTable(container, dramas) {
             <th>${t('table.col.voiceover')}</th>
             <th>${t('table.col.status')}</th>
             <th>${t('table.col.rating')}</th>
-            <th>${t('table.col.progress')}</th>
+            <th>${t('table.col.episodes')}</th>
             <th>${t('table.col.seasons')}</th>
             <th>${t('table.col.added_at')}</th>
             <th>${t('table.col.last_watched')}</th>
@@ -286,7 +309,6 @@ export function renderDramaTable(container, dramas) {
         </thead>
         <tbody>
           ${dramas.map(d => {
-            const progress = d.episodesTotal ? Math.round((d.episodesWatched / d.episodesTotal) * 100) : 0;
             const flag = countryFlag[d.country] ?? '🌏';
             const tags = [
               d.ongoing  ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>` : '',
@@ -310,12 +332,7 @@ export function renderDramaTable(container, dramas) {
                 </div>
               </td>
               <td>${renderStars(d.rating)}</td>
-              <td class="table-muted table-progress">
-                <div class="table-progress-wrap">
-                  <div class="table-progress-bar"><div class="table-progress-fill" style="width:${progress}%"></div></div>
-                  <span>${d.episodesWatched}/${d.episodesTotal}</span>
-                </div>
-              </td>
+              <td class="table-muted table-episodes">${formatEpisodes(d)}</td>
               <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>

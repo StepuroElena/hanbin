@@ -460,6 +460,7 @@ const componentCSS = `
 
 .table-country { font-size: 13px; white-space: nowrap; }
 .table-seasons { white-space: nowrap; font-size: 12px; }
+.table-episodes { white-space: nowrap; font-size: 12px; }
 .table-date {
   white-space: nowrap;
   font-size: 12px;

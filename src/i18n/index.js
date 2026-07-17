@@ -124,11 +124,15 @@ export const translations = {
     'table.col.status':           'Статус',
     'table.col.rating':           'Оценка',
     'table.col.progress':         'Прогресс',
+    'table.col.episodes':         'Серии',
     'table.col.country':          'Страна',
     'table.col.tags':             'Теги',
     'table.col.seasons':          'Сезоны',
     'table.col.added_at':         'Добавлено',
-    'table.col.last_watched':     'Последний просмотр',
+    'table.col.last_watched':     'Обновлено',
+
+    'table.episodes.count_only':      '{n} {label}',
+    'table.episodes.with_duration':  '{n} {label} · {min} мин/серия',
 
     // Login modal
     'modal.close':                'Закрыть',
@@ -330,11 +334,15 @@ export const translations = {
     'table.col.status':           'Status',
     'table.col.rating':           'Rating',
     'table.col.progress':         'Progress',
+    'table.col.episodes':         'Episodes',
     'table.col.country':          'Country',
     'table.col.tags':             'Tags',
     'table.col.seasons':          'Seasons',
     'table.col.added_at':         'Added',
-    'table.col.last_watched':     'Last watched',
+    'table.col.last_watched':     'Updated',
+
+    'table.episodes.count_only':     '{n} {label}',
+    'table.episodes.with_duration':  '{n} {label} · {min} min each',
 
     // Login modal
     'modal.close':                'Close',
