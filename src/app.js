@@ -461,6 +461,17 @@ const componentCSS = `
 .table-country { font-size: 13px; white-space: nowrap; }
 .table-seasons { white-space: nowrap; font-size: 12px; }
 .table-episodes { white-space: nowrap; font-size: 12px; }
+
+.table-stars-wrap { display: inline-flex; gap: 2px; cursor: pointer; }
+.table-star {
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(245,230,211,0.2);
+  transition: color 0.15s ease, transform 0.1s ease;
+}
+.table-star:hover { transform: scale(1.2); }
+.table-star--filled { color: var(--color-gold, #d4a574); }
+.table-star--preview { color: var(--color-gold, #d4a574); opacity: 0.6; }
 .table-date {
   white-space: nowrap;
   font-size: 12px;

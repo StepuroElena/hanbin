@@ -449,6 +449,21 @@ export async function updateDramaStatus(id, status) {
 }
 
 export async function rateDrama(id, rating) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    // Фронт хранит оценку как 1-5 звёзд, бэк — как 0-10 (см. adaptDramaFromApi/addDrama).
+    // rating === null — снять оценку (повторный клик по той же звездочке).
+    const body = rating == null ? { clear_rating: true } : { rating: rating * 2 };
+    const result = await authPatch(`/dramas/${id}`, body);
+    if (!result.error) {
+      invalidateUserCache();
+      return { data: { id, rating }, error: null };
+    }
+    console.warn('[API] rateDrama failed:', result.error);
+    return result;
+  }
+
   await delay();
   console.log('[MOCK] rateDrama:', id, '->', rating);
   return { data: { id, rating }, error: null };

@@ -77,6 +77,64 @@ function attachStatusDropdown(container) {
   });
 }
 
+/**
+ * Рендерит интерактивные звёзды для ячейки «Оценка» в таблице.
+ * Всегда 5 звёзд (даже без оценки) — столбец не должен превращаться в текст «Не оценено».
+ */
+function interactiveStarsHTML(d, max = 5) {
+  const rating = d.rating || 0;
+  const stars = Array.from({ length: max }, (_, i) => {
+    const value = i + 1;
+    return `<span class="table-star ${value <= rating ? 'table-star--filled' : ''}" data-value="${value}">★</span>`;
+  }).join('');
+  return `<div class="table-stars-wrap" data-id="${d.id}" data-current="${rating}">${stars}</div>`;
+}
+
+/**
+ * Навешивает клик/ховер на звёзды в таблице (.table-stars-wrap).
+ * Клик по звездочке шлёт PATCH на бэк через rateDrama — он сам инвалидирует кэш
+ * и через событие hanbin:data-changed вся страница (Home.js) сама перерисует таблицу.
+ * Повторный клик по текущей оценке — снимает её (rating = null).
+ */
+function attachRatingControls(container) {
+  container.querySelectorAll('.table-stars-wrap').forEach(wrap => {
+    const id = wrap.dataset.id;
+    const stars = [...wrap.querySelectorAll('.table-star')];
+
+    stars.forEach(star => {
+      star.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const value = Number(star.dataset.value);
+        const current = Number(wrap.dataset.current) || 0;
+        const newRating = value === current ? null : value;
+
+        wrap.style.opacity = '0.5';
+        wrap.style.pointerEvents = 'none';
+        const { error } = await rateDrama(id, newRating);
+        if (error) {
+          console.warn('[Table] rate failed:', error);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
+        }
+        // При успехе rateDrama сам вызовет invalidateUserCache() ->
+        // Home.js перерисует таблицу с актуальной оценкой — локально строку не перерисовываем.
+      });
+
+      // Превью оценки при наведении мыши
+      star.addEventListener('mouseenter', () => {
+        const value = Number(star.dataset.value);
+        stars.forEach(s => {
+          s.classList.toggle('table-star--preview', Number(s.dataset.value) <= value);
+        });
+      });
+    });
+
+    wrap.addEventListener('mouseleave', () => {
+      stars.forEach(s => s.classList.remove('table-star--preview'));
+    });
+  });
+}
+
 /** Рендерит сетку карточек */
 export function renderDramaCards(container, dramas) {
   if (!dramas.length) {
@@ -331,7 +389,7 @@ export function renderDramaTable(container, dramas) {
                   <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
                 </div>
               </td>
-              <td>${renderStars(d.rating)}</td>
+              <td>${interactiveStarsHTML(d)}</td>
               <td class="table-muted table-episodes">${formatEpisodes(d)}</td>
               <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
@@ -378,6 +436,9 @@ export function renderDramaTable(container, dramas) {
 
   // —— Смена статуса из таблицы: клик по badge —> выпадающий список из остальных статусов
   attachStatusDropdown(container);
+
+  // —— Оценка из таблицы: клик по звездочке —> PATCH на бэк
+  attachRatingControls(container);
 
   container.querySelectorAll('.drama-table__row').forEach(row => {
     row.querySelector('.table-watch-btn')?.addEventListener('click', (e) => {
