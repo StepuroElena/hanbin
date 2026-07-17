@@ -24,6 +24,7 @@ const MOCK_USER = {
   stats: {
     dramasWatched: 73,
     totalEpisodes: 1840,
+    dramasPlanned: 12,
     totalHours: 2214,
     milestone: 'Drama Queen',
   },
@@ -51,6 +52,7 @@ const EMPTY_USER = {
   stats: {
     dramasWatched: 0,
     totalEpisodes: 0,
+    dramasPlanned: 0,
     totalHours: 0,
     milestone: '',
   },
@@ -247,6 +249,47 @@ export async function getUser() {
 
   await delay();
   return { data: MOCK_USER, error: null };
+}
+
+// Считаем по-старому из мок-данных — только для гостя, когда бэка ещё нет.
+function computeMockStats() {
+  const dramasPlanned = MOCK_DRAMAS.filter(d => d.status === 'plan').length;
+  return { ...MOCK_USER.stats, dramasPlanned };
+}
+
+/**
+ * Статистика для карточек на главной — считается на бэке одним запросом.
+ * GET /api/v1/dramas/stats — требует авторизации.
+ *
+ * @returns {Promise<{ data: {
+ *   dramasWatched: number, dramasWatching: number, dramasPlanned: number,
+ *   dramasDropped: number, totalEpisodes: number, totalHours: number
+ * }, error: string|null }>}
+ */
+export async function getStats() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet('/dramas/stats');
+    if (data) {
+      return {
+        data: {
+          dramasWatched:  data.dramas_watched,
+          dramasWatching: data.dramas_watching,
+          dramasPlanned:  data.dramas_planned,
+          dramasDropped:  data.dramas_dropped,
+          totalEpisodes:  data.total_episodes,
+          totalHours:     data.total_hours,
+        },
+        error: null,
+      };
+    }
+    console.warn('[API] getStats failed, falling back to empty stats:', error);
+    return { data: { dramasWatched: 0, dramasWatching: 0, dramasPlanned: 0, dramasDropped: 0, totalEpisodes: 0, totalHours: 0 }, error };
+  }
+
+  await delay();
+  return { data: computeMockStats(), error: null };
 }
 
 function adaptDramaFromApi(d) {
@@ -606,6 +649,7 @@ export async function getMe() {
     const dramas = raw.dramas ?? [];
     const dramasWatched  = dramas.filter(d => d.watch_status === 'completed').length;
     const dramasWatching = dramas.filter(d => d.watch_status === 'watching').length;
+    const dramasPlanned  = dramas.filter(d => d.watch_status === 'planned').length;
     const totalEpisodes  = dramasWatched + dramasWatching;
     const totalHours = Math.round(totalEpisodes * 45 / 60);
 
@@ -648,6 +692,7 @@ export async function getMe() {
       stats: {
         dramasWatched,
         totalEpisodes,
+        dramasPlanned,
         totalHours,
         milestone: 'Drama Queen',
       },

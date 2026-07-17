@@ -33,6 +33,8 @@ export const translations = {
     'stats.dramas_unit':          'завершённых сериалов',
     'stats.total_episodes':       'Всего эпизодов',
     'stats.episodes_unit':        'поглощённых серий',
+    'stats.dramas_planned':       'Запланировано',
+    'stats.planned_unit':         'дорам к просмотру',
     'stats.hours':                'Часов дорам',
     'stats.hours_unit':           'часов чистого удовольствия',
 
@@ -237,6 +239,8 @@ export const translations = {
     'stats.dramas_unit':          'completed series',
     'stats.total_episodes':       'Total episodes',
     'stats.episodes_unit':        'episodes devoured',
+    'stats.dramas_planned':       'Plan to watch',
+    'stats.planned_unit':         'dramas queued up',
     'stats.hours':                'Hours of drama',
     'stats.hours_unit':           'hours of pure bliss',
 

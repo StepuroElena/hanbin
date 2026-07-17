@@ -3,7 +3,7 @@
  * Hero-секция с большими числами и цитатой дня из дорамы
  */
 
-import { getUser } from '../api/mock.js';
+import { getStats } from '../api/mock.js';
 import { t, getLang, onLangChange } from '../i18n/index.js';
 
 /**
@@ -43,8 +43,7 @@ async function getDailyQuote() {
 }
 
 export async function renderStatsBlock(container) {
-  const { data: user } = await getUser();
-  const { stats } = user;
+  const { data: stats } = await getStats();
 
   const fallbackRu = { emoji: '🕯️', text: '«Даже самая долгая ночь в конце концов встречает рассвет.»', source: 'Нирвана в огне · 2015' };
   const fallbackEn = { emoji: '🕯️', text: '«Even the longest night will eventually meet the dawn.»', source: 'Nirvana in Fire · 2015' };
@@ -65,10 +64,10 @@ export async function renderStatsBlock(container) {
             <div class="stat-unit">${t('stats.dramas_unit')}</div>
           </div>
 
-          <div class="stat-card glass-card" data-stat="episodes">
-            <div class="stat-label">${t('stats.total_episodes')}</div>
-            <div class="stat-number" id="stat-episodes">${stats.totalEpisodes.toLocaleString()}</div>
-            <div class="stat-unit">${t('stats.episodes_unit')}</div>
+          <div class="stat-card glass-card" data-stat="planned">
+            <div class="stat-label">${t('stats.dramas_planned')}</div>
+            <div class="stat-number" id="stat-planned">${stats.dramasPlanned.toLocaleString()}</div>
+            <div class="stat-unit">${t('stats.planned_unit')}</div>
           </div>
 
           <div class="stat-card glass-card" data-stat="hours">
@@ -88,7 +87,7 @@ export async function renderStatsBlock(container) {
 
     // Animate numbers counting up
     animateNumber(container.querySelector('#stat-dramas'), stats.dramasWatched);
-    animateNumber(container.querySelector('#stat-episodes'), stats.totalEpisodes);
+    animateNumber(container.querySelector('#stat-planned'), stats.dramasPlanned);
     animateNumber(container.querySelector('#stat-hours'), stats.totalHours);
   }
 
