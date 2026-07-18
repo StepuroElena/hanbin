@@ -41,10 +41,13 @@ export async function renderHome(container) {
 
   // Читаем сохранённый вид — переживает рефреш
   let currentView = localStorage.getItem('hanbin_view_mode') || 'card';
-  let currentFilters = { status: currentView === 'card' ? 'watching' : 'all' };
+  // Дефолт при загрузке — всегда «status:'all'», в любом виде.
+  // Раньше для карточного вида тут был status:'watching' с тихим фоллбэком на «plan», если watching пустой —
+  // из-за этого чип показывал «Смотрю» активным, а реально показывалась карточка из «Запланировано».
+  // Теперь просто: дефолт — весь список, чип «Все» активен, никаких скрытых подмен.
+  let currentFilters = { status: 'all' };
   // Становится true, как только пользователь вручную выберет фильтр (статус/жанр/страна).
-  // Пока false — переключение карточки/таблицы вправе подставлять дефолтный статус для нового вида.
-  // После явного выбора — фильтр должен переживать переключение вида, а не сбрасываться.
+  // После явного выбора — фильтр должен переживать переключение карточки/таблицы, а не сбрасываться.
   let hasExplicitFilter = false;
 
   // ── Header ──
@@ -64,11 +67,9 @@ export async function renderHome(container) {
     },
     onViewChange: (mode) => {
       currentView = mode;
-      // Раньше тут был баг: при любом переключении вида currentFilters тихо затирался дефолтом,
-      // и любой выбранный вручную фильтр/статус сбрасывался при переключении карточки/таблицы.
-      // Теперь дефолт применяется только пока пользователь ни разу не трогал фильтры вручную.
+      // Дефолт одинаков для обоих видов — status:'all'. Актуален только пока пользователь ни разу не трогал фильтры вручную.
       if (!hasExplicitFilter) {
-        currentFilters = { status: mode === 'card' ? 'watching' : 'all' };
+        currentFilters = { status: 'all' };
       }
       loadWatching();
     },
@@ -110,14 +111,6 @@ export async function renderHome(container) {
     slot.innerHTML = `<div class="loading-dots">${t('loading')}</div>`;
 
     let { data } = await getDramas(currentFilters);
-
-    // Фоллбэк на запланированное — ТОЛЬКО для дефолтного состояния при первой загрузке (раздел "Сейчас смотрю").
-    // Раньше он срабатывал и когда пользователь вручную выбирал чип «Смотрю» — и если в этом статусе пусто,
-    // тихо подменял его на «Запланировано» — чип подсвечивал «Смотрю», а реально показывались запланированные.
-    if (!hasExplicitFilter && currentView !== 'table' && currentFilters.status === 'watching' && data.length === 0) {
-      const { data: planData } = await getDramas({ ...currentFilters, status: 'plan' });
-      data = planData;
-    }
 
     if (currentView === 'table') {
       renderDramaTable(slot, data);
