@@ -7,6 +7,16 @@ import { getUser } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 export async function renderSidebar(container) {
+  // Скелетон сразу — не ждём getUser() (реальный запрос к бэку).
+  container.innerHTML = `
+    <aside class="sidebar">
+      <div class="sidebar-card glass-card">
+        <div class="sidebar-title">${t('sidebar.by_country')}</div>
+        <div class="loading-dots">${t('loading')}</div>
+      </div>
+    </aside>
+  `;
+
   const { data: user } = await getUser();
   const { countries } = user;
 

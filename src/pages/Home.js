@@ -42,10 +42,16 @@ export async function renderHome(container) {
   // Читаем сохранённый вид — переживает рефреш
   let currentView = localStorage.getItem('hanbin_view_mode') || 'card';
   let currentFilters = { status: currentView === 'card' ? 'watching' : 'all' };
+  // Становится true, как только пользователь вручную выберет фильтр (статус/жанр/страна).
+  // Пока false — переключение карточки/таблицы вправе подставлять дефолтный статус для нового вида.
+  // После явного выбора — фильтр должен переживать переключение вида, а не сбрасываться.
+  let hasExplicitFilter = false;
 
   // ── Header ──
+  // Без await: шапка сама красит себя мгновенно (по localStorage) и доводит auth в фоне—
+  // не блокируем её отрисовкой остальные секции страницы.
   const headerSlot = container.querySelector('#header-slot');
-  await renderHeader(headerSlot, {
+  renderHeader(headerSlot, {
     onSearch: (query, results) => {
       if (!query) return loadWatching();
       if (results) {
@@ -58,13 +64,19 @@ export async function renderHome(container) {
     },
     onViewChange: (mode) => {
       currentView = mode;
-      currentFilters = { status: mode === 'card' ? 'watching' : 'all' };
+      // Раньше тут был баг: при любом переключении вида currentFilters тихо затирался дефолтом,
+      // и любой выбранный вручную фильтр/статус сбрасывался при переключении карточки/таблицы.
+      // Теперь дефолт применяется только пока пользователь ни разу не трогал фильтры вручную.
+      if (!hasExplicitFilter) {
+        currentFilters = { status: mode === 'card' ? 'watching' : 'all' };
+      }
       loadWatching();
     },
   });
 
   // ── Stats ──
-  await renderStatsBlock(container.querySelector('#stats-slot'));
+  // Без await: внутри уже рисуется скелетон синхронно, реальные цифры подтянутся сами.
+  renderStatsBlock(container.querySelector('#stats-slot'));
 
   // ── Filters ──
   renderFilters(container.querySelector('#filters-slot'), {
@@ -73,6 +85,7 @@ export async function renderHome(container) {
       // Фильтры взаимоисключающие — как и визуально в чипах (активен только один).
       // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',
       // из-за чего клик по жанру/стране показывал только «сейчас смотрю + жанр» и часто выглядел как «не работает».
+      hasExplicitFilter = true; // теперь этот выбор переживёт переключение карточки/таблицы
       if (type === 'status') {
         // "Все" — это всегда весь список, в любом виде (карточки/таблица).
         // Раньше здесь был баг: в карточном виде клик по «Все» тихо откатывался на status:'watching',
@@ -109,17 +122,21 @@ export async function renderHome(container) {
     }
   }
 
-  await loadWatching();
+  // Без await: loadWatching сама сразу ставит индикатор загрузки, дальше не блокируем архив/сайдбар.
+  loadWatching();
 
   // ── Archive ──
   async function loadArchive() {
     const slot = container.querySelector('#archive-slot');
     if (!slot) return;
+    // Сразу показываем индикатор загрузки — раньше секция оставалась пустой, пока не приходил ответ.
+    slot.innerHTML = `<div class="loading-dots">${t('loading')}</div>`;
     const { data } = await getArchivedDramas();
     renderArchiveTable(slot, data, loadArchive);
   }
 
-  await loadArchive();
+  // Без await: идёт параллельно loadWatching, а не после неё.
+  loadArchive();
 
   // See all watching
   container.querySelector('#see-all-watching')?.addEventListener('click', () => {
@@ -165,5 +182,6 @@ export async function renderHome(container) {
   });
 
   // ── Sidebar ──
-  await renderSidebar(container.querySelector('#sidebar-slot'));
+  // Без await: идёт параллельно с остальными секциями, а не после них.
+  renderSidebar(container.querySelector('#sidebar-slot'));
 }

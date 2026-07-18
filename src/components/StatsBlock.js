@@ -43,12 +43,29 @@ async function getDailyQuote() {
 }
 
 export async function renderStatsBlock(container) {
-  const { data: stats } = await getStats();
+  // Скелетон сразу — не ждём getStats() (это реальный запрос к бэку).
+  // Функция возвращается быстро, а реальные цифры подставляются ниже в фоне.
+  container.innerHTML = `
+    <section class="hero-section">
+      <div class="stats-grid">
+        <div class="stat-card glass-card"><div class="stat-label">${t('stats.dramas_watched')}</div><div class="stat-number stat-number--shimmer">···</div><div class="stat-unit">${t('stats.dramas_unit')}</div></div>
+        <div class="stat-card glass-card"><div class="stat-label">${t('stats.dramas_planned')}</div><div class="stat-number">···</div><div class="stat-unit">${t('stats.planned_unit')}</div></div>
+        <div class="stat-card glass-card"><div class="stat-label">${t('stats.hours')}</div><div class="stat-number">···</div><div class="stat-unit">${t('stats.hours_unit')}</div></div>
+        <div class="quote-card"><div class="quote-emoji">✨</div><div class="quote-text">…</div><div class="quote-sub"></div></div>
+      </div>
+    </section>
+  `;
 
   const fallbackRu = { emoji: '🕯️', text: '«Даже самая долгая ночь в конце концов встречает рассвет.»', source: 'Нирвана в огне · 2015' };
   const fallbackEn = { emoji: '🕯️', text: '«Even the longest night will eventually meet the dawn.»', source: 'Nirvana in Fire · 2015' };
 
-  let quote = await getDailyQuote().catch(() => fallbackRu);
+  // Оба запроса идут параллельно — не ждём один через другой.
+  // quote — let, потому что переприсваивается внутри render() при каждой смене языка.
+  const [{ data: stats }, dailyQuote] = await Promise.all([
+    getStats(),
+    getDailyQuote().catch(() => fallbackRu),
+  ]);
+  let quote = dailyQuote;
 
   async function render() {
     // При каждом ре-рендере перечитываем цитату с актуальным языком

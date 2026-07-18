@@ -3,19 +3,27 @@
  */
 
 import { navigate } from '../router.js';
-import { searchDramas, setViewMode, getViewMode, getAuthState } from '../api/mock.js';
+import { searchDramas, setViewMode, getAuthState } from '../api/mock.js';
 import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { renderLangToggle } from './LangToggle.js';
 
 export async function renderHeader(container, { onSearch, onViewChange }) {
-  const [{ data: { mode: initialMode } }, { data: auth }] = await Promise.all([
-    getViewMode(),
-    getAuthState(),
-  ]);
+  // ── Начальное auth-состояние — берём ТОЛЬКО из localStorage, без похода в сеть. ──
+  // Так шапка (лого, поиск, переключатель вида) отрисовывается сразу, не дожидаясь бэка.
+  // Реальный /users/me (протух ли токен, актуальное имя) досчитывается ниже в фоне —
+  // без блокировки первого рендера.
+  const hasTokenLocally = !!localStorage.getItem('hanbin_token');
+  let cachedUser = null;
+  if (hasTokenLocally) {
+    try { cachedUser = JSON.parse(localStorage.getItem('hanbin_user') || 'null'); } catch (_) { /* ignore */ }
+  }
+  let auth = hasTokenLocally
+    ? { isLoggedIn: true, user: cachedUser || { name: '···' } }
+    : { isLoggedIn: false, user: null };
 
   // Храним текущий вид в мутабельной переменной — переживает перерендер при смене языка
-  let currentMode = localStorage.getItem('hanbin_view_mode') || initialMode || 'card';
+  let currentMode = localStorage.getItem('hanbin_view_mode') || 'card';
 
   function buildHTML() {
     const mode = currentMode;
@@ -98,17 +106,19 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
   container.innerHTML = buildHTML();
   let langUnsub = renderLangToggle(container.querySelector('#lang-toggle-slot'));
 
-  // ── Re-render header on language change (nav links, placeholder, tagline…) ──
-  onLangChange(async () => {
-    // Save scroll position
-    const scrollY = window.scrollY;
-    // Tear down previous lang toggle subscription
+  // Полная перерисовка шапки (используется и при смене языка, и когда доедет
+  // реальное auth-состояние с бэка) — сохраняем позицию скролла, если просят.
+  function refreshHeader({ preserveScroll = false } = {}) {
+    const scrollY = preserveScroll ? window.scrollY : null;
     langUnsub?.();
     container.innerHTML = buildHTML();
     langUnsub = renderLangToggle(container.querySelector('#lang-toggle-slot'));
     attachListeners();
-    window.scrollTo(0, scrollY);
-  });
+    if (preserveScroll) window.scrollTo(0, scrollY);
+  }
+
+  // ── Re-render header on language change (nav links, placeholder, tagline…) ──
+  onLangChange(() => refreshHeader({ preserveScroll: true }));
 
   function attachListeners() {
     // ── Search ──
@@ -214,4 +224,17 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
   }
 
   attachListeners();
+
+  // ── Фоновая доводка авторизации ──
+  // Шапка уже отрисована выше по localStorage. Если реальный ответ бэка
+  // расходится (напр. токен протух, или имя изменилось) — перерисовываем
+  // только тогда; если токена не было и сейчас нет — вообще не бьём по сети.
+  if (hasTokenLocally) {
+    getAuthState().then(({ data: realAuth }) => {
+      const changed = realAuth.isLoggedIn !== auth.isLoggedIn ||
+        (realAuth.user?.name ?? null) !== (auth.user?.name ?? null);
+      auth = realAuth;
+      if (changed && container.isConnected) refreshHeader();
+    }).catch(() => { /* тихо игнорируем — шапка уже рабочая с локальным состоянием */ });
+  }
 }
