@@ -74,9 +74,11 @@ export async function renderHome(container) {
       // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',
       // из-за чего клик по жанру/стране показывал только «сейчас смотрю + жанр» и часто выглядел как «не работает».
       if (type === 'status') {
-        currentFilters = value === 'all'
-          ? { status: currentView === 'card' ? 'watching' : 'all' }
-          : { status: value };
+        // "Все" — это всегда весь список, в любом виде (карточки/таблица).
+        // Раньше здесь был баг: в карточном виде клик по «Все» тихо откатывался на status:'watching',
+        // и пользователь никогда не видел полный список в карточках.
+        // Дефолтный status:'watching' остаётся только при первой загрузке страницы (см. currentFilters выше).
+        currentFilters = { status: value };
       } else if (type === 'genre') {
         currentFilters = { genre: value };
       } else if (type === 'country') {
