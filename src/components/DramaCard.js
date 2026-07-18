@@ -2,7 +2,7 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, updateVoiceover, updateSeasons, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { updateDramaStatus, updateVoiceover, updateSeasons, updateReleaseTag, updateTranslationTag, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -15,6 +15,16 @@ const STATUS_OPTIONS = [
 
 // Фиксированный выбор количества сезонов для табличного вида — 1..5.
 const SEASONS_OPTIONS = [1, 2, 3, 4, 5];
+
+// Два независимых тега в столбце «Тэги» — выпуск/выходит и переведён/переводится.
+const RELEASE_OPTIONS = [
+  { value: 'released', key: 'modal.add.tag.released', badgeClass: 'released' },
+  { value: 'ongoing',  key: 'modal.add.tag.ongoing',  badgeClass: 'ongoing' },
+];
+const TRANSLATION_OPTIONS = [
+  { value: 'translated',  key: 'modal.add.tag.translated',  badgeClass: 'translated' },
+  { value: 'translating', key: 'modal.add.tag.translating', badgeClass: 'translating' },
+];
 
 let _floatingMenuEl = null;
 
@@ -197,6 +207,64 @@ function attachSeasonsDropdown(container) {
           }
           wrap.dataset.current = opt;
           wrap.innerHTML = `${opt} ${seasonLabel(opt)}`;
+        });
+        menu.appendChild(item);
+      });
+
+      document.body.appendChild(menu);
+      _floatingMenuEl = menu;
+
+      setTimeout(() => {
+        document.addEventListener('click', closeFloatingMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
+/**
+ * Обобщённый двух-опционный дропдаун для столбца «Тэги» — переиспользуется и для
+ * тега выпуска (.release-select-wrap), и для тега перевода (.translation-select-wrap).
+ * Выбор шлёт PATCH через updateFn — она сама инвалидирует кэш тихо;
+ * ячейка обновляется локально, без перерисовки всей таблицы.
+ */
+function attachTagDropdown(container, { selector, kind, options, updateFn }) {
+  container.querySelectorAll(selector).forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === kind;
+      closeFloatingMenu();
+      if (alreadyOpenForThis) return;
+
+      const id = wrap.dataset.id;
+      const current = wrap.dataset.current;
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.dataset.forId = id;
+      menu.dataset.kind = kind;
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+
+      options.filter(opt => opt.value !== current).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'status-dropdown-option';
+        item.textContent = t(opt.key);
+        item.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          closeFloatingMenu();
+          wrap.style.opacity = '0.5';
+          wrap.style.pointerEvents = 'none';
+          const { error } = await updateFn(id, opt.value);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
+          if (error) {
+            console.warn(`[Table] ${kind} tag update failed:`, error);
+            return;
+          }
+          wrap.dataset.current = opt.value;
+          wrap.innerHTML = `<span class="badge badge--${opt.badgeClass}">${t(opt.key)}</span>`;
         });
         menu.appendChild(item);
       });
@@ -511,14 +579,11 @@ export function renderDramaTable(container, dramas) {
           ${dramas.map(d => {
             const flag = countryFlag[d.country] ?? '🌏';
             // Теги: всегда показываем оба статуса — выпуск/выходит и переведён/переводится —
-            // а не только одну из двух сторон, как было раньше (только “Ongoing”/“RU”, без альтернативы).
-            const releaseBadge = d.ongoing
-              ? `<span class="badge badge--ongoing">${t('modal.add.tag.ongoing')}</span>`
-              : `<span class="badge badge--released">${t('modal.add.tag.released')}</span>`;
-            const translationBadge = d.hasSubs
-              ? `<span class="badge badge--translated">${t('modal.add.tag.translated')}</span>`
-              : `<span class="badge badge--translating">${t('modal.add.tag.translating')}</span>`;
-            const tags = `${releaseBadge} ${translationBadge}`;
+            // каждый — свой кликабельный дропдаун, не просто текст.
+            const releaseTag = d.ongoing ? 'ongoing' : 'released';
+            const translationTag = d.hasSubs ? 'translated' : 'translating';
+            const releaseOpt = RELEASE_OPTIONS.find(o => o.value === releaseTag);
+            const translationOpt = TRANSLATION_OPTIONS.find(o => o.value === translationTag);
             return `
             <tr class="drama-table__row" data-id="${d.id}">
               <td>
@@ -547,7 +612,14 @@ export function renderDramaTable(container, dramas) {
                   ${d.seasons ?? 1} ${seasonLabel(d.seasons ?? 1)}
                 </div>
               </td>
-              <td class="table-tags">${tags}</td>
+              <td class="table-tags">
+                <div class="release-select-wrap status-select-wrap" data-id="${d.id}" data-current="${releaseTag}">
+                  <span class="badge badge--${releaseOpt.badgeClass}">${t(releaseOpt.key)}</span>
+                </div>
+                <div class="translation-select-wrap status-select-wrap" data-id="${d.id}" data-current="${translationTag}">
+                  <span class="badge badge--${translationOpt.badgeClass}">${t(translationOpt.key)}</span>
+                </div>
+              </td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
               <td style="white-space:nowrap">
@@ -597,6 +669,10 @@ export function renderDramaTable(container, dramas) {
 
   // —— Смена количества сезонов из таблицы: клик —> выпадающий список 1–5
   attachSeasonsDropdown(container);
+
+  // —— Тэги из таблицы: клик по каждому тегу —> выпадающий список из двух опций
+  attachTagDropdown(container, { selector: '.release-select-wrap',     kind: 'release',     options: RELEASE_OPTIONS,     updateFn: updateReleaseTag });
+  attachTagDropdown(container, { selector: '.translation-select-wrap', kind: 'translation', options: TRANSLATION_OPTIONS, updateFn: updateTranslationTag });
 
   // —— Оценка из таблицы: клик по звездочке —> PATCH на бэк
   attachRatingControls(container);

@@ -523,6 +523,50 @@ export async function updateSeasons(id, count) {
   return { data: { id, seasons: count }, error: null };
 }
 
+/**
+ * Обновляет тег выпуска дорамы — 'released' | 'ongoing'. Используется редактируемым
+ * тегом в столбце «Тэги» в табличном виде.
+ */
+export async function updateReleaseTag(id, tag) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { release_tag: tag });
+    if (!result.error) {
+      invalidateUserCacheSilent();
+      return { data: { id, releaseTag: tag }, error: null };
+    }
+    console.warn('[API] updateReleaseTag failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateReleaseTag:', id, '->', tag);
+  return { data: { id, releaseTag: tag }, error: null };
+}
+
+/**
+ * Обновляет тег перевода дорамы — 'translated' | 'translating'. Используется редактируемым
+ * тегом в столбце «Тэги» в табличном виде.
+ */
+export async function updateTranslationTag(id, tag) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { translation_tag: tag });
+    if (!result.error) {
+      invalidateUserCacheSilent();
+      return { data: { id, translationTag: tag }, error: null };
+    }
+    console.warn('[API] updateTranslationTag failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateTranslationTag:', id, '->', tag);
+  return { data: { id, translationTag: tag }, error: null };
+}
+
 export async function getLatestDramas(limit = 10) {
   await delay();
   const latestDramas = [
