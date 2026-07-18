@@ -232,12 +232,10 @@ const ADD_DRAMA_CSS = `
   .hb-site-trigger--open .hb-site-chevron { transform: rotate(180deg); }
 
   .hb-site-list {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0; right: 0;
+    position: fixed;
     background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));
     border: 1px solid rgba(201,123,138,0.25); border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 500;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 10000;
     overflow: hidden; max-height: 240px; overflow-y: auto;
     scrollbar-width: thin; scrollbar-color: rgba(201,123,138,0.3) transparent;
     animation: hb-slideUp 0.18s ease;
@@ -924,6 +922,20 @@ export function mountAddDramaContent(content, savedState = {}) {
   const loader     = document.getElementById('hb-scrape-loader');
 
   function openSiteList() {
+    // Фиксированный расчёт координат ОДИН раз, в момент открытия — без пересчёта при скролле и без флипа вверх/вниз.
+    // position:fixed нужен, чтобы список не обрезался внутренним скроллом #hb-modal-content.
+    // Ширина и левый край — по всей строке (постер + поле), а не только по тригеру —
+    // открытый список ложится поверх постера, как и просили.
+    const rect = trigger.getBoundingClientRect();
+    const rowEl = document.querySelector('.hb-add-top-row');
+    const rowRect = rowEl ? rowEl.getBoundingClientRect() : rect;
+
+    list.style.left   = rowRect.left + 'px';
+    list.style.width  = rowRect.width + 'px';
+    list.style.top    = (rect.bottom + 6) + 'px';
+    list.style.bottom = '';
+    list.style.maxHeight = '240px';
+
     list.style.display = 'block';
     trigger.setAttribute('aria-expanded', 'true');
     trigger.classList.add('hb-site-trigger--open');
@@ -933,6 +945,12 @@ export function mountAddDramaContent(content, savedState = {}) {
     trigger.setAttribute('aria-expanded', 'false');
     trigger.classList.remove('hb-site-trigger--open');
   }
+
+  // Если пользователь скроллит контент модалки пока список открыт — просто закрываем его,
+  // вместо того чтобы пересчитывать позицию и «таскать» его за триггером.
+  document.getElementById('hb-modal-content')?.addEventListener('scroll', () => {
+    if (list.style.display !== 'none') closeSiteList();
+  });
 
   trigger.addEventListener('click', e => {
     e.stopPropagation();
