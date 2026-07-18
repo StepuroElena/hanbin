@@ -261,7 +261,7 @@ const componentCSS = `
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text; animation: shimmer 3s linear infinite;
 }
-.stat-unit { font-size: 14px; color: var(--color-text-muted); margin-top: 4px; }
+.stat-unit { font-size: 14px; color: var(--color-text-muted); margin-top: 10px; }
 
 .quote-card {
   background: linear-gradient(135deg, rgba(74,25,66,0.6), rgba(45,15,42,0.8));
@@ -574,7 +574,8 @@ const componentCSS = `
   color: var(--color-jade, #7aab8e);
   font-size: 11px;
 }
-.table-tags { white-space: nowrap; display: flex; align-items: center; height: 100%; gap: 6px; }
+.table-tags { white-space: nowrap; }
+.table-tags > .release-select-wrap { margin-right: 6px; }
 .table-tags .badge { margin-right: 0; }
 .table-no-tags { color: var(--color-text-muted); opacity: 0.35; font-size: 12px; }
 

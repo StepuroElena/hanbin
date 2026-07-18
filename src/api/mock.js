@@ -527,13 +527,17 @@ export async function updateVoiceover(id, value) {
 }
 
 /**
- * Обновляет количество сезонов дорамы — используется выпадающим списком в табличном виде.
- * Бэк принимает массив сезонов { season_number, episode_count } — строим плейсхолдерный
- * массив из count элементов, т.к. фронт хранит только общее количество сезонов, без разбивки по сериям.
+ * Обновляет количество сезонов дорамы — выпадающий список в табличном виде.
+ * Бэк принимает массив сезонов { season_number, episode_count } целиком (PATCH заменяет весь массив,
+ * а не мержит) — поэтому currentTotalEpisodes обязателен: без него смена только количества
+ * сезонов тихо обнуляет раньше введённое количество серий (и наоборот, см. updateEpisodeCount).
  */
-export async function updateSeasons(id, count) {
+export async function updateSeasons(id, count, currentTotalEpisodes = 0) {
   const token = localStorage.getItem('hanbin_token');
-  const seasons = Array.from({ length: count }, (_, i) => ({ season_number: i + 1, episode_count: 0 }));
+  const seasons = Array.from({ length: count }, (_, i) => ({
+    season_number: i + 1,
+    episode_count: i === 0 ? currentTotalEpisodes : 0, // все серии числим в первый сезон — разбивки по сезонам у нас нет
+  }));
 
   if (token) {
     const result = await authPatch(`/dramas/${id}`, { seasons });
@@ -619,14 +623,19 @@ export async function updateEpisodeDuration(id, minutes) {
 
 /**
  * Обновляет общее количество серий — выпадающий список 1–50 в табличном виде.
- * В новой доменной модели бэка нет отдельного поля «total_episodes» — так же, как и в updateSeasons,
- * пишем это как episode_count первого сезона — приближение, пока бэк не поддерживает отдельное поле.
+ * Принимает текущее количество сезонов по той же причине, что и updateSeasons — оба пишут в одно и то же
+ * поле seasons, которое PATCH заменяет целиком, а не мержит — без этого смена числа серий сбрасывала бы число сезонов до 1.
  */
-export async function updateEpisodeCount(id, count) {
+export async function updateEpisodeCount(id, count, currentSeasonsCount = 1) {
   const token = localStorage.getItem('hanbin_token');
+  const seasonsCount = Math.max(1, currentSeasonsCount);
+  const seasons = Array.from({ length: seasonsCount }, (_, i) => ({
+    season_number: i + 1,
+    episode_count: i === 0 ? count : 0,
+  }));
 
   if (token) {
-    const result = await authPatch(`/dramas/${id}`, { seasons: [{ season_number: 1, episode_count: count }] });
+    const result = await authPatch(`/dramas/${id}`, { seasons });
     if (!result.error) {
       invalidateUserCacheSilent();
       return { data: { id, episodesTotal: count }, error: null };
@@ -839,10 +848,19 @@ export async function getMe() {
   if (_getMeInflight) return _getMeInflight;
 
   _getMeInflight = (async () => {
-    const { data: raw, error } = await authGet('/users/me');
+    // /users/me — имя/email/бэйджи/страны (старая доменная модель, но эти поля там есть).
+    // /dramas — сам список дорам, теперь из НОВОЙ доменной модели — той же, в которую пишут
+    // updateSeasons/updateEpisodeCount/updateEpisodeDuration и т.д. Раньше список брался из raw.dramas выше (/users/me),
+    // а та старая доменная модель вообще не знает про seasons/episode_duration_min — отсюда после рефреша
+    // введённое количество серий/длительность исчезало.
+    const [{ data: raw, error }, { data: dramaList, error: dramaListError }] = await Promise.all([
+      authGet('/users/me'),
+      authGet('/dramas'),
+    ]);
     if (error || !raw) return { data: null, error: error ?? 'no data' };
 
-    const dramas = raw.dramas ?? [];
+    const dramas = Array.isArray(dramaList) ? dramaList : (raw.dramas ?? []);
+    if (dramaListError) console.warn('[API] getMe: /dramas list failed, falling back to /users/me dramas:', dramaListError);
     const dramasWatched  = dramas.filter(d => d.watch_status === 'completed').length;
     const dramasWatching = dramas.filter(d => d.watch_status === 'watching').length;
     const dramasPlanned  = dramas.filter(d => d.watch_status === 'planned').length;

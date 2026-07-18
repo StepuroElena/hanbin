@@ -171,6 +171,20 @@ function attachVoiceoverDropdown(container) {
 }
 
 /**
+ * Читает текущее значение соседней ячейки в той же строке — сезоны и количество серий пишутся
+ * в одно и то же поле seasons на бэке (PATCH заменяет его целиком, а не мержит) — нужно
+ * знать текущее значение другого поля, чтобы его не затереть.
+ */
+function currentTotalEpisodesFor(id) {
+  const wrap = document.querySelector(`.episode-count-wrap[data-id="${id}"]`);
+  return Number(wrap?.dataset.current) || 0;
+}
+function currentSeasonsFor(id) {
+  const wrap = document.querySelector(`.seasons-select-wrap[data-id="${id}"]`);
+  return Number(wrap?.dataset.current) || 1;
+}
+
+/**
  * Аналогично attachVoiceoverDropdown, но для ячейки сезонов (.seasons-select-wrap) —
  * фиксированный выбор 1–5. Выбор шлёт PATCH через updateSeasons — он сам инвалидирует
  * кэш тихо; ячейка обновляется локально, без перерисовки всей таблицы.
@@ -204,7 +218,7 @@ function attachSeasonsDropdown(container) {
           closeFloatingMenu();
           wrap.style.opacity = '0.5';
           wrap.style.pointerEvents = 'none';
-          const { error } = await updateSeasons(id, opt);
+          const { error } = await updateSeasons(id, opt, currentTotalEpisodesFor(id));
           wrap.style.opacity = '';
           wrap.style.pointerEvents = '';
           if (error) {
@@ -319,7 +333,7 @@ function attachEpisodeCountDropdown(container) {
           closeFloatingMenu();
           wrap.style.opacity = '0.5';
           wrap.style.pointerEvents = 'none';
-          const { error } = await updateEpisodeCount(id, opt);
+          const { error } = await updateEpisodeCount(id, opt, currentSeasonsFor(id));
           wrap.style.opacity = '';
           wrap.style.pointerEvents = '';
           if (error) {
