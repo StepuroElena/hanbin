@@ -82,6 +82,9 @@ function attachStatusDropdown(container) {
           // без глобального события — остальная таблица не мигает в «Загрузка…».
           wrap.dataset.current = opt.value;
           wrap.innerHTML = `<span class="badge badge--${opt.value}">${t(opt.key)}</span>`;
+          // Статус влияет на карточки «Просмотрено дорам» / «Запланировано» / «Часов дорам» —
+          // отдельное, лёгкое событие, чтобы Home.js перерисовал ТОЛЬКО блок статистики, а не всю таблицу.
+          window.dispatchEvent(new CustomEvent('hanbin:stats-changed'));
         });
         menu.appendChild(item);
       });
@@ -210,6 +213,8 @@ function attachSeasonsDropdown(container) {
           }
           wrap.dataset.current = opt;
           wrap.innerHTML = `${opt} ${seasonLabel(opt)}`;
+          // Количество сезонов входит в формулу «Часов дорам» — обновляем только статистику.
+          window.dispatchEvent(new CustomEvent('hanbin:stats-changed'));
         });
         menu.appendChild(item);
       });
@@ -323,6 +328,8 @@ function attachEpisodeCountDropdown(container) {
           }
           wrap.dataset.current = opt;
           wrap.innerHTML = `${opt} ${episodeLabel(opt)}`;
+          // Количество серий входит в формулу «Часов дорам» — обновляем только статистику.
+          window.dispatchEvent(new CustomEvent('hanbin:stats-changed'));
         });
         menu.appendChild(item);
       });
@@ -411,6 +418,8 @@ function attachEpisodeDurationEditor(container) {
         }
         wrap.dataset.current = total;
         wrap.innerHTML = formatDuration(total);
+        // Длительность серии входит в формулу «Часов дорам» — обновляем только статистику.
+        window.dispatchEvent(new CustomEvent('hanbin:stats-changed'));
       };
 
       menu.querySelector('.duration-popover-save').addEventListener('click', save);

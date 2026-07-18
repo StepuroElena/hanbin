@@ -188,10 +188,19 @@ export async function renderHome(container) {
   };
   window.addEventListener('hanbin:data-changed', onDataChanged);
 
+  // Лёгкое событие от DramaCard.js: статус/сезоны/серии/длительность в таблице влияют на карточки
+  // «Просмотрено дорам» / «Запланировано» / «Часов дорам» — перерисовываем ТОЛЬКО блок
+  // статистики, а не всю таблицу/архив/сайдбар.
+  const onStatsChanged = () => {
+    renderStatsBlock(container.querySelector('#stats-slot'));
+  };
+  window.addEventListener('hanbin:stats-changed', onStatsChanged);
+
   // Отписываемся при уходе со страницы (router чистит container)
   const observer = new MutationObserver(() => {
     if (!container.isConnected) {
       window.removeEventListener('hanbin:data-changed', onDataChanged);
+      window.removeEventListener('hanbin:stats-changed', onStatsChanged);
       observer.disconnect();
     }
   });
