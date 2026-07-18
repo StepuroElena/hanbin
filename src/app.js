@@ -412,6 +412,7 @@ const componentCSS = `
   border-bottom: 1px dashed rgba(232,196,184,0.25);
   padding-bottom: 1px; transition: var(--transition-fast);
 }
+.table-voiceover-value--empty { opacity: 0.5; }
 .voiceover-select-wrap:hover .table-voiceover-value { color: var(--color-text); border-bottom-color: rgba(201,123,138,0.5); }
 .status-dropdown-menu {
   position: fixed;
@@ -447,9 +448,9 @@ const componentCSS = `
 .badge--plan      { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
 .badge--dropped   { background: rgba(180,80,80,0.6);    color: #fff;               border: 1px solid rgba(200,90,90,0.75); }
 .badge--ru        { background: rgba(120,60,110,0.85);  color: #f5e6d3;            border: 1px solid rgba(232,196,184,0.45); }
-.badge--released    { background: rgba(212,165,116,0.6);  color: #fff;               border: 1px solid rgba(212,165,116,0.75); }
-.badge--translated  { background: rgba(122,171,142,0.65); color: #fff;               border: 1px solid rgba(122,171,142,0.8); }
-.badge--translating { background: rgba(180,140,200,0.55); color: #fff;               border: 1px solid rgba(180,140,200,0.7); }
+.badge--released    { background: rgba(70,130,190,0.55);  color: #fff;               border: 1px solid rgba(70,130,190,0.75); }
+.badge--translated   { background: rgba(60,165,175,0.55);  color: #fff;               border: 1px solid rgba(60,165,175,0.75); }
+.badge--translating  { background: rgba(90,100,175,0.5);   color: #fff;               border: 1px solid rgba(90,100,175,0.7); }
 
 /* ── Archive section ── */
 .section--archive {

@@ -433,9 +433,9 @@ export function renderDramaTable(container, dramas) {
             <th>${t('table.col.rating')}</th>
             <th>${t('table.col.episodes')}</th>
             <th>${t('table.col.seasons')}</th>
+            <th>${t('table.col.tags')}</th>
             <th>${t('table.col.added_at')}</th>
             <th>${t('table.col.last_watched')}</th>
-            <th>${t('table.col.tags')}</th>
             <th></th>
           </tr>
         </thead>
@@ -464,7 +464,7 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
               <td>
                 <div class="voiceover-select-wrap status-select-wrap" data-id="${d.id}" data-current="${d.voiceover ?? ''}">
-                  ${d.voiceover ? `<span class="table-voiceover-value">${d.voiceover}</span>` : '<span class="table-no-tags">—</span>'}
+                  <span class="table-voiceover-value ${d.voiceover ? '' : 'table-voiceover-value--empty'}">${d.voiceover || '—'}</span>
                 </div>
               </td>
               <td>
@@ -475,9 +475,9 @@ export function renderDramaTable(container, dramas) {
               <td>${interactiveStarsHTML(d)}</td>
               <td class="table-muted table-episodes">${formatEpisodes(d)}</td>
               <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
+              <td class="table-tags">${tags}</td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
-              <td class="table-tags">${tags}</td>
               <td style="white-space:nowrap">
                 <button class="table-watch-btn" data-tooltip="${t('table.watch_tooltip')}" data-tooltip-pos="left" data-id="${d.id}">▶</button>
                 ${d.status === 'archived'
