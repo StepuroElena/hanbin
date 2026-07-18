@@ -553,7 +553,7 @@ const componentCSS = `
   color: var(--color-jade, #7aab8e);
   font-size: 11px;
 }
-.table-tags { white-space: nowrap; display: flex; gap: 6px; }
+.table-tags { white-space: nowrap; display: flex; align-items: center; gap: 6px; }
 .table-tags .badge { margin-right: 0; }
 .table-no-tags { color: var(--color-text-muted); opacity: 0.35; font-size: 12px; }
 
