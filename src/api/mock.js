@@ -301,6 +301,31 @@ export async function getStats() {
   return { data: computeMockStats(), error: null };
 }
 
+/**
+ * Реально используемые страны/жанры в дорамах пользователя — для динамического
+ * построения чипов фильтров в Filters.js — чтобы не показывать чипы без данных (напр.
+ * Япония, если там нет ни одной дорамы). Считается на бэке (GET /api/v1/dramas/facets) —
+ * не вычисляем на фронте.
+ */
+export async function getFacets() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet('/dramas/facets');
+    if (data) {
+      return { data: { countries: data.countries ?? [], genres: data.genres ?? [] }, error: null };
+    }
+    console.warn('[API] getFacets failed:', error);
+    return { data: { countries: [], genres: [] }, error };
+  }
+
+  // Гость — считаем из мок-данных локально, там бэка всё равно нет.
+  await delay(50);
+  const countries = [...new Set(MOCK_DRAMAS.map(d => d.country).filter(Boolean))].sort();
+  const genres = [...new Set(MOCK_DRAMAS.flatMap(d => d.genres))].sort();
+  return { data: { countries, genres }, error: null };
+}
+
 function adaptDramaFromApi(d) {
   const ongoing = d.release_tag === 'ongoing';
   const hasSubs = d.translation_tag === 'translated';
@@ -352,7 +377,8 @@ export async function getDramas(filters = {}) {
       result = result.filter(d => d.country === filters.country);
     }
     if (filters.genre) {
-      result = result.filter(d => d.genres.some(g => g.toLowerCase().includes(filters.genre.toLowerCase())));
+      const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
+      result = result.filter(d => d.genres.some(g => genreList.some(fg => g.toLowerCase().includes(fg.toLowerCase()))));
     }
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -378,7 +404,8 @@ export async function getDramas(filters = {}) {
     result = result.filter(d => d.country === filters.country);
   }
   if (filters.genre) {
-    result = result.filter(d => d.genres.includes(filters.genre));
+    const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
+    result = result.filter(d => d.genres.some(g => genreList.some(fg => g === fg)));
   }
   if (filters.search) {
     const q = filters.search.toLowerCase();

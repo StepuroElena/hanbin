@@ -290,6 +290,27 @@ const componentCSS = `
 .filter-chip.status-dropped { border-color: rgba(255,107,138,0.4); color: rgba(255,107,138,0.8); }
 .filter-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 4px; flex-shrink: 0; }
 
+/* ── Жанр — выпадающий список с чекбоксами (мультивыбор) ── */
+.genre-dropdown-wrap { position: relative; }
+.genre-dropdown-trigger { display: inline-flex; align-items: center; gap: 5px; }
+.genre-dropdown-caret { font-size: 9px; opacity: 0.7; }
+.genre-dropdown-panel {
+  position: absolute; top: calc(100% + 8px); left: 0;
+  min-width: 200px; max-height: 280px; overflow-y: auto;
+  background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));
+  border: 1px solid rgba(201,123,138,0.25); border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 500;
+  padding: 6px; animation: fadeUp 0.15s ease;
+}
+.genre-dropdown-panel.hidden { display: none; }
+.genre-checkbox-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  font-size: 12px; color: var(--color-text); transition: background 0.15s;
+}
+.genre-checkbox-item:hover { background: rgba(201,123,138,0.15); }
+.genre-checkbox-item input[type="checkbox"] { accent-color: var(--color-rose); cursor: pointer; }
+
 /* ── Section ── */
 .section { margin-bottom: 44px; animation: fadeUp 0.7s 0.2s ease both; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
