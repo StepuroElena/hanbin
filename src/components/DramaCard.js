@@ -2,7 +2,7 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, updateVoiceover, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { updateDramaStatus, updateVoiceover, updateSeasons, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -12,6 +12,9 @@ const STATUS_OPTIONS = [
   { value: 'plan',      key: 'status.plan' },
   { value: 'dropped',   key: 'status.dropped' },
 ];
+
+// Фиксированный выбор количества сезонов для табличного вида — 1..5.
+const SEASONS_OPTIONS = [1, 2, 3, 4, 5];
 
 let _floatingMenuEl = null;
 
@@ -56,13 +59,16 @@ function attachStatusDropdown(container) {
           wrap.style.opacity = '0.5';
           wrap.style.pointerEvents = 'none';
           const { error } = await updateDramaStatus(id, opt.value);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
           if (error) {
             console.warn('[Table] status update failed:', error);
-            wrap.style.opacity = '';
-            wrap.style.pointerEvents = '';
+            return;
           }
-          // При успехе updateDramaStatus сам вызовет invalidateUserCache() ->
-          // Home.js перерисует таблицу с актуальным статусом — локально строку не перерисовываем.
+          // Обновляем только эту ячейку локально — updateDramaStatus инвалидирует кэш тихо,
+          // без глобального события — остальная таблица не мигает в «Загрузка…».
+          wrap.dataset.current = opt.value;
+          wrap.innerHTML = `<span class="badge badge--${opt.value}">${t(opt.key)}</span>`;
         });
         menu.appendChild(item);
       });
@@ -135,6 +141,63 @@ function attachVoiceoverDropdown(container) {
         item.className = 'status-dropdown-option';
         item.textContent = opt;
         item.addEventListener('click', (ev) => { ev.stopPropagation(); applyVoiceover(opt); });
+        menu.appendChild(item);
+      });
+
+      document.body.appendChild(menu);
+      _floatingMenuEl = menu;
+
+      setTimeout(() => {
+        document.addEventListener('click', closeFloatingMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
+/**
+ * Аналогично attachVoiceoverDropdown, но для ячейки сезонов (.seasons-select-wrap) —
+ * фиксированный выбор 1–5. Выбор шлёт PATCH через updateSeasons — он сам инвалидирует
+ * кэш тихо; ячейка обновляется локально, без перерисовки всей таблицы.
+ */
+function attachSeasonsDropdown(container) {
+  container.querySelectorAll('.seasons-select-wrap').forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'seasons';
+      closeFloatingMenu();
+      if (alreadyOpenForThis) return;
+
+      const id = wrap.dataset.id;
+      const current = Number(wrap.dataset.current) || 1;
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.dataset.forId = id;
+      menu.dataset.kind = 'seasons';
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+
+      SEASONS_OPTIONS.filter(v => v !== current).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'status-dropdown-option';
+        item.textContent = `${opt} ${seasonLabel(opt)}`;
+        item.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          closeFloatingMenu();
+          wrap.style.opacity = '0.5';
+          wrap.style.pointerEvents = 'none';
+          const { error } = await updateSeasons(id, opt);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
+          if (error) {
+            console.warn('[Table] seasons update failed:', error);
+            return;
+          }
+          wrap.dataset.current = opt;
+          wrap.innerHTML = `${opt} ${seasonLabel(opt)}`;
+        });
         menu.appendChild(item);
       });
 
@@ -479,7 +542,11 @@ export function renderDramaTable(container, dramas) {
               </td>
               <td>${interactiveStarsHTML(d)}</td>
               <td class="table-muted table-episodes">${formatEpisodes(d)}</td>
-              <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
+              <td class="table-muted table-seasons">
+                <div class="seasons-select-wrap status-select-wrap" data-id="${d.id}" data-current="${d.seasons ?? 1}">
+                  ${d.seasons ?? 1} ${seasonLabel(d.seasons ?? 1)}
+                </div>
+              </td>
               <td class="table-tags">${tags}</td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
@@ -527,6 +594,9 @@ export function renderDramaTable(container, dramas) {
 
   // —— Смена озвучки из таблицы: клик —> выпадающий список из VOICEOVER_OPTIONS
   attachVoiceoverDropdown(container);
+
+  // —— Смена количества сезонов из таблицы: клик —> выпадающий список 1–5
+  attachSeasonsDropdown(container);
 
   // —— Оценка из таблицы: клик по звездочке —> PATCH на бэк
   attachRatingControls(container);

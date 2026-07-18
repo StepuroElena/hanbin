@@ -331,7 +331,9 @@ function adaptDramaFromApi(d) {
     hasSubs,
     isArchived:      Boolean(d.is_archived),
     cover:           d.poster_url ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(d.poster_url)}` : null,
-    seasons:         d.seasons ?? null,
+    // Сезоны: бэк может вернуть либо массив сезонов (берём длину), либо число напрямую.
+    // Если с сайта/бэка ничего не пришло — дефолт 1, чтобы ячейка всегда была чем-то редактируемым, а не прочерком.
+    seasons:         Array.isArray(d.seasons) ? (d.seasons.length || 1) : (d.seasons ?? 1),
     addedAt:         d.created_at ? new Date(d.created_at) : null,
     lastWatchedAt:   d.updated_at ? new Date(d.updated_at) : null,
   };
@@ -436,7 +438,9 @@ export async function updateDramaStatus(id, status) {
     const backendStatus = REVERSE_STATUS_MAP[status] ?? status;
     const result = await authPatch(`/dramas/${id}`, { watch_status: backendStatus });
     if (!result.error) {
-      invalidateUserCache();
+      // Тихо, без глобального события — вызывающий код (DramaCard.js) сам обновляет ячейку
+      // локально. Раньше invalidateUserCache() триггерил перерисовку всей таблицы из-за изменения одного статуса.
+      invalidateUserCacheSilent();
       return { data: { id, status }, error: null };
     }
     console.warn('[API] updateDramaStatus failed:', result.error);
@@ -493,6 +497,30 @@ export async function updateVoiceover(id, value) {
   await delay();
   console.log('[MOCK] updateVoiceover:', id, '->', value);
   return { data: { id, voiceover: value }, error: null };
+}
+
+/**
+ * Обновляет количество сезонов дорамы — используется выпадающим списком в табличном виде.
+ * Бэк принимает массив сезонов { season_number, episode_count } — строим плейсхолдерный
+ * массив из count элементов, т.к. фронт хранит только общее количество сезонов, без разбивки по сериям.
+ */
+export async function updateSeasons(id, count) {
+  const token = localStorage.getItem('hanbin_token');
+  const seasons = Array.from({ length: count }, (_, i) => ({ season_number: i + 1, episode_count: 0 }));
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { seasons });
+    if (!result.error) {
+      invalidateUserCacheSilent();
+      return { data: { id, seasons: count }, error: null };
+    }
+    console.warn('[API] updateSeasons failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateSeasons:', id, '->', count);
+  return { data: { id, seasons: count }, error: null };
 }
 
 export async function getLatestDramas(limit = 10) {
