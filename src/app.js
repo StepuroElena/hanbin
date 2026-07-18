@@ -449,9 +449,37 @@ const componentCSS = `
   box-shadow: 0 20px 40px rgba(0,0,0,0.5);
   z-index: 10000;
   overflow: hidden;
+  overflow-y: auto;
+  max-height: 280px;
   min-width: 160px;
   animation: fadeUp 0.15s ease;
 }
+.duration-popover {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+  max-height: none;
+  overflow: visible;
+}
+.duration-popover-fields { display: flex; align-items: center; gap: 6px; }
+.duration-input {
+  width: 48px; padding: 6px 8px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(232,196,184,0.2);
+  border-radius: 8px; color: var(--color-text); font-size: 13px;
+  font-family: var(--font-body); text-align: center;
+  transition: var(--transition-fast);
+}
+.duration-input:focus { outline: none; border-color: var(--color-rose); }
+.duration-popover-unit { font-size: 12px; color: var(--color-text-muted); margin-right: 4px; }
+.duration-popover-save {
+  padding: 7px 12px; border-radius: 8px; border: 1px solid rgba(201,123,138,0.4);
+  background: rgba(201,123,138,0.15); color: var(--color-text);
+  font-family: var(--font-body); font-size: 12px; cursor: pointer;
+  transition: var(--transition-fast);
+}
+.duration-popover-save:hover { background: rgba(201,123,138,0.28); }
 .status-dropdown-option {
   padding: 10px 16px;
   font-size: 12px;
@@ -495,7 +523,14 @@ const componentCSS = `
 
 .table-country { font-size: 13px; white-space: nowrap; }
 .table-seasons { white-space: nowrap; font-size: 12px; }
-.table-episodes { white-space: nowrap; font-size: 12px; }
+.table-episodes { white-space: nowrap; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.episode-duration-wrap {
+  cursor: pointer; color: var(--color-text-muted);
+  border-bottom: 1px dashed rgba(232,196,184,0.25);
+  display: inline-block; width: fit-content;
+  transition: var(--transition-fast);
+}
+.episode-duration-wrap:hover { color: var(--color-text); border-bottom-color: rgba(201,123,138,0.5); }
 
 .table-stars-wrap { display: inline-flex; gap: 2px; cursor: pointer; transition: opacity 0.15s ease; }
 .table-stars-wrap--loading { opacity: 0.45; pointer-events: none; }

@@ -567,6 +567,52 @@ export async function updateTranslationTag(id, tag) {
   return { data: { id, translationTag: tag }, error: null };
 }
 
+/**
+ * Обновляет длительность одной серии в минутах — вводится вручную (часы + минуты) в табличном виде,
+ * так как с разных сайтов длительность может быть любой (45мин, 1ч 05мин и т.д.) —
+ * скрейпер её не парсит. Бэк требует значение > 0.
+ */
+export async function updateEpisodeDuration(id, minutes) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { episode_duration_min: minutes });
+    if (!result.error) {
+      invalidateUserCacheSilent();
+      return { data: { id, episodeDurationMin: minutes }, error: null };
+    }
+    console.warn('[API] updateEpisodeDuration failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateEpisodeDuration:', id, '->', minutes);
+  return { data: { id, episodeDurationMin: minutes }, error: null };
+}
+
+/**
+ * Обновляет общее количество серий — выпадающий список 1–50 в табличном виде.
+ * В новой доменной модели бэка нет отдельного поля «total_episodes» — так же, как и в updateSeasons,
+ * пишем это как episode_count первого сезона — приближение, пока бэк не поддерживает отдельное поле.
+ */
+export async function updateEpisodeCount(id, count) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { seasons: [{ season_number: 1, episode_count: count }] });
+    if (!result.error) {
+      invalidateUserCacheSilent();
+      return { data: { id, episodesTotal: count }, error: null };
+    }
+    console.warn('[API] updateEpisodeCount failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateEpisodeCount:', id, '->', count);
+  return { data: { id, episodesTotal: count }, error: null };
+}
+
 export async function getLatestDramas(limit = 10) {
   await delay();
   const latestDramas = [

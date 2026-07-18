@@ -2,7 +2,7 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, updateVoiceover, updateSeasons, updateReleaseTag, updateTranslationTag, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { updateDramaStatus, updateVoiceover, updateSeasons, updateReleaseTag, updateTranslationTag, updateEpisodeDuration, updateEpisodeCount, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -15,6 +15,9 @@ const STATUS_OPTIONS = [
 
 // Фиксированный выбор количества сезонов для табличного вида — 1..5.
 const SEASONS_OPTIONS = [1, 2, 3, 4, 5];
+
+// Количество серий — выпадающий список 1..50.
+const EPISODE_COUNT_OPTIONS = Array.from({ length: 50 }, (_, i) => i + 1);
 
 // Два независимых тега в столбце «Тэги» — выпуск/выходит и переведён/переводится.
 const RELEASE_OPTIONS = [
@@ -271,6 +274,147 @@ function attachTagDropdown(container, { selector, kind, options, updateFn }) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+
+      setTimeout(() => {
+        document.addEventListener('click', closeFloatingMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
+/**
+ * Аналогично attachSeasonsDropdown, но для общего количества серий (.episode-count-wrap) — выбор 1..50.
+ */
+function attachEpisodeCountDropdown(container) {
+  container.querySelectorAll('.episode-count-wrap').forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'episode-count';
+      closeFloatingMenu();
+      if (alreadyOpenForThis) return;
+
+      const id = wrap.dataset.id;
+      const current = Number(wrap.dataset.current) || 0;
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.dataset.forId = id;
+      menu.dataset.kind = 'episode-count';
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+
+      EPISODE_COUNT_OPTIONS.filter(v => v !== current).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'status-dropdown-option';
+        item.textContent = `${opt} ${episodeLabel(opt)}`;
+        item.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          closeFloatingMenu();
+          wrap.style.opacity = '0.5';
+          wrap.style.pointerEvents = 'none';
+          const { error } = await updateEpisodeCount(id, opt);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
+          if (error) {
+            console.warn('[Table] episode count update failed:', error);
+            return;
+          }
+          wrap.dataset.current = opt;
+          wrap.innerHTML = `${opt} ${episodeLabel(opt)}`;
+        });
+        menu.appendChild(item);
+      });
+
+      document.body.appendChild(menu);
+      _floatingMenuEl = menu;
+
+      setTimeout(() => {
+        document.addEventListener('click', closeFloatingMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
+/** Минуты -> «1ч 05мин» / «45мин» */
+function formatDuration(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h > 0) return `${h}ч ${String(m).padStart(2, '0')}мин`;
+  return `${m}мин`;
+}
+
+/**
+ * Клик по ячейке длительности (.episode-duration-wrap) открывает мини-форму с двумя полями (часы/минуты) —
+ * длительность серий не скрейпится, вводится вручную. Клики внутри попапа не закрывают его
+ * (stopPropagation на самом попапе), иначе клик в input для ввода текста тут же закрывал бы его.
+ */
+function attachEpisodeDurationEditor(container) {
+  container.querySelectorAll('.episode-duration-wrap').forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'duration';
+      closeFloatingMenu();
+      if (alreadyOpenForThis) return;
+
+      const id = wrap.dataset.id;
+      const currentMin = Number(wrap.dataset.current) || 0;
+      const curH = Math.floor(currentMin / 60);
+      const curM = currentMin % 60;
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu duration-popover';
+      menu.dataset.forId = id;
+      menu.dataset.kind = 'duration';
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+      menu.addEventListener('click', (ev) => ev.stopPropagation()); // клик внутри не должен закрывать попап
+
+      menu.innerHTML = `
+        <div class="duration-popover-fields">
+          <input type="number" min="0" max="9" class="duration-input" id="dur-h-${id}" placeholder="ч" value="${curH || ''}">
+          <span class="duration-popover-unit">ч</span>
+          <input type="number" min="0" max="59" class="duration-input" id="dur-m-${id}" placeholder="мин" value="${curM || ''}">
+          <span class="duration-popover-unit">мин</span>
+        </div>
+        <button class="duration-popover-save">Сохранить</button>
+      `;
+
+      document.body.appendChild(menu);
+      _floatingMenuEl = menu;
+
+      const hInput = menu.querySelector(`#dur-h-${id}`);
+      const mInput = menu.querySelector(`#dur-m-${id}`);
+      hInput.focus();
+
+      const save = async () => {
+        const h = Math.max(0, Number(hInput.value) || 0);
+        const m = Math.max(0, Math.min(59, Number(mInput.value) || 0));
+        const total = h * 60 + m;
+        if (total <= 0) {
+          hInput.style.borderColor = 'rgba(255,107,138,0.7)';
+          mInput.style.borderColor = 'rgba(255,107,138,0.7)';
+          return;
+        }
+        closeFloatingMenu();
+        wrap.style.opacity = '0.5';
+        wrap.style.pointerEvents = 'none';
+        const { error } = await updateEpisodeDuration(id, total);
+        wrap.style.opacity = '';
+        wrap.style.pointerEvents = '';
+        if (error) {
+          console.warn('[Table] episode duration update failed:', error);
+          return;
+        }
+        wrap.dataset.current = total;
+        wrap.innerHTML = formatDuration(total);
+      };
+
+      menu.querySelector('.duration-popover-save').addEventListener('click', save);
+      [hInput, mInput].forEach(inp => inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') save(); }));
 
       setTimeout(() => {
         document.addEventListener('click', closeFloatingMenu, { once: true });
@@ -606,7 +750,14 @@ export function renderDramaTable(container, dramas) {
                 </div>
               </td>
               <td>${interactiveStarsHTML(d)}</td>
-              <td class="table-muted table-episodes">${formatEpisodes(d)}</td>
+              <td class="table-episodes">
+                <div class="episode-duration-wrap" data-id="${d.id}" data-current="${d.episodeDurationMin ?? ''}">
+                  ${d.episodeDurationMin ? formatDuration(d.episodeDurationMin) : '<span class="table-no-tags">—</span>'}
+                </div>
+                <div class="episode-count-wrap status-select-wrap" data-id="${d.id}" data-current="${d.episodesTotal || ''}">
+                  ${d.episodesTotal ? `${d.episodesTotal} ${episodeLabel(d.episodesTotal)}` : '<span class="table-no-tags">—</span>'}
+                </div>
+              </td>
               <td class="table-muted table-seasons">
                 <div class="seasons-select-wrap status-select-wrap" data-id="${d.id}" data-current="${d.seasons ?? 1}">
                   ${d.seasons ?? 1} ${seasonLabel(d.seasons ?? 1)}
@@ -669,6 +820,12 @@ export function renderDramaTable(container, dramas) {
 
   // —— Смена количества сезонов из таблицы: клик —> выпадающий список 1–5
   attachSeasonsDropdown(container);
+
+  // —— Количество серий из таблицы: клик —> выпадающий список 1–50
+  attachEpisodeCountDropdown(container);
+
+  // —— Длительность серии из таблицы: клик —> мини-форма часы/минуты (вводится вручную, не скрейпится)
+  attachEpisodeDurationEditor(container);
 
   // —— Тэги из таблицы: клик по каждому тегу —> выпадающий список из двух опций
   attachTagDropdown(container, { selector: '.release-select-wrap',     kind: 'release',     options: RELEASE_OPTIONS,     updateFn: updateReleaseTag });
