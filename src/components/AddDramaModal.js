@@ -303,7 +303,7 @@ const ADD_DRAMA_CSS = `
     animation: hb-slideUp 0.3s ease;
   }
   .hb-poster-frame__img {
-    width: 100%; height: 100%; object-fit: cover; display: block;
+    width: 100%; height: 100%; object-fit: contain; display: block;
     transition: opacity 0.35s ease;
   }
   .hb-poster-frame__img--loading { opacity: 0.5; }
@@ -684,11 +684,11 @@ function hidePosterPreview() {
 // Тянет og:image со страницы источника через CORS-прокси и подменяет плейсхолдер.
 // Fallback-путь на случай, если бэкенд не смог вытащить poster_url сам — в большинстве случаев
 // этот путь больше не нужен, т.к. бэкенд сам вытаскивает картинку из og:image при скрейпе.
-async function fetchPoster(pageUrl, siteName) {
+async function fetchPoster(pageUrl, siteName, isStale = () => false) {
   const img = document.getElementById('hb-poster-img');
   const sourceEl = document.getElementById('hb-poster-source');
   if (!img || !pageUrl) {
-    if (sourceEl) {
+    if (!isStale() && sourceEl) {
       sourceEl.textContent = t('poster.no_poster');
       sourceEl.classList.add('hb-poster-frame__label--missing');
     }
@@ -713,6 +713,9 @@ async function fetchPoster(pageUrl, siteName) {
     await new Promise((resolve, reject) => {
       const real = new Image();
       real.onload = () => {
+        // Пока шёл этот fallback-запрос пользователь мог запустить новый скрейп —
+        // если он устарел, не трогаем DOM, чтобы не перетереть более свежее состояние.
+        if (isStale()) { resolve(); return; }
         img.src = posterProxyURL(ogImage);
         img.classList.remove('hb-poster-frame__img--loading');
         if (sourceEl) {
@@ -727,10 +730,12 @@ async function fetchPoster(pageUrl, siteName) {
     return true;
   } catch (err) {
     console.warn('[AddDramaModal] fetchPoster failed:', err.message);
-    img.classList.remove('hb-poster-frame__img--loading');
-    if (sourceEl) {
-      sourceEl.textContent = t('poster.no_poster');
-      sourceEl.classList.add('hb-poster-frame__label--missing');
+    if (!isStale()) {
+      img.classList.remove('hb-poster-frame__img--loading');
+      if (sourceEl) {
+        sourceEl.textContent = t('poster.no_poster');
+        sourceEl.classList.add('hb-poster-frame__label--missing');
+      }
     }
     return false;
   }
@@ -992,13 +997,13 @@ export function mountAddDramaContent(content, savedState = {}) {
             hasRealPoster = true;
           };
           real.onerror = () => {
-            fetchPoster(scraped.source_url, name).then(ok => {
+            fetchPoster(scraped.source_url, name, () => myToken !== scrapeToken).then(ok => {
               if (myToken === scrapeToken) hasRealPoster = ok;
             });
           };
           real.src = posterProxyURL(scraped.poster_url);
         } else {
-          fetchPoster(scraped.source_url, name).then(ok => {
+          fetchPoster(scraped.source_url, name, () => myToken !== scrapeToken).then(ok => {
             if (myToken === scrapeToken) hasRealPoster = ok;
           });
         }
