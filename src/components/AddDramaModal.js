@@ -12,7 +12,7 @@
 import { closeModal, injectModalCSS } from './LoginModal.js';
 import { addDrama, getDramas, invalidateUserCache, scrapeDrama } from '../api/mock.js';
 import { API_BASE } from '../api/client.js';
-import { debounce } from '../utils/helpers.js';
+import { debounce, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 // ─────────────────────────────────────────────
@@ -87,8 +87,7 @@ const GENRE_SCRAPE_MAP = {
   'documentary': 'Documentary','документальный': 'Documentary',
 };
 
-// Фиксированный список озвучек — выбор вместо свободного текста.
-const VOICEOVER_OPTIONS = ['Light Breeze', 'SlothSound', 'DubLik.TV', 'SoftBox', 'AniMaunt', 'STEPonee'];
+// Фиксированный список озвучек импортируется из utils/helpers.js — общий с табличным видом.
 
 // ─────────────────────────────────────────────
 // CSS

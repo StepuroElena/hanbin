@@ -2,8 +2,8 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
-import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo } from '../utils/helpers.js';
+import { updateDramaStatus, updateVoiceover, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
 const STATUS_OPTIONS = [
@@ -13,11 +13,11 @@ const STATUS_OPTIONS = [
   { value: 'dropped',   key: 'status.dropped' },
 ];
 
-let _statusMenuEl = null;
+let _floatingMenuEl = null;
 
-function closeStatusMenu() {
-  _statusMenuEl?.remove();
-  _statusMenuEl = null;
+function closeFloatingMenu() {
+  _floatingMenuEl?.remove();
+  _floatingMenuEl = null;
 }
 
 /**
@@ -31,8 +31,8 @@ function attachStatusDropdown(container) {
     wrap.addEventListener('click', (e) => {
       e.stopPropagation();
 
-      const alreadyOpenForThis = _statusMenuEl?.dataset.forId === wrap.dataset.id;
-      closeStatusMenu();
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'status';
+      closeFloatingMenu();
       if (alreadyOpenForThis) return; // второй клик по той же ячейке — просто закрываем
 
       const id = wrap.dataset.id;
@@ -42,6 +42,7 @@ function attachStatusDropdown(container) {
       const menu = document.createElement('div');
       menu.className = 'status-dropdown-menu';
       menu.dataset.forId = id;
+      menu.dataset.kind = 'status';
       menu.style.left = rect.left + 'px';
       menu.style.top = (rect.bottom + 6) + 'px';
 
@@ -51,7 +52,7 @@ function attachStatusDropdown(container) {
         item.textContent = t(opt.key);
         item.addEventListener('click', async (ev) => {
           ev.stopPropagation();
-          closeStatusMenu();
+          closeFloatingMenu();
           wrap.style.opacity = '0.5';
           wrap.style.pointerEvents = 'none';
           const { error } = await updateDramaStatus(id, opt.value);
@@ -67,11 +68,76 @@ function attachStatusDropdown(container) {
       });
 
       document.body.appendChild(menu);
-      _statusMenuEl = menu;
+      _floatingMenuEl = menu;
 
       // Закрытие по клику снаружи — вешаем на следующий тик, чтобы не поймать текущий клик
       setTimeout(() => {
-        document.addEventListener('click', closeStatusMenu, { once: true });
+        document.addEventListener('click', closeFloatingMenu, { once: true });
+      }, 0);
+    });
+  });
+}
+
+/**
+ * Аналогично attachStatusDropdown, но для ячейки озвучки (.voiceover-select-wrap) —
+ * список опций тот же, что и в модалке добавления дорамы (VOICEOVER_OPTIONS).
+ * Выбор шлёт PATCH через updateVoiceover — он сам инвалидирует кэш и через
+ * событие hanbin:data-changed вся страница (Home.js) сама перерисует таблицу.
+ */
+function attachVoiceoverDropdown(container) {
+  container.querySelectorAll('.voiceover-select-wrap').forEach(wrap => {
+    wrap.addEventListener('click', (e) => {
+      e.stopPropagation();
+
+      const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'voiceover';
+      closeFloatingMenu();
+      if (alreadyOpenForThis) return;
+
+      const id = wrap.dataset.id;
+      const current = wrap.dataset.current || '';
+      const rect = wrap.getBoundingClientRect();
+
+      const menu = document.createElement('div');
+      menu.className = 'status-dropdown-menu';
+      menu.dataset.forId = id;
+      menu.dataset.kind = 'voiceover';
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 6) + 'px';
+
+      const applyVoiceover = async (value) => {
+        closeFloatingMenu();
+        wrap.style.opacity = '0.5';
+        wrap.style.pointerEvents = 'none';
+        const { error } = await updateVoiceover(id, value);
+        if (error) {
+          console.warn('[Table] voiceover update failed:', error);
+          wrap.style.opacity = '';
+          wrap.style.pointerEvents = '';
+        }
+      };
+
+      // Пункт «Без озвучки» — снять текущий выбор, только если озвучка уже выбрана
+      if (current) {
+        const clearItem = document.createElement('div');
+        clearItem.className = 'status-dropdown-option';
+        clearItem.textContent = t('table.no_voiceover');
+        clearItem.addEventListener('click', (ev) => { ev.stopPropagation(); applyVoiceover(null); });
+        menu.appendChild(clearItem);
+      }
+
+      VOICEOVER_OPTIONS.filter(v => v !== current).forEach(opt => {
+        const item = document.createElement('div');
+        item.className = 'status-dropdown-option';
+        item.textContent = opt;
+        item.addEventListener('click', (ev) => { ev.stopPropagation(); applyVoiceover(opt); });
+        menu.appendChild(item);
+      });
+
+      document.body.appendChild(menu);
+      _floatingMenuEl = menu;
+
+      setTimeout(() => {
+        document.addEventListener('click', closeFloatingMenu, { once: true });
       }, 0);
     });
   });
@@ -376,10 +442,15 @@ export function renderDramaTable(container, dramas) {
         <tbody>
           ${dramas.map(d => {
             const flag = countryFlag[d.country] ?? '🌏';
-            const tags = [
-              d.ongoing  ? `<span class="badge badge--ongoing">${t('status.ongoing')}</span>` : '',
-              d.hasSubs  ? `<span class="badge badge--ru">RU</span>` : '',
-            ].filter(Boolean).join(' ');
+            // Теги: всегда показываем оба статуса — выпуск/выходит и переведён/переводится —
+            // а не только одну из двух сторон, как было раньше (только “Ongoing”/“RU”, без альтернативы).
+            const releaseBadge = d.ongoing
+              ? `<span class="badge badge--ongoing">${t('modal.add.tag.ongoing')}</span>`
+              : `<span class="badge badge--released">${t('modal.add.tag.released')}</span>`;
+            const translationBadge = d.hasSubs
+              ? `<span class="badge badge--translated">${t('modal.add.tag.translated')}</span>`
+              : `<span class="badge badge--translating">${t('modal.add.tag.translating')}</span>`;
+            const tags = `${releaseBadge} ${translationBadge}`;
             return `
             <tr class="drama-table__row" data-id="${d.id}">
               <td>
@@ -391,7 +462,11 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted">${d.year}</td>
               <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
               <td class="table-muted">${d.genres.slice(0, 2).join(', ')}</td>
-              <td class="table-muted">${d.voiceover ? d.voiceover : '<span class="table-no-tags">—</span>'}</td>
+              <td>
+                <div class="voiceover-select-wrap status-select-wrap" data-id="${d.id}" data-current="${d.voiceover ?? ''}">
+                  ${d.voiceover ? `<span class="table-voiceover-value">${d.voiceover}</span>` : '<span class="table-no-tags">—</span>'}
+                </div>
+              </td>
               <td>
                 <div class="status-select-wrap" data-id="${d.id}" data-current="${d.status}">
                   <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
@@ -402,7 +477,7 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted table-seasons">${d.seasons != null ? `${d.seasons} ${seasonLabel(d.seasons)}` : '<span class="table-no-tags">—</span>'}</td>
               <td class="table-muted table-date">${formatDate(d.addedAt)}</td>
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
-              <td class="table-tags">${tags || '<span class="table-no-tags">—</span>'}</td>
+              <td class="table-tags">${tags}</td>
               <td style="white-space:nowrap">
                 <button class="table-watch-btn" data-tooltip="${t('table.watch_tooltip')}" data-tooltip-pos="left" data-id="${d.id}">▶</button>
                 ${d.status === 'archived'
@@ -444,6 +519,9 @@ export function renderDramaTable(container, dramas) {
 
   // —— Смена статуса из таблицы: клик по badge —> выпадающий список из остальных статусов
   attachStatusDropdown(container);
+
+  // —— Смена озвучки из таблицы: клик —> выпадающий список из VOICEOVER_OPTIONS
+  attachVoiceoverDropdown(container);
 
   // —— Оценка из таблицы: клик по звездочке —> PATCH на бэк
   attachRatingControls(container);

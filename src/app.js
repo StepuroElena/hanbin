@@ -407,6 +407,12 @@ const componentCSS = `
 /* ── Статус в таблице — кликабельный, открывает выпадающее меню с остальными статусами ── */
 .status-select-wrap { display: inline-flex; cursor: pointer; user-select: none; }
 .status-select-wrap:hover .badge { filter: brightness(1.15); }
+.table-voiceover-value {
+  font-size: 12px; color: var(--color-text-muted);
+  border-bottom: 1px dashed rgba(232,196,184,0.25);
+  padding-bottom: 1px; transition: var(--transition-fast);
+}
+.voiceover-select-wrap:hover .table-voiceover-value { color: var(--color-text); border-bottom-color: rgba(201,123,138,0.5); }
 .status-dropdown-menu {
   position: fixed;
   background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));

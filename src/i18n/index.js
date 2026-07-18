@@ -114,6 +114,7 @@ export const translations = {
     'archive.delete_btn':          'Удалить',
     'archive.delete_tooltip':      'Удалить навсегда',
     'table.watch_tooltip':         'Смотреть дораму',
+    'table.no_voiceover':          'Без озвучки',
     'archive.hint':               'Не начала смотреть и передумала — перенеси в архив',
 
     // Table headers
@@ -324,6 +325,7 @@ export const translations = {
     'archive.delete_btn':          'Delete',
     'archive.delete_tooltip':      'Delete permanently',
     'table.watch_tooltip':         'Watch drama',
+    'table.no_voiceover':          'No voiceover',
     'archive.hint':               'Never started and changed your mind — move to archive',
 
     // Table headers

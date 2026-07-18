@@ -469,6 +469,29 @@ export async function rateDrama(id, rating) {
   return { data: { id, rating }, error: null };
 }
 
+/**
+ * Обновляет озвучку дорамы — используется выпадающим списком в табличном виде,
+ * тем же списком VOICEOVER_OPTIONS, что и в модалке добавления дорамы.
+ * value === null — снять озвучку.
+ */
+export async function updateVoiceover(id, value) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, { voiceover: value ?? '' });
+    if (!result.error) {
+      invalidateUserCache();
+      return { data: { id, voiceover: value }, error: null };
+    }
+    console.warn('[API] updateVoiceover failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateVoiceover:', id, '->', value);
+  return { data: { id, voiceover: value }, error: null };
+}
+
 export async function getLatestDramas(limit = 10) {
   await delay();
   const latestDramas = [
