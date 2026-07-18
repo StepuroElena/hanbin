@@ -79,8 +79,11 @@ export async function renderHome(container) {
   renderStatsBlock(container.querySelector('#stats-slot'));
 
   // ── Filters ──
+  // activeFilter должен совпадать с реальным дефолтным фильтром выше (currentFilters).
+  // Раньше тут был жёстко прописан 'all', хотя реальный дефолт в карточном виде — status:'watching'.
+  // Отсюда визуальное рассогласование: чип «Все» активен, а на самом деле показывался фоллбэк на «status:'plan'».
   renderFilters(container.querySelector('#filters-slot'), {
-    activeFilter: 'all',
+    activeFilter: currentFilters.status ?? currentFilters.genre ?? currentFilters.country ?? 'all',
     onFilter: async ({ type, value }) => {
       // Фильтры взаимоисключающие — как и визуально в чипах (активен только один).
       // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',

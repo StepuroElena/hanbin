@@ -65,6 +65,40 @@ function resolveRoute(hash) {
 }
 
 // ─── Инициализация ───────────────────────────
+// ─── Сохранение/восстановление позиции скролла ───
+const SCROLL_KEY_PREFIX = 'hanbin_scroll_';
+
+function saveScroll(hash) {
+  try { sessionStorage.setItem(SCROLL_KEY_PREFIX + hash, String(window.scrollY)); } catch (_) { /* ignore */ }
+}
+
+function readSavedScroll(hash) {
+  try {
+    const v = sessionStorage.getItem(SCROLL_KEY_PREFIX + hash);
+    return v ? Number(v) : 0;
+  } catch (_) { return 0; }
+}
+
+function restoreScroll(hash) {
+  const target = readSavedScroll(hash);
+  if (!target) return;
+
+  let attempts = 0;
+  const maxAttempts = 20;
+
+  const tryScroll = () => {
+    attempts++;
+    const maxScrollable = document.documentElement.scrollHeight - window.innerHeight;
+    if (maxScrollable >= target || attempts >= maxAttempts) {
+      window.scrollTo(0, target);
+      return;
+    }
+    setTimeout(tryScroll, 100);
+  };
+
+  tryScroll();
+}
+
 export function initRouter(appEl) {
   const isHomeHash = (hash) => hash === '#/' || hash === '#/home' || hash === '';
 
@@ -72,6 +106,22 @@ export function initRouter(appEl) {
   // поэтому не блокирует первую отрисовку. Реальная валидность токена
   // (протух ли он, отвечает ли бэк) проверяется отдельно, в фоне.
   const hasTokenLocally = () => !!localStorage.getItem('hanbin_token');
+
+  // Сохраняем скролл непрерывно, пока пользователь листает — на случай рефреша/закрытия вкладки.
+  let scrollSaveScheduled = false;
+  window.addEventListener('scroll', () => {
+    if (scrollSaveScheduled) return;
+    scrollSaveScheduled = true;
+    requestAnimationFrame(() => {
+      saveScroll(getCurrentRoute());
+      scrollSaveScheduled = false;
+    });
+  }, { passive: true });
+  window.addEventListener('beforeunload', () => saveScroll(getCurrentRoute()));
+
+  // Восстанавливаем скролл только на самом первом рендере после загрузки/рефреша.
+  // Обычная SPA-навигация (hashchange) по-прежнему уходит вверх.
+  let isFirstRenderAfterLoad = true;
 
   async function render() {
     const hash = getCurrentRoute();
@@ -99,6 +149,11 @@ export function initRouter(appEl) {
     // Не блокирует и не задерживает то, что уже отрисовано выше.
     if (isHomeHash(hash) && hasTokenLocally()) {
       validateSessionInBackground(pageEl, hash);
+    }
+
+    if (isFirstRenderAfterLoad) {
+      isFirstRenderAfterLoad = false;
+      restoreScroll(hash);
     }
   }
 

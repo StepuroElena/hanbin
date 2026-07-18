@@ -332,6 +332,7 @@ const componentCSS = `
 .progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--gradient-progress); border-radius: 3px; transition: width 0.5s ease; }
 .progress-text { font-size: 10px; color: var(--color-text-muted); white-space: nowrap; }
+.card-status-text { font-size: 11px; color: var(--color-text-muted); margin-top: 8px; letter-spacing: 0.03em; }
 
 /* ── Table view ── */
 .drama-table-wrap {

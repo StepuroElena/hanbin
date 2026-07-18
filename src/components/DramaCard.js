@@ -289,7 +289,9 @@ function dramaCardHTML(d, index) {
             </div>
             <div class="progress-text">${d.episodesWatched}/${d.episodesTotal}</div>
           </div>
-        ` : ''}
+        ` : `
+          <div class="card-status-text">${statusLabel(d.status)}</div>
+        `}
       </div>
     </div>
   `;
