@@ -42,11 +42,10 @@ export async function renderHome(container) {
 
   // Читаем сохранённый вид — переживает рефреш
   let currentView = localStorage.getItem('hanbin_view_mode') || 'card';
-  // Дефолт при загрузке — всегда «status:'all'», в любом виде.
-  // Раньше для карточного вида тут был status:'watching' с тихим фоллбэком на «plan», если watching пустой —
-  // из-за этого чип показывал «Смотрю» активным, а реально показывалась карточка из «Запланировано».
-  // Теперь просто: дефолт — весь список, чип «Все» активен, никаких скрытых подмен.
-  let currentFilters = { status: 'all' };
+  // Дефолт при загрузке — всегда «status:'all'», без жанра/страны, в любом виде.
+  // Статус, жанр и страна теперь комбинируются по И одновременно — раньше выбор любого
+  // из трёх заменял currentFilters целиком, и выбрать статус+жанр+страну вместе было невозможно.
+  let currentFilters = { status: 'all', genre: [], country: null };
   // Становится true, как только пользователь вручную выберет фильтр (статус/жанр/страна).
   // После явного выбора — фильтр должен переживать переключение карточки/таблицы, а не сбрасываться.
   let hasExplicitFilter = false;
@@ -83,9 +82,9 @@ export async function renderHome(container) {
     },
     onViewChange: (mode) => {
       currentView = mode;
-      // Дефолт одинаков для обоих видов — status:'all'. Актуален только пока пользователь ни разу не трогал фильтры вручную.
+      // Дефолт одинаков для обоих видов — status:'all', без жанра/страны. Актуален только пока пользователь ни разу не трогал фильтры вручную.
       if (!hasExplicitFilter) {
-        currentFilters = { status: 'all' };
+        currentFilters = { status: 'all', genre: [], country: null };
       }
       loadWatching();
     },
@@ -96,29 +95,17 @@ export async function renderHome(container) {
   renderStatsBlock(container.querySelector('#stats-slot'));
 
   // ── Filters ──
-  // activeFilter должен совпадать с реальным дефолтным фильтром выше (currentFilters).
-  // Раньше тут был жёстко прописан 'all', хотя реальный дефолт в карточном виде — status:'watching'.
-  // Отсюда визуальное рассогласование: чип «Все» активен, а на самом деле показывался фоллбэк на «status:'plan'».
+  // Filters.js теперь сам комбинирует статус/жанр/страну внутри себя и отдаёт весь объединённый
+  // объект целиком при любом изменении — просто применяем его как новый currentFilters.
+  // Раньше каждый фильтр был взаимоисключающим — выбор статуса стирал выбранный жанр/страну и наоборот,
+  // из-за чего комбинация «статус + жанр + страна одновременно» была невозможна.
   renderFilters(container.querySelector('#filters-slot'), {
-    activeFilter: currentFilters.status ?? currentFilters.genre ?? currentFilters.country ?? 'all',
-    onFilter: async ({ type, value }) => {
-      // Фильтры взаимоисключающие — как и визуально в чипах (активен только один).
-      // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',
-      // из-за чего клик по жанру/стране показывал только «сейчас смотрю + жанр» и часто выглядел как «не работает».
+    activeFilter: currentFilters,
+    onFilter: async (filters) => {
       hasExplicitFilter = true; // теперь этот выбор переживёт переключение карточки/таблицы
       currentPage = 1; // новый фильтр — другое общее количество страниц, начинаем с первой
       persistPagination();
-      if (type === 'status') {
-        // "Все" — это всегда весь список, в любом виде (карточки/таблица).
-        // Раньше здесь был баг: в карточном виде клик по «Все» тихо откатывался на status:'watching',
-        // и пользователь никогда не видел полный список в карточках.
-        // Дефолтный status:'watching' остаётся только при первой загрузке страницы (см. currentFilters выше).
-        currentFilters = { status: value };
-      } else if (type === 'genre') {
-        currentFilters = { genre: value };
-      } else if (type === 'country') {
-        currentFilters = { country: value };
-      }
+      currentFilters = filters;
       await loadWatching();
     },
   });

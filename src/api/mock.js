@@ -376,7 +376,7 @@ export async function getDramas(filters = {}) {
     if (filters.country) {
       result = result.filter(d => d.country === filters.country);
     }
-    if (filters.genre) {
+    if (filters.genre && (!Array.isArray(filters.genre) || filters.genre.length)) {
       const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
       result = result.filter(d => d.genres.some(g => genreList.some(fg => g.toLowerCase().includes(fg.toLowerCase()))));
     }
@@ -403,7 +403,7 @@ export async function getDramas(filters = {}) {
   if (filters.country) {
     result = result.filter(d => d.country === filters.country);
   }
-  if (filters.genre) {
+  if (filters.genre && (!Array.isArray(filters.genre) || filters.genre.length)) {
     const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
     result = result.filter(d => d.genres.some(g => genreList.some(fg => g === fg)));
   }

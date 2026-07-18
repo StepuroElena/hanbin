@@ -1,13 +1,14 @@
 /**
  * HANBIN — Filters Bar Component
  *
- * Страны и жанры — динамические, приходят с бэка (getFacets(), см. api/mock.js)
- * и показывают только то, что реально есть в дорамах пользователя. Раньше тут
- * был хардкодный список (Корея/Китай/Япония, 4 жанра) — если у пользователя нет
- * ни одной дорамы из Японии, чип «Япония» всё равно показывался.
+ * Статус, жанр (мультивыбор) и страна комбинируются по И — можно выбрать статус
+ * «Смотрю» + жанр «Драма» + страну «Корея» одновременно, и список покажет только
+ * дорамы, подходящие под все три условия сразу. Раньше выбор любого фильтра
+ * молча стирал остальные (взаимоисключающе), теперь только внутри своей группы:
+ * один статус, одна страна (повторный клик снимает её), любое число жанров.
  *
- * Жанр — выпадающий список с чекбоксами (мультивыбор), а не плоский список чипов:
- * жанров может быть много (до 10), и выбор нескольких одновременно матчит любой из них (OR).
+ * Страны и жанры — динамические, приходят с бэка (getFacets(), см. api/mock.js)
+ * и показывают только то, что реально есть в дорамах пользователя.
  */
 
 import { t, onLangChange } from '../i18n/index.js';
@@ -33,11 +34,21 @@ const COUNTRY_KEY_MAP = {
   other: 'modal.add.country.other',
 };
 
-export function renderFilters(container, { activeFilter = 'all', onFilter }) {
-  // Если изначально передан массив (сохранённый выбор жанров) — восстанавливаем мультивыбор.
-  let selectedGenres = Array.isArray(activeFilter) ? [...activeFilter] : [];
+/**
+ * @param {HTMLElement} container
+ * @param {{ activeFilter?: { status?: string, genre?: string[], country?: string|null },
+ *           onFilter?: (filters: { status: string, genre: string[], country: string|null }) => void }} opts
+ */
+export function renderFilters(container, { activeFilter = {}, onFilter }) {
+  let activeStatus = activeFilter.status ?? 'all';
+  let activeCountry = activeFilter.country ?? null;
+  let selectedGenres = Array.isArray(activeFilter.genre) ? [...activeFilter.genre] : [];
   let facets = { countries: [], genres: [] };
-  let genreDropdownOpen = false;
+
+  // Плавающая панель жанров — как и остальные floating-меню в приложении, живёт в document.body
+  // с position:fixed, а не внутри .filters-row — иначе её могло перекрывать sticky-шапкой таблицы
+  // (тут разные ветки DOM, и локальный z-index внутри .filters-row против этого не спасает).
+  let genrePanelEl = null;
 
   function genreLabel(g) {
     const key = GENRE_KEY_MAP[g];
@@ -46,6 +57,62 @@ export function renderFilters(container, { activeFilter = 'all', onFilter }) {
   function countryLabel(c) {
     const key = COUNTRY_KEY_MAP[(c || '').toLowerCase()];
     return key ? t(key) : (c || '').toUpperCase();
+  }
+
+  function emit() {
+    onFilter?.({ status: activeStatus, genre: [...selectedGenres], country: activeCountry });
+  }
+
+  function closeGenrePanel() {
+    genrePanelEl?.remove();
+    genrePanelEl = null;
+    container.querySelector('#genre-dropdown-trigger')?.classList.remove('genre-dropdown-trigger--open');
+  }
+
+  function openGenrePanel(trigger) {
+    closeGenrePanel();
+    const rect = trigger.getBoundingClientRect();
+
+    const panel = document.createElement('div');
+    panel.className = 'genre-dropdown-panel';
+    panel.style.left = rect.left + 'px';
+    panel.style.top = (rect.bottom + 8) + 'px';
+    panel.innerHTML = facets.genres.map(g => `
+      <label class="genre-checkbox-item">
+        <input type="checkbox" value="${g}" ${selectedGenres.includes(g) ? 'checked' : ''}>
+        <span>${genreLabel(g)}</span>
+      </label>
+    `).join('');
+    panel.addEventListener('click', (e) => e.stopPropagation()); // клик внутри не должен закрывать панель
+
+    panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const value = cb.value;
+        if (cb.checked) {
+          if (!selectedGenres.includes(value)) selectedGenres.push(value);
+        } else {
+          selectedGenres = selectedGenres.filter(g => g !== value);
+        }
+        updateGenreTriggerLabel();
+        emit();
+      });
+    });
+
+    document.body.appendChild(panel);
+    genrePanelEl = panel;
+    trigger.classList.add('genre-dropdown-trigger--open');
+
+    setTimeout(() => {
+      document.addEventListener('click', closeGenrePanel, { once: true });
+    }, 0);
+  }
+
+  function updateGenreTriggerLabel() {
+    const trigger = container.querySelector('#genre-dropdown-trigger');
+    if (!trigger) return;
+    const count = selectedGenres.length;
+    trigger.innerHTML = `${t('filter.genre.label')}${count ? ` (${count})` : ''} <span class="genre-dropdown-caret">▾</span>`;
+    trigger.classList.toggle('active', count > 0);
   }
 
   function buildStatusChips() {
@@ -57,7 +124,7 @@ export function renderFilters(container, { activeFilter = 'all', onFilter }) {
       { id: 'dropped', label: t('filter.dropped'), cls: 'status-dropped' },
     ];
     return statusFilters.map(f => `
-      <button class="filter-chip ${f.cls || ''} ${activeFilter === f.id ? 'active' : ''}"
+      <button class="filter-chip ${f.cls || ''} ${activeStatus === f.id ? 'active' : ''}"
               data-filter="${f.id}" data-type="status">${f.label}</button>
     `).join('');
   }
@@ -67,19 +134,9 @@ export function renderFilters(container, { activeFilter = 'all', onFilter }) {
     const count = selectedGenres.length;
     return `
       <div class="filter-divider"></div>
-      <div class="genre-dropdown-wrap" id="genre-dropdown-wrap">
-        <button class="filter-chip genre-dropdown-trigger ${count ? 'active' : ''}" id="genre-dropdown-trigger" type="button">
-          ${t('filter.genre.label')}${count ? ` (${count})` : ''} <span class="genre-dropdown-caret">▾</span>
-        </button>
-        <div class="genre-dropdown-panel ${genreDropdownOpen ? '' : 'hidden'}" id="genre-dropdown-panel">
-          ${facets.genres.map(g => `
-            <label class="genre-checkbox-item">
-              <input type="checkbox" value="${g}" ${selectedGenres.includes(g) ? 'checked' : ''}>
-              <span>${genreLabel(g)}</span>
-            </label>
-          `).join('')}
-        </div>
-      </div>
+      <button class="filter-chip genre-dropdown-trigger ${count ? 'active' : ''}" id="genre-dropdown-trigger" type="button">
+        ${t('filter.genre.label')}${count ? ` (${count})` : ''} <span class="genre-dropdown-caret">▾</span>
+      </button>
     `;
   }
 
@@ -88,13 +145,14 @@ export function renderFilters(container, { activeFilter = 'all', onFilter }) {
     return `
       <div class="filter-divider"></div>
       ${facets.countries.map(c => `
-        <button class="filter-chip ${activeFilter === c ? 'active' : ''}"
+        <button class="filter-chip ${activeCountry === c ? 'active' : ''}"
                 data-filter="${c}" data-type="country">${countryLabel(c)}</button>
       `).join('')}
     `;
   }
 
   function render() {
+    closeGenrePanel();
     container.innerHTML = `
       <div class="filters-row">
         ${buildStatusChips()}
@@ -106,66 +164,33 @@ export function renderFilters(container, { activeFilter = 'all', onFilter }) {
   }
 
   function attachEvents() {
-    // Статус/страна — обычные взаимоисключающие чипы (как и раньше)
-    container.querySelectorAll('.filter-chip[data-type="status"], .filter-chip[data-type="country"]').forEach(chip => {
+    // Статус — эксклюзивно среди статусов (один активен), но не трогает жанр/страну.
+    container.querySelectorAll('.filter-chip[data-type="status"]').forEach(chip => {
       chip.addEventListener('click', () => {
-        container.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        activeStatus = chip.dataset.filter;
+        container.querySelectorAll('.filter-chip[data-type="status"]').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        selectedGenres = [];
-        const panel = container.querySelector('#genre-dropdown-panel');
-        panel?.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
-        activeFilter = chip.dataset.filter;
-        onFilter?.({ type: chip.dataset.type, value: chip.dataset.filter });
+        emit();
       });
     });
 
-    // Жанр — дропдаун с чекбоксами (мультивыбор)
-    const trigger = container.querySelector('#genre-dropdown-trigger');
-    const panel = container.querySelector('#genre-dropdown-panel');
+    // Страна — эксклюзивно среди стран, повторный клик по активной снимает фильтр по стране.
+    container.querySelectorAll('.filter-chip[data-type="country"]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const code = chip.dataset.filter;
+        activeCountry = (activeCountry === code) ? null : code;
+        container.querySelectorAll('.filter-chip[data-type="country"]').forEach(c => c.classList.remove('active'));
+        if (activeCountry) chip.classList.add('active');
+        emit();
+      });
+    });
 
-    trigger?.addEventListener('click', (e) => {
+    // Жанр — плавающая панель с чекбоксами (мультивыбор), см. openGenrePanel/closeGenrePanel выше.
+    const genreTrigger = container.querySelector('#genre-dropdown-trigger');
+    genreTrigger?.addEventListener('click', (e) => {
       e.stopPropagation();
-      genreDropdownOpen = !genreDropdownOpen;
-      panel?.classList.toggle('hidden', !genreDropdownOpen);
+      if (genrePanelEl) { closeGenrePanel(); } else { openGenrePanel(genreTrigger); }
     });
-    panel?.addEventListener('click', (e) => e.stopPropagation());
-
-    panel?.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        const value = cb.value;
-        if (cb.checked) {
-          if (!selectedGenres.includes(value)) selectedGenres.push(value);
-        } else {
-          selectedGenres = selectedGenres.filter(g => g !== value);
-        }
-
-        const count = selectedGenres.length;
-        trigger.innerHTML = `${t('filter.genre.label')}${count ? ` (${count})` : ''} <span class="genre-dropdown-caret">▾</span>`;
-        trigger.classList.toggle('active', count > 0);
-
-        if (count === 0) {
-          // Ничего не выбрано — возвращаемся к «Все»
-          container.querySelectorAll('.filter-chip[data-type]').forEach(c =>
-            c.classList.toggle('active', c.dataset.type === 'status' && c.dataset.filter === 'all'));
-          activeFilter = 'all';
-          onFilter?.({ type: 'status', value: 'all' });
-        } else {
-          container.querySelectorAll('.filter-chip[data-type="status"], .filter-chip[data-type="country"]')
-            .forEach(c => c.classList.remove('active'));
-          trigger.classList.add('active');
-          activeFilter = [...selectedGenres];
-          onFilter?.({ type: 'genre', value: [...selectedGenres] });
-        }
-      });
-    });
-
-    // Закрытие дропдауна по клику снаружи
-    document.addEventListener('click', () => {
-      if (genreDropdownOpen) {
-        genreDropdownOpen = false;
-        panel?.classList.add('hidden');
-      }
-    }, { once: true });
   }
 
   async function init() {

@@ -291,18 +291,16 @@ const componentCSS = `
 .filter-divider { width: 1px; height: 20px; background: var(--color-border); margin: 0 4px; flex-shrink: 0; }
 
 /* ── Жанр — выпадающий список с чекбоксами (мультивыбор) ── */
-.genre-dropdown-wrap { position: relative; }
 .genre-dropdown-trigger { display: inline-flex; align-items: center; gap: 5px; }
 .genre-dropdown-caret { font-size: 9px; opacity: 0.7; }
 .genre-dropdown-panel {
-  position: absolute; top: calc(100% + 8px); left: 0;
+  position: fixed;
   min-width: 200px; max-height: 280px; overflow-y: auto;
   background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));
   border: 1px solid rgba(201,123,138,0.25); border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 500;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 10000;
   padding: 6px; animation: fadeUp 0.15s ease;
 }
-.genre-dropdown-panel.hidden { display: none; }
 .genre-checkbox-item {
   display: flex; align-items: center; gap: 9px;
   padding: 8px 10px; border-radius: 8px; cursor: pointer;
