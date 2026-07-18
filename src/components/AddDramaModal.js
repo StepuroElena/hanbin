@@ -12,6 +12,7 @@
 import { closeModal, injectModalCSS } from './LoginModal.js';
 import { addDrama, getDramas, invalidateUserCache, scrapeDrama } from '../api/mock.js';
 import { API_BASE } from '../api/client.js';
+import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 // ─────────────────────────────────────────────
@@ -85,6 +86,9 @@ const GENRE_SCRAPE_MAP = {
   'horror': 'Horror',       'ужасы': 'Horror',
   'documentary': 'Documentary','документальный': 'Documentary',
 };
+
+// Фиксированный список озвучек — выбор вместо свободного текста.
+const VOICEOVER_OPTIONS = ['Light Breeze', 'SlothSound', 'DubLik.TV', 'SoftBox', 'AniMaunt', 'STEPonee'];
 
 // ─────────────────────────────────────────────
 // CSS
@@ -487,9 +491,10 @@ function buildHTML(savedState = {}) {
 
       <div class="hb-field" style="margin-top:16px">
         <div class="hb-field-label"><span>${t('modal.add.field.voiceover')}</span></div>
-        <input class="hb-field-input" id="hb-add-voiceover" type="text"
-          placeholder="${t('modal.add.field.voiceover_ph')}" maxlength="255" autocomplete="off"
-          value="${savedState.voiceover ?? ''}">
+        <select class="hb-field-select" id="hb-add-voiceover">
+          <option value="" ${!savedState.voiceover ? 'selected' : ''}>${t('modal.add.field.voiceover_ph')}</option>
+          ${VOICEOVER_OPTIONS.map(v => `<option value="${v}" ${savedState.voiceover === v ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
       </div>
 
       <div class="hb-section-label">${t('modal.add.section.tags')}</div>
@@ -775,8 +780,13 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
     setSubTag(scraped.translation_tag);
   }
   if (scraped.voiceover) {
-    const voiceoverInput = document.getElementById('hb-add-voiceover');
-    if (voiceoverInput) voiceoverInput.value = scraped.voiceover.slice(0, 255);
+    const voiceoverSelect = document.getElementById('hb-add-voiceover');
+    if (voiceoverSelect) {
+      // Селект — фиксированный список, произвольный текст со скрейпа в него не подставить —
+      // выбираем совпадение по имени, если есть; иначе оставляем текущий выбор как есть.
+      const match = VOICEOVER_OPTIONS.find(v => v.toLowerCase() === scraped.voiceover.trim().toLowerCase());
+      if (match) voiceoverSelect.value = match;
+    }
   }
   syncSubmit();
 }
@@ -807,6 +817,12 @@ export function mountAddDramaContent(content, savedState = {}) {
   let showDetails      = savedState.showDetails     ?? false;
   let lastScraped      = null; // последний успешный результат скрейпера
   let hasRealPoster    = false; // true, когда в hb-poster-img загружено реальное изображение, а не плейсхолдер
+  // Увеличивается на каждый новый вызов scrapeDrama() — позволяет игнорировать устаревшие ответы,
+  // если пока ожидали ответ пользователь успел поменять сайт/название и запустил новый скрейп.
+  // Раньше этого не было — два параллельных запроса могли завершиться в любом порядке,
+  // и более старый/медленный ответ мог перетереть данные от более нового запроса —
+  // именно так при вводе одной дорамы и переключении между сайтами могла вылезть совершенно другая дорама.
+  let scrapeToken      = 0;
 
   // Плейсхолдер постера виден сразу, ещё до любого скрейпа — но сама колонка скрыта, пока не заполнено и название, и сайт (только тогда запускается скрейп)
   updatePosterPlaceholder(savedState.title ?? '');
@@ -853,6 +869,17 @@ export function mountAddDramaContent(content, savedState = {}) {
   const titleInput   = document.getElementById('hb-add-title');
   const titleCounter = document.getElementById('hb-add-title-counter');
 
+  // Повторный скрейп при изменении названия, если сайт уже выбран — иначе после смены названия
+  // данные (год, страна, жанры и т.д.) оставались от прежней дорамы. debounce, чтобы не дергать
+  // запрос на каждое нажатие клавиши; токен в runScrape() гасит устаревшие ответы, если пока ждали
+  // пользователь успел переключиться на другой сайт или снова поменять название.
+  const debouncedTitleRescrape = debounce(() => {
+    const currentTitle = titleInput.value.trim();
+    if (currentTitle && selectedSiteUrl) {
+      runScrape(currentTitle, selectedSiteUrl, selectedSiteName);
+    }
+  }, 600);
+
   titleInput.addEventListener('input', () => {
     titleCounter.textContent = `${titleInput.value.length} / 120`;
     titleCounter.classList.toggle('warn', titleInput.value.length > 105);
@@ -862,6 +889,7 @@ export function mountAddDramaContent(content, savedState = {}) {
     if (!hasRealPoster) updatePosterPlaceholder(titleInput.value.trim());
     togglePosterColumn(!!(titleInput.value.trim() && selectedSiteUrl));
     syncSubmit();
+    debouncedTitleRescrape();
   });
 
   // ── Дропдаун сайтов ──────────────────────────────────────────────────────
@@ -919,6 +947,71 @@ export function mountAddDramaContent(content, savedState = {}) {
     if (e.key === 'Escape') closeSiteList();
   });
 
+  async function runScrape(title, url, name) {
+    if (!title || !url) return;
+
+    const myToken = ++scrapeToken;
+
+    loader.style.display = 'flex';
+    try {
+      const { data: scraped, error, notFound } = await scrapeDrama(title, url);
+
+      if (myToken !== scrapeToken) return;
+
+      if (notFound || error) {
+        showBannerNotFound(name);
+      } else if (scraped) {
+        const originalTitle = titleInput.value.trim();
+        lastScraped = scraped;
+
+        openDetails();
+        applyScrapeData(scraped, {
+          setCountry:    v => { selectedCountry = v; },
+          setGenres:     v => { selectedGenres  = v; },
+          setReleaseTag: v => { releaseTag = v; },
+          setSubTag:     v => { subTag = v; },
+          syncSubmit,
+        });
+        showBannerFound(scraped, originalTitle);
+
+        const finalTitle = scraped.title || originalTitle;
+        hasRealPoster = false;
+        showPosterPreview(finalTitle, name);
+        if (scraped.poster_url) {
+          const img = document.getElementById('hb-poster-img');
+          const sourceEl = document.getElementById('hb-poster-source');
+          const real = new Image();
+          real.onload = () => {
+            if (myToken !== scrapeToken) return;
+            img.src = posterProxyURL(scraped.poster_url);
+            img.classList.remove('hb-poster-frame__img--loading');
+            if (sourceEl) {
+              sourceEl.textContent = name || 'Найдено';
+              sourceEl.classList.remove('hb-poster-frame__label--missing');
+            }
+            hasRealPoster = true;
+          };
+          real.onerror = () => {
+            fetchPoster(scraped.source_url, name).then(ok => {
+              if (myToken === scrapeToken) hasRealPoster = ok;
+            });
+          };
+          real.src = posterProxyURL(scraped.poster_url);
+        } else {
+          fetchPoster(scraped.source_url, name).then(ok => {
+            if (myToken === scrapeToken) hasRealPoster = ok;
+          });
+        }
+
+        persistState();
+      }
+    } catch (e) {
+      console.warn('[AddDramaModal] scrapeDrama error:', e);
+    } finally {
+      if (myToken === scrapeToken) loader.style.display = 'none';
+    }
+  }
+
   list.querySelectorAll('.hb-site-option').forEach(opt => {
     opt.addEventListener('click', async () => {
       const url  = opt.dataset.url;
@@ -948,68 +1041,12 @@ export function mountAddDramaContent(content, savedState = {}) {
       document.getElementById('hb-add-url-error').textContent = '';
       syncSubmit();
 
-      // Скрейп запускается только если название уже есть
+      // Скрейп запускается только если название уже есть. Логика самого скрейпа — в runScrape() выше,
+      // она же используется для повторного скрейпа при изменении названия.
       const title = titleInput.value.trim();
       if (!title) return;
 
-      loader.style.display = 'flex';
-      try {
-        const { data: scraped, error, notFound } = await scrapeDrama(title, url);
-
-        if (notFound || error) {
-          // Показываем баннер «не найдено» — детали остаются скрытыми
-          showBannerNotFound(name);
-        } else if (scraped) {
-          // Сохраняем оригинальное название до того как applyScrapeData его изменит
-          const originalTitle = titleInput.value.trim();
-          lastScraped = scraped;
-
-          // Открываем детали и заполняем их
-          openDetails();
-          applyScrapeData(scraped, {
-            setCountry:    v => { selectedCountry = v; },
-            setGenres:     v => { selectedGenres  = v; },
-            setReleaseTag: v => { releaseTag = v; },
-            setSubTag:     v => { subTag = v; },
-            syncSubmit,
-          });
-          showBannerFound(scraped, originalTitle);
-
-          // Постер: бэкенд уже вытащил poster_url из og:image при скрейпе — не нужно второй раз тянуть
-          // картинку через публичный CORS-прокси из браузера (часто блокируется антибот-защитой целевого сайта)
-          const finalTitle = scraped.title || originalTitle;
-          hasRealPoster = false;
-          showPosterPreview(finalTitle, name);
-          if (scraped.poster_url) {
-            const img = document.getElementById('hb-poster-img');
-            const sourceEl = document.getElementById('hb-poster-source');
-            const real = new Image();
-            real.onload = () => {
-              img.src = posterProxyURL(scraped.poster_url);
-              img.classList.remove('hb-poster-frame__img--loading');
-              if (sourceEl) {
-                sourceEl.textContent = name || 'Найдено';
-                sourceEl.classList.remove('hb-poster-frame__label--missing');
-              }
-              hasRealPoster = true;
-            };
-            real.onerror = () => {
-              // картинка по ссылке не загрузилась — пробуем fallback через прокси
-              fetchPoster(scraped.source_url, name).then(ok => { hasRealPoster = ok; });
-            };
-            real.src = posterProxyURL(scraped.poster_url);
-          } else {
-            // Бэкенд не нашёл poster_url в og:image — пробуем старый путь через прокси как fallback
-            fetchPoster(scraped.source_url, name).then(ok => { hasRealPoster = ok; });
-          }
-
-          persistState();
-        }
-      } catch (e) {
-        console.warn('[AddDramaModal] scrapeDrama error:', e);
-      } finally {
-        loader.style.display = 'none';
-      }
+      await runScrape(title, url, name);
     });
   });
 
