@@ -109,11 +109,16 @@ function attachVoiceoverDropdown(container) {
         wrap.style.opacity = '0.5';
         wrap.style.pointerEvents = 'none';
         const { error } = await updateVoiceover(id, value);
+        wrap.style.opacity = '';
+        wrap.style.pointerEvents = '';
         if (error) {
           console.warn('[Table] voiceover update failed:', error);
-          wrap.style.opacity = '';
-          wrap.style.pointerEvents = '';
+          return;
         }
+        // Обновляем только эту ячейку локально — updateVoiceover инвалидирует кэш тихо,
+        // без глобального события — остальная таблица не мигает в «Загрузка…».
+        wrap.dataset.current = value ?? '';
+        wrap.innerHTML = `<span class="table-voiceover-value ${value ? '' : 'table-voiceover-value--empty'}">${value || '—'}</span>`;
       };
 
       // Пункт «Без озвучки» — снять текущий выбор, только если озвучка уже выбрана

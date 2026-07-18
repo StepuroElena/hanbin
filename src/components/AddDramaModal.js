@@ -232,10 +232,12 @@ const ADD_DRAMA_CSS = `
   .hb-site-trigger--open .hb-site-chevron { transform: rotate(180deg); }
 
   .hb-site-list {
-    position: fixed;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
     background: linear-gradient(145deg, rgba(74,25,66,0.98), rgba(45,15,42,0.99));
     border: 1px solid rgba(201,123,138,0.25); border-radius: 14px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 10000;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5); z-index: 500;
     overflow: hidden; max-height: 240px; overflow-y: auto;
     scrollbar-width: thin; scrollbar-color: rgba(201,123,138,0.3) transparent;
     animation: hb-slideUp 0.18s ease;
@@ -296,10 +298,11 @@ const ADD_DRAMA_CSS = `
   .hb-poster-col.hb-hidden { display: none; }
 
   .hb-poster-frame {
-    position: relative; width: 100%; aspect-ratio: 2 / 3;
+    position: relative; width: 100%;
     border-radius: 16px; overflow: hidden;
     background: rgba(255,255,255,0.04); border: 1px solid rgba(232,196,184,0.15);
     animation: hb-slideUp 0.3s ease;
+    transition: aspect-ratio 0.25s ease;
   }
   .hb-poster-frame__img {
     width: 100%; height: 100%; object-fit: contain; display: block;
@@ -411,7 +414,7 @@ function buildHTML(savedState = {}) {
     <!-- Постер (слева, ~половина модалки) + поле «где смотреть» (справа) — бок о бок. Постер скрыт, пока нет ни названия, ни выбранного сайта -->
     <div class="hb-add-top-row">
       <div class="hb-poster-col ${(savedState.title && savedState.selectedSiteUrl) ? '' : 'hb-hidden'}" id="hb-poster-col">
-        <div class="hb-poster-frame" id="hb-poster-frame">
+        <div class="hb-poster-frame" id="hb-poster-frame" style="aspect-ratio: 2 / 3;">
           <img class="hb-poster-frame__img" id="hb-poster-img" src="" alt="">
           <div class="hb-poster-frame__label" id="hb-poster-source">Нет постера</div>
         </div>
@@ -641,11 +644,25 @@ function defaultPosterURI(title = '') {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+// Устанавливает соотношение сторон рамки под реальные размеры картинки: горизонтальный
+// og:image-баннер больше не втискивается в портретный бокс 2:3 с безжалостной обрезкой/сжатием.
+function setPosterAspectRatio(width, height) {
+  const frame = document.getElementById('hb-poster-frame');
+  if (!frame || !width || !height) return;
+  frame.style.aspectRatio = `${width} / ${height}`;
+}
+
+function resetPosterAspectRatio() {
+  const frame = document.getElementById('hb-poster-frame');
+  if (frame) frame.style.aspectRatio = '2 / 3';
+}
+
 // Обновляет плейсхолдер постера (пока нет реального изображения — например, при вводе названия)
 function updatePosterPlaceholder(title) {
   const img = document.getElementById('hb-poster-img');
   const sourceEl = document.getElementById('hb-poster-source');
   if (!img) return;
+  resetPosterAspectRatio(); // плейсхолдер всегда портретный
   img.src = defaultPosterURI(title);
   img.classList.remove('hb-poster-frame__img--loading');
   if (sourceEl) {
@@ -666,6 +683,7 @@ function showPosterPreview(title, siteName) {
   const sourceEl = document.getElementById('hb-poster-source');
   if (!img) return;
 
+  resetPosterAspectRatio(); // до прихода реального изображения показываем портретный плейсхолдер
   img.src = defaultPosterURI(title);
   img.classList.add('hb-poster-frame__img--loading');
   if (sourceEl) {
@@ -715,6 +733,7 @@ async function fetchPoster(pageUrl, siteName, isStale = () => false) {
         // Пока шёл этот fallback-запрос пользователь мог запустить новый скрейп —
         // если он устарел, не трогаем DOM, чтобы не перетереть более свежее состояние.
         if (isStale()) { resolve(); return; }
+        setPosterAspectRatio(real.naturalWidth, real.naturalHeight);
         img.src = posterProxyURL(ogImage);
         img.classList.remove('hb-poster-frame__img--loading');
         if (sourceEl) {
@@ -905,28 +924,6 @@ export function mountAddDramaContent(content, savedState = {}) {
   const loader     = document.getElementById('hb-scrape-loader');
 
   function openSiteList() {
-    // Позиционируем список через fixed — вычисляем координаты тригера
-    const rect = trigger.getBoundingClientRect();
-    const listMaxH = 240;
-    const gap = 6;
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const spaceAbove = rect.top - gap;
-
-    list.style.width = rect.width + 'px';
-    list.style.left  = rect.left + 'px';
-
-    if (spaceBelow >= Math.min(listMaxH, 150)) {
-      // Открываем вниз
-      list.style.top    = (rect.bottom + gap) + 'px';
-      list.style.bottom = '';
-      list.style.maxHeight = Math.min(listMaxH, spaceBelow) + 'px';
-    } else {
-      // Открываем вверх
-      list.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
-      list.style.top    = '';
-      list.style.maxHeight = Math.min(listMaxH, spaceAbove) + 'px';
-    }
-
     list.style.display = 'block';
     trigger.setAttribute('aria-expanded', 'true');
     trigger.classList.add('hb-site-trigger--open');
@@ -936,11 +933,6 @@ export function mountAddDramaContent(content, savedState = {}) {
     trigger.setAttribute('aria-expanded', 'false');
     trigger.classList.remove('hb-site-trigger--open');
   }
-
-  // При скролле контента модалки обновляем позицию списка
-  document.getElementById('hb-modal-content')?.addEventListener('scroll', () => {
-    if (list.style.display !== 'none') openSiteList();
-  });
 
   trigger.addEventListener('click', e => {
     e.stopPropagation();
@@ -987,6 +979,7 @@ export function mountAddDramaContent(content, savedState = {}) {
           const real = new Image();
           real.onload = () => {
             if (myToken !== scrapeToken) return;
+            setPosterAspectRatio(real.naturalWidth, real.naturalHeight);
             img.src = posterProxyURL(scraped.poster_url);
             img.classList.remove('hb-poster-frame__img--loading');
             if (sourceEl) {

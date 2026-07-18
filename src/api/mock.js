@@ -480,7 +480,10 @@ export async function updateVoiceover(id, value) {
   if (token) {
     const result = await authPatch(`/dramas/${id}`, { voiceover: value ?? '' });
     if (!result.error) {
-      invalidateUserCache();
+      // Тихо, без глобального события hanbin:data-changed — вызывающий код (DramaCard.js)
+      // сам обновляет ячейку локально. Раньше invalidateUserCache() триггерил перерисовку
+      // всей таблицы (через loadWatching() в Home.js) из-за изменения одной ячейки.
+      invalidateUserCacheSilent();
       return { data: { id, voiceover: value }, error: null };
     }
     console.warn('[API] updateVoiceover failed:', result.error);
