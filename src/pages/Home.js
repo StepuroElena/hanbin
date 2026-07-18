@@ -111,9 +111,10 @@ export async function renderHome(container) {
 
     let { data } = await getDramas(currentFilters);
 
-    // Если в карточном виде watching-фильтр вернул пустой список —
-    // показываем запланированные как фоллбэк («Следующее на очереди»)
-    if (currentView !== 'table' && currentFilters.status === 'watching' && data.length === 0) {
+    // Фоллбэк на запланированное — ТОЛЬКО для дефолтного состояния при первой загрузке (раздел "Сейчас смотрю").
+    // Раньше он срабатывал и когда пользователь вручную выбирал чип «Смотрю» — и если в этом статусе пусто,
+    // тихо подменял его на «Запланировано» — чип подсвечивал «Смотрю», а реально показывались запланированные.
+    if (!hasExplicitFilter && currentView !== 'table' && currentFilters.status === 'watching' && data.length === 0) {
       const { data: planData } = await getDramas({ ...currentFilters, status: 'plan' });
       data = planData;
     }
