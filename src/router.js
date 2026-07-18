@@ -66,16 +66,22 @@ function resolveRoute(hash) {
 
 // ─── Инициализация ───────────────────────────
 export function initRouter(appEl) {
+  const isHomeHash = (hash) => hash === '#/' || hash === '#/home' || hash === '';
+
+  // Быстрая синхронная проверка по localStorage — НЕ бьёт по сети,
+  // поэтому не блокирует первую отрисовку. Реальная валидность токена
+  // (протух ли он, отвечает ли бэк) проверяется отдельно, в фоне.
+  const hasTokenLocally = () => !!localStorage.getItem('hanbin_token');
+
   async function render() {
     const hash = getCurrentRoute();
     let { handler, params } = resolveRoute(hash);
 
-    // Если пользователь открыл корень (#/ или пустой хэш) — проверяем авторизацию
-    if (hash === '#/' || hash === '#/home' || hash === '') {
-      const { data: auth } = await getAuthState();
-      if (!auth.isLoggedIn) handler = renderUnauthorized;
+    if (isHomeHash(hash)) {
+      handler = hasTokenLocally() ? renderHome : renderUnauthorized;
     }
 
+    // Красим страницу сразу — до всякого обращения к бэку.
     appEl.innerHTML = '<div class="page-enter"></div>';
     const pageEl = appEl.querySelector('.page-enter');
 
@@ -86,6 +92,28 @@ export function initRouter(appEl) {
       pageEl.innerHTML = `<div class="container" style="padding-top:60px;text-align:center;color:var(--color-rose)">
         Something went wrong loading this page.
       </div>`;
+    }
+
+    // Фоновая валидация сессии: если токен есть, но бэк говорит, что он
+    // невалиден (протух/отозван) — тихо переключаемся на гостевую страницу.
+    // Не блокирует и не задерживает то, что уже отрисовано выше.
+    if (isHomeHash(hash) && hasTokenLocally()) {
+      validateSessionInBackground(pageEl, hash);
+    }
+  }
+
+  async function validateSessionInBackground(pageEl, hashAtRenderTime) {
+    try {
+      const { data: auth } = await getAuthState();
+      // Если пока ждали ответ бэка пользователь успел уйти с этой страницы
+      // или страница уже перерисована — ничего не трогаем.
+      if (!pageEl.isConnected || getCurrentRoute() !== hashAtRenderTime) return;
+      if (!auth.isLoggedIn) {
+        pageEl.innerHTML = '';
+        await renderUnauthorized(pageEl, {});
+      }
+    } catch (err) {
+      console.warn('[Router] Background session check failed:', err);
     }
   }
 
