@@ -45,7 +45,7 @@ export async function renderHome(container) {
   // Дефолт при загрузке — всегда «status:'all'», без жанра/страны, в любом виде.
   // Статус, жанр и страна теперь комбинируются по И одновременно — раньше выбор любого
   // из трёх заменял currentFilters целиком, и выбрать статус+жанр+страну вместе было невозможно.
-  let currentFilters = { status: 'all', genre: [], country: null };
+  let currentFilters = { status: 'all', genre: [], country: [] };
   // Становится true, как только пользователь вручную выберет фильтр (статус/жанр/страна).
   // После явного выбора — фильтр должен переживать переключение карточки/таблицы, а не сбрасываться.
   let hasExplicitFilter = false;
@@ -84,7 +84,7 @@ export async function renderHome(container) {
       currentView = mode;
       // Дефолт одинаков для обоих видов — status:'all', без жанра/страны. Актуален только пока пользователь ни разу не трогал фильтры вручную.
       if (!hasExplicitFilter) {
-        currentFilters = { status: 'all', genre: [], country: null };
+        currentFilters = { status: 'all', genre: [], country: [] };
       }
       loadWatching();
     },

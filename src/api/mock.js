@@ -338,6 +338,15 @@ function adaptDramaFromApi(d) {
   const status = STATUS_MAP[d.watch_status] ?? d.watch_status;
   const rating = d.rating != null ? Math.round(d.rating / 2) || 1 : null;
 
+  // Сезоны: бэк может вернуть либо массив сезонов (берём длину), либо число напрямую.
+  // Если с сайта/бэка ничего не пришло — дефолт 1, чтобы ячейка всегда была чем-то редактируемым, а не прочерком.
+  const seasonsCount = Array.isArray(d.seasons) ? (d.seasons.length || 1) : (d.seasons ?? 1);
+
+  // total_episodes с бэка — это сумма episode_count по всем сезонам (updateSeasons/updateEpisodeCount кладут одинаковое
+  // число в каждый сезон), т.е. total_episodes = (серий на сезон) × seasonsCount. А ячейка «Серии» в таблице
+  // должна показывать то, что вводил пользователь (серии на сезон) — делим обратно.
+  const episodesPerSeason = seasonsCount > 0 ? Math.round((d.total_episodes ?? 0) / seasonsCount) : (d.total_episodes ?? 0);
+
   return {
     id:              String(d.id),
     title:           d.title,
@@ -346,7 +355,7 @@ function adaptDramaFromApi(d) {
     country:         (d.country || '').toLowerCase().slice(0, 2),
     status,
     episodesWatched: d.current_episode ?? 0,
-    episodesTotal:   d.total_episodes  ?? 0,
+    episodesTotal:   episodesPerSeason,
     episodeDurationMin: d.episode_duration_min ?? null,
     watchUrl:        d.watch_url || null,
     sourceUrl:       d.source_url || null,
@@ -356,9 +365,7 @@ function adaptDramaFromApi(d) {
     hasSubs,
     isArchived:      Boolean(d.is_archived),
     cover:           d.poster_url ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(d.poster_url)}` : null,
-    // Сезоны: бэк может вернуть либо массив сезонов (берём длину), либо число напрямую.
-    // Если с сайта/бэка ничего не пришло — дефолт 1, чтобы ячейка всегда была чем-то редактируемым, а не прочерком.
-    seasons:         Array.isArray(d.seasons) ? (d.seasons.length || 1) : (d.seasons ?? 1),
+    seasons:         seasonsCount,
     addedAt:         d.created_at ? new Date(d.created_at) : null,
     lastWatchedAt:   d.updated_at ? new Date(d.updated_at) : null,
   };
@@ -373,8 +380,9 @@ export async function getDramas(filters = {}) {
     if (filters.status && filters.status !== 'all') {
       result = result.filter(d => d.status === filters.status);
     }
-    if (filters.country) {
-      result = result.filter(d => d.country === filters.country);
+    if (filters.country && (!Array.isArray(filters.country) || filters.country.length)) {
+      const countryList = Array.isArray(filters.country) ? filters.country : [filters.country];
+      result = result.filter(d => countryList.includes(d.country));
     }
     if (filters.genre && (!Array.isArray(filters.genre) || filters.genre.length)) {
       const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
@@ -400,8 +408,9 @@ export async function getDramas(filters = {}) {
   if (filters.status && filters.status !== 'all') {
     result = result.filter(d => d.status === filters.status);
   }
-  if (filters.country) {
-    result = result.filter(d => d.country === filters.country);
+  if (filters.country && (!Array.isArray(filters.country) || filters.country.length)) {
+    const countryList = Array.isArray(filters.country) ? filters.country : [filters.country];
+    result = result.filter(d => countryList.includes(d.country));
   }
   if (filters.genre && (!Array.isArray(filters.genre) || filters.genre.length)) {
     const genreList = Array.isArray(filters.genre) ? filters.genre : [filters.genre];
@@ -529,14 +538,19 @@ export async function updateVoiceover(id, value) {
 /**
  * Обновляет количество сезонов дорамы — выпадающий список в табличном виде.
  * Бэк принимает массив сезонов { season_number, episode_count } целиком (PATCH заменяет весь массив,
- * а не мержит) — поэтому currentTotalEpisodes обязателен: без него смена только количества
- * сезонов тихо обнуляет раньше введённое количество серий (и наоборот, см. updateEpisodeCount).
+ * а не мержит) — поэтому currentEpisodesPerSeason обязателен.
+ *
+ * ВАЖНО: количество серий, которое выбирает пользователь в ячейке «Серии» — это серии НА СЕЗОН,
+ * а не всего по дораме — поэтому кладём одинаковое значение в КАЖДЫЙ сезон массива, а не только в первый.
+ * Раньше все серии клались только в первый сезон, и сумма по сезонам на бэке (используется для «Часов
+ * дорам») получалась равной просто числу серий без умножения на количество сезонов — вот откуда была
+ * заниженная сумма часов (78 вместо 92, если считать вручную по формуле длительность×серии×сезоны).
  */
-export async function updateSeasons(id, count, currentTotalEpisodes = 0) {
+export async function updateSeasons(id, count, currentEpisodesPerSeason = 0) {
   const token = localStorage.getItem('hanbin_token');
   const seasons = Array.from({ length: count }, (_, i) => ({
     season_number: i + 1,
-    episode_count: i === 0 ? currentTotalEpisodes : 0, // все серии числим в первый сезон — разбивки по сезонам у нас нет
+    episode_count: currentEpisodesPerSeason, // одинаково во всех сезонах — сумма на бэке сама умножается на count
   }));
 
   if (token) {
@@ -622,16 +636,20 @@ export async function updateEpisodeDuration(id, minutes) {
 }
 
 /**
- * Обновляет общее количество серий — выпадающий список 1–50 в табличном виде.
+ * Обновляет количество серий в ОДНОМ сезоне — выпадающий список 1–50 в табличном виде.
  * Принимает текущее количество сезонов по той же причине, что и updateSeasons — оба пишут в одно и то же
- * поле seasons, которое PATCH заменяет целиком, а не мержит — без этого смена числа серий сбрасывала бы число сезонов до 1.
+ * поле seasons, которое PATCH заменяет целиком, а не мержит.
+ *
+ * Кладём count в КАЖДЫЙ сезон массива (одинаково), а не только в первый — чтобы сумма на бэке
+ * (используется в формуле «Часов дорам») сама естественно умножалась на количество сезонов,
+ * вместо того чтобы считаться равной просто числу серий без учёта сезонов.
  */
 export async function updateEpisodeCount(id, count, currentSeasonsCount = 1) {
   const token = localStorage.getItem('hanbin_token');
   const seasonsCount = Math.max(1, currentSeasonsCount);
   const seasons = Array.from({ length: seasonsCount }, (_, i) => ({
     season_number: i + 1,
-    episode_count: i === 0 ? count : 0,
+    episode_count: count,
   }));
 
   if (token) {

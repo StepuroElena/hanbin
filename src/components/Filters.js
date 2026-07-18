@@ -1,11 +1,11 @@
 /**
  * HANBIN — Filters Bar Component
  *
- * Статус, жанр (мультивыбор) и страна комбинируются по И — можно выбрать статус
- * «Смотрю» + жанр «Драма» + страну «Корея» одновременно, и список покажет только
- * дорамы, подходящие под все три условия сразу. Раньше выбор любого фильтра
- * молча стирал остальные (взаимоисключающе), теперь только внутри своей группы:
- * один статус, одна страна (повторный клик снимает её), любое число жанров.
+ * Статус — единственный выбор (эксклюзивный, «Все» снимает фильтр по статусу).
+ * Жанр и страна — независимый мультивыбор каждый (можно выбрать сразу Корею и Китай,
+ * или сразу Драму и Мистику) — внутри группы это ИЛИ, между группами (статус/жанр/страна) — И.
+ * Например: статус «Смотрю» + страна [Корея, Китай] + жанр [Драма] покажет дорамы
+ * в статусе «Смотрю», из Кореи ИЛИ Китая, с жанром Драма.
  *
  * Страны и жанры — динамические, приходят с бэка (getFacets(), см. api/mock.js)
  * и показывают только то, что реально есть в дорамах пользователя.
@@ -36,13 +36,13 @@ const COUNTRY_KEY_MAP = {
 
 /**
  * @param {HTMLElement} container
- * @param {{ activeFilter?: { status?: string, genre?: string[], country?: string|null },
- *           onFilter?: (filters: { status: string, genre: string[], country: string|null }) => void }} opts
+ * @param {{ activeFilter?: { status?: string, genre?: string[], country?: string[] },
+ *           onFilter?: (filters: { status: string, genre: string[], country: string[] }) => void }} opts
  */
 export function renderFilters(container, { activeFilter = {}, onFilter }) {
   let activeStatus = activeFilter.status ?? 'all';
-  let activeCountry = activeFilter.country ?? null;
   let selectedGenres = Array.isArray(activeFilter.genre) ? [...activeFilter.genre] : [];
+  let selectedCountries = Array.isArray(activeFilter.country) ? [...activeFilter.country] : [];
   let facets = { countries: [], genres: [] };
 
   // Плавающая панель жанров — как и остальные floating-меню в приложении, живёт в document.body
@@ -60,7 +60,7 @@ export function renderFilters(container, { activeFilter = {}, onFilter }) {
   }
 
   function emit() {
-    onFilter?.({ status: activeStatus, genre: [...selectedGenres], country: activeCountry });
+    onFilter?.({ status: activeStatus, genre: [...selectedGenres], country: [...selectedCountries] });
   }
 
   function closeGenrePanel() {
@@ -140,12 +140,14 @@ export function renderFilters(container, { activeFilter = {}, onFilter }) {
     `;
   }
 
+  // Страна — такой же мультивыбор, как жанр (просто чипы, без дропдауна, т.к. вариантов немного) —
+  // клик по чипу переключает ЕЁ ОДНУ, не трогая остальные выбранные страны.
   function buildCountryChips() {
     if (!facets.countries.length) return '';
     return `
       <div class="filter-divider"></div>
       ${facets.countries.map(c => `
-        <button class="filter-chip ${activeCountry === c ? 'active' : ''}"
+        <button class="filter-chip ${selectedCountries.includes(c) ? 'active' : ''}"
                 data-filter="${c}" data-type="country">${countryLabel(c)}</button>
       `).join('')}
     `;
@@ -164,7 +166,7 @@ export function renderFilters(container, { activeFilter = {}, onFilter }) {
   }
 
   function attachEvents() {
-    // Статус — эксклюзивно среди статусов (один активен), но не трогает жанр/страну.
+    // Статус — эксклюзивно среди статусов (один активен), не трогает жанр/страну.
     container.querySelectorAll('.filter-chip[data-type="status"]').forEach(chip => {
       chip.addEventListener('click', () => {
         activeStatus = chip.dataset.filter;
@@ -174,13 +176,17 @@ export function renderFilters(container, { activeFilter = {}, onFilter }) {
       });
     });
 
-    // Страна — эксклюзивно среди стран, повторный клик по активной снимает фильтр по стране.
+    // Страна — мультивыбор (как жанр): клик переключает только свою страну, остальные не трогает.
     container.querySelectorAll('.filter-chip[data-type="country"]').forEach(chip => {
       chip.addEventListener('click', () => {
         const code = chip.dataset.filter;
-        activeCountry = (activeCountry === code) ? null : code;
-        container.querySelectorAll('.filter-chip[data-type="country"]').forEach(c => c.classList.remove('active'));
-        if (activeCountry) chip.classList.add('active');
+        if (selectedCountries.includes(code)) {
+          selectedCountries = selectedCountries.filter(c => c !== code);
+          chip.classList.remove('active');
+        } else {
+          selectedCountries.push(code);
+          chip.classList.add('active');
+        }
         emit();
       });
     });
