@@ -7,6 +7,7 @@ import { renderStatsBlock }  from '../components/StatsBlock.js';
 import { renderFilters }     from '../components/Filters.js';
 import { renderDramaCards, renderDramaTable, renderArchiveTable } from '../components/DramaCard.js';
 import { renderSidebar }     from '../components/Sidebar.js';
+import { renderPagination, PAGE_SIZE_OPTIONS } from '../components/Pagination.js';
 import { getDramas, getCurrentlyWatching, getArchivedDramas } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
@@ -20,7 +21,7 @@ export async function renderHome(container) {
         <section class="section">
           <div class="section-header">
             <div class="section-title">${t('home.currently_watching')}</div>
-            <button class="see-all" id="see-all-watching">${t('home.see_all')}</button>
+            <div class="pagination-slot" id="pagination-slot"></div>
           </div>
           <div id="watching-slot"></div>
         </section>
@@ -49,6 +50,21 @@ export async function renderHome(container) {
   // Становится true, как только пользователь вручную выберет фильтр (статус/жанр/страна).
   // После явного выбора — фильтр должен переживать переключение карточки/таблицы, а не сбрасываться.
   let hasExplicitFilter = false;
+
+  // ── Пагинация ──
+  // sessionStorage — переживает обычный рефреш страницы (как и позиция скролла в router.js), но очищается,
+  // когда закрывается вкладка/сессия — в отличие от localStorage. Оговорка: браузерный «жёсткий»
+  // рефреш (Cmd+Shift+R) технически не отличается от обычного для JS/sessionStorage — оба просто перезагружают страницу,
+  // не трогая sessionStorage. Сброс только при закрытии вкладки/окна.
+  const savedPageSize = Number(sessionStorage.getItem('hanbin_page_size'));
+  let pageSize = PAGE_SIZE_OPTIONS.includes(savedPageSize) ? savedPageSize : PAGE_SIZE_OPTIONS[0];
+  const savedPage = Number(sessionStorage.getItem('hanbin_page'));
+  let currentPage = savedPage >= 1 ? savedPage : 1;
+
+  function persistPagination() {
+    sessionStorage.setItem('hanbin_page_size', String(pageSize));
+    sessionStorage.setItem('hanbin_page', String(currentPage));
+  }
 
   // ── Header ──
   // Без await: шапка сама красит себя мгновенно (по localStorage) и доводит auth в фоне—
@@ -90,6 +106,8 @@ export async function renderHome(container) {
       // Раньше они тихо накапливались (AND) поверх дефолтного status:'watching',
       // из-за чего клик по жанру/стране показывал только «сейчас смотрю + жанр» и часто выглядел как «не работает».
       hasExplicitFilter = true; // теперь этот выбор переживёт переключение карточки/таблицы
+      currentPage = 1; // новый фильтр — другое общее количество страниц, начинаем с первой
+      persistPagination();
       if (type === 'status') {
         // "Все" — это всегда весь список, в любом виде (карточки/таблица).
         // Раньше здесь был баг: в карточном виде клик по «Все» тихо откатывался на status:'watching',
@@ -110,12 +128,37 @@ export async function renderHome(container) {
     const slot = container.querySelector('#watching-slot');
     slot.innerHTML = `<div class="loading-dots">${t('loading')}</div>`;
 
-    let { data } = await getDramas(currentFilters);
+    // Берём весь отфильтрованный список целиком — пагинация режется на фронте, а не на бэке.
+    let { data: allData } = await getDramas({ ...currentFilters, limit: 100000 });
+
+    const total = allData.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIdx = (currentPage - 1) * pageSize;
+    const pageData = allData.slice(startIdx, startIdx + pageSize);
+
+    renderPagination(container.querySelector('#pagination-slot'), {
+      total,
+      pageSize,
+      currentPage,
+      onPageChange: (page) => {
+        currentPage = page;
+        persistPagination();
+        loadWatching();
+      },
+      onPageSizeChange: (size) => {
+        pageSize = size;
+        currentPage = 1; // меняется количество страниц — начинаем с первой, чтобы не зависнуть в пустую страницу
+        persistPagination();
+        loadWatching();
+      },
+    });
 
     if (currentView === 'table') {
-      renderDramaTable(slot, data);
+      renderDramaTable(slot, pageData);
     } else {
-      renderDramaCards(slot, data);
+      renderDramaCards(slot, pageData);
     }
   }
 
@@ -134,12 +177,6 @@ export async function renderHome(container) {
 
   // Без await: идёт параллельно loadWatching, а не после неё.
   loadArchive();
-
-  // See all watching
-  container.querySelector('#see-all-watching')?.addEventListener('click', () => {
-    console.log('[UI] See all watching');
-    // TODO: navigate('#/my-list?status=watching')
-  });
 
   // ── Refresh on data change (e.g. after addDrama) ──
   // Перезапрашиваем /users/me и обновляем все слоты
@@ -166,8 +203,6 @@ export async function renderHome(container) {
     // Берём точный элемент: первый .section-title не .section-title--archive
     const title = container.querySelector('.section-title:not(.section-title--archive)');
     if (title) title.textContent = t('home.currently_watching');
-    const seeAll = container.querySelector('#see-all-watching');
-    if (seeAll) seeAll.textContent = t('home.see_all');
 
     // Заголовок секции "Архив"
     const archiveTitle = container.querySelector('.section-title--archive');

@@ -300,6 +300,33 @@ const componentCSS = `
 }
 .see-all:hover { opacity: 1; }
 
+/* ── Пагинация (заменяет старый «Все →» в шапке секции) ── */
+.pagination-bar { display: flex; align-items: center; gap: 14px; }
+.pagination-pages { display: flex; align-items: center; gap: 4px; }
+.pagination-page, .pagination-arrow {
+  min-width: 26px; height: 26px; padding: 0 6px;
+  border-radius: 8px; border: 1px solid transparent;
+  background: none; color: var(--color-text-muted);
+  font-size: 12px; font-family: var(--font-body);
+  cursor: pointer; transition: var(--transition-fast);
+  display: flex; align-items: center; justify-content: center;
+}
+.pagination-page:hover, .pagination-arrow:hover:not(:disabled) {
+  background: var(--color-accentGlow); color: var(--color-text); border-color: rgba(201,123,138,0.3);
+}
+.pagination-page--active {
+  background: rgba(201,123,138,0.25); color: var(--color-text); border-color: var(--color-rose);
+}
+.pagination-arrow:disabled { opacity: 0.25; cursor: default; }
+.pagination-ellipsis { color: var(--color-text-muted); font-size: 12px; padding: 0 2px; }
+.pagination-size-select {
+  background: var(--color-glass); border: 1px solid var(--color-border);
+  border-radius: 8px; color: var(--color-text-muted); font-size: 12px;
+  font-family: var(--font-body); padding: 4px 8px; cursor: pointer;
+  transition: var(--transition-fast);
+}
+.pagination-size-select:hover { border-color: rgba(201,123,138,0.4); color: var(--color-text); }
+
 /* ── Drama Cards ── */
 .watching-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .watching-card {
