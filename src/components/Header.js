@@ -18,8 +18,12 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
   if (hasTokenLocally) {
     try { cachedUser = JSON.parse(localStorage.getItem('hanbin_user') || 'null'); } catch (_) { /* ignore */ }
   }
+  // Важно: LoginModal.js сохраняет в hanbin_user только { id, email } — без name.
+  // Без этого фоллбэка auth.user.name был undefined, и дальше buildHTML() падал на undefined.slice(),
+  // из-за чего вся шапка молча не отрисовывалась вообще.
+  const fallbackName = cachedUser?.name || cachedUser?.email || '···';
   let auth = hasTokenLocally
-    ? { isLoggedIn: true, user: cachedUser || { name: '···' } }
+    ? { isLoggedIn: true, user: { ...cachedUser, name: fallbackName } }
     : { isLoggedIn: false, user: null };
 
   // Храним текущий вид в мутабельной переменной — переживает перерендер при смене языка
