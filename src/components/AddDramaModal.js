@@ -35,7 +35,7 @@ const LOGO_SVG = `
   </svg>
 `;
 
-const STREAMING_SITES = [
+export const STREAMING_SITES = [
   { id: 1,  name: 'DoramaTV',      url: 'https://m.doramatv.one',  language: 'ru' },
   { id: 2,  name: 'Dorama.land',   url: 'https://dorama.land',     language: 'ru' },
   { id: 3,  name: 'Doramy.club',   url: 'https://doramy.club',     language: 'ru' },

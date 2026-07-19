@@ -204,6 +204,21 @@ export const translations = {
     'modal.add.country.jp':             '🇯🇵 Япония',
     'modal.add.country.other':          '🌏 Другая',
 
+    // Edit Drama Links modal
+    'modal.editlinks.title':             'Ссылки на дораму',
+    'modal.editlinks.sub':               'Полная информация загружена с сервера',
+    'modal.editlinks.loading':           'Загружаем информацию о дораме…',
+    'modal.editlinks.error_load':        'Не удалось загрузить информацию о дораме',
+    'modal.editlinks.section.info':      'Информация',
+    'modal.editlinks.field.site':        'Сайт (из списка)',
+    'modal.editlinks.field.source_url':      'Точная ссылка на дораму',
+    'modal.editlinks.field.source_url_hint': 'Необязательно, вводится вручную',
+    'modal.editlinks.field.source_url_ph':   'https://…',
+    'modal.editlinks.btn.save':           'Сохранить изменения',
+    'modal.editlinks.btn.saving':         'Сохраняем…',
+    'modal.editlinks.btn.saved':          'Сохранено ✓',
+    'links.edit_tooltip':                 'Редактировать ссылки',
+
     // Register modal
     'modal.reg.title':            'Стань легендой',
     'modal.reg.sub':              'Создай аккаунт и начни свой путь',
@@ -415,6 +430,21 @@ export const translations = {
     'modal.add.country.cn':             '🇨🇳 China',
     'modal.add.country.jp':             '🇯🇵 Japan',
     'modal.add.country.other':          '🌏 Other',
+
+    // Edit Drama Links modal
+    'modal.editlinks.title':             'Drama links',
+    'modal.editlinks.sub':               'Full info loaded from the server',
+    'modal.editlinks.loading':           'Loading drama info…',
+    'modal.editlinks.error_load':        'Failed to load drama info',
+    'modal.editlinks.section.info':      'Info',
+    'modal.editlinks.field.site':        'Site (from list)',
+    'modal.editlinks.field.source_url':      'Exact link to the drama',
+    'modal.editlinks.field.source_url_hint': 'Optional, entered manually',
+    'modal.editlinks.field.source_url_ph':   'https://…',
+    'modal.editlinks.btn.save':           'Save changes',
+    'modal.editlinks.btn.saving':         'Saving…',
+    'modal.editlinks.btn.saved':          'Saved ✓',
+    'links.edit_tooltip':                 'Edit links',
 
     // Register modal
     'modal.reg.title':            'Become a legend',

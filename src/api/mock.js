@@ -326,7 +326,7 @@ export async function getFacets() {
   return { data: { countries, genres }, error: null };
 }
 
-function adaptDramaFromApi(d) {
+export function adaptDramaFromApi(d) {
   const ongoing = d.release_tag === 'ongoing';
   const hasSubs = d.translation_tag === 'translated';
   const STATUS_MAP = {
@@ -426,6 +426,59 @@ export async function getDramas(filters = {}) {
 
 export async function getCurrentlyWatching() {
   return getDramas({ status: 'watching' });
+}
+
+/**
+ * Возвращает полную информацию по одной дораме отдельным запросом к бэку —
+ * GET /api/v1/dramas/{id}. Используется модалкой редактирования ссылок — намеренно не
+ * переиспользует уже отрендеренные данные из таблицы/карточек, а всегда тянет свежий снимок.
+ *
+ * @returns {Promise<{ data: object|null, error: string|null }>}
+ */
+export async function getDrama(id) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) {
+    // Гость — берём из мок-данных, бэка всё равно нет.
+    await delay();
+    const drama = MOCK_DRAMAS.find(d => d.id === id);
+    return drama ? { data: drama, error: null } : { data: null, error: 'Дорама не найдена' };
+  }
+
+  const { data, error } = await authGet(`/dramas/${id}`);
+  if (data) return { data: adaptDramaFromApi(data), error: null };
+  console.warn('[API] getDrama failed:', error);
+  return { data: null, error };
+}
+
+/**
+ * Обновляет две ссылки дорамы — сайт из дропдауна (watch_url) и точную ссылку
+ * на страницу дорамы (source_url, опционально, вводится вручную). Используется
+ * модалкой редактирования ссылок в табличном/карточном виде.
+ *
+ * @param {string} id
+ * @param {{ watchUrl: string, sourceUrl: string|null }} links
+ */
+export async function updateDramaLinks(id, { watchUrl, sourceUrl }) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const result = await authPatch(`/dramas/${id}`, {
+      watch_url:  watchUrl,
+      source_url: sourceUrl ?? '',
+    });
+    if (!result.error) {
+      // Не тихо — ссылки влияют на кнопку «перейти на сайт» в уже отрендеренной строке/карточке —
+      // перерисовываем весь список, чтобы новая ссылка сразу же работала.
+      invalidateUserCache();
+      return { data: { id, watchUrl, sourceUrl }, error: null };
+    }
+    console.warn('[API] updateDramaLinks failed:', result.error);
+    return result;
+  }
+
+  await delay();
+  console.log('[MOCK] updateDramaLinks:', id, '->', { watchUrl, sourceUrl });
+  return { data: { id, watchUrl, sourceUrl }, error: null };
 }
 
 export async function getActivity(limit = 5) {

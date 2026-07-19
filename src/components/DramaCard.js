@@ -3,6 +3,7 @@
  */
 
 import { updateDramaStatus, updateVoiceover, updateSeasons, updateReleaseTag, updateTranslationTag, updateEpisodeDuration, updateEpisodeCount, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { openEditDramaLinksModal } from './EditDramaLinksModal.js';
 import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
@@ -573,6 +574,12 @@ export function renderDramaCards(container, dramas) {
       console.log('[MOCK] Watch drama:', id);
     });
 
+    // Edit links button — открывает модалку редактирования ссылок (сайт + точная ссылка)
+    card.querySelector('.card-edit-link-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditDramaLinksModal(id);
+    });
+
     // Archive / Unarchive button
     card.querySelector('.card-archive-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -623,6 +630,12 @@ function dramaCardHTML(d, index) {
 
         <button class="card-watch-btn" title="${t('archive.btn')}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
+        </button>
+        <button class="card-edit-link-btn" data-id="${d.id}" data-tooltip="${t('links.edit_tooltip')}" data-tooltip-pos="left">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+          </svg>
         </button>
         ${d.status === 'archived'
           ? `<button class="card-archive-btn card-archive-btn--unarchive" data-action="unarchive" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
@@ -798,6 +811,12 @@ export function renderDramaTable(container, dramas) {
               <td class="table-muted table-date">${d.lastWatchedAt ? formatDate(d.lastWatchedAt) : '<span class="table-no-tags">—</span>'}</td>
               <td style="white-space:nowrap">
                 <button class="table-watch-btn" data-tooltip="${t('table.watch_tooltip')}" data-tooltip-pos="left" data-id="${d.id}">▶</button>
+                <button class="table-edit-link-btn" data-id="${d.id}" data-tooltip="${t('links.edit_tooltip')}" data-tooltip-pos="left">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </button>
                 ${d.status === 'archived'
                   ? `<button class="table-archive-btn table-archive-btn--unarchive" data-id="${d.id}" data-action="unarchive" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -881,6 +900,11 @@ export function renderDramaTable(container, dramas) {
           window.open(drama.watchUrl, '_blank');
         }
       }
+    });
+
+    row.querySelector('.table-edit-link-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditDramaLinksModal(row.dataset.id);
     });
 
     row.querySelector('.table-archive-btn')?.addEventListener('click', async (e) => {

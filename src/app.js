@@ -610,6 +610,15 @@ const componentCSS = `
 }
 .table-archive-btn:hover { color: var(--color-rose); background: var(--color-accentGlow); }
 
+.table-edit-link-btn {
+  background: none; border: none;
+  color: rgba(245,230,211,0.35); cursor: pointer;
+  padding: 4px 6px; border-radius: 6px;
+  transition: var(--transition-fast);
+  vertical-align: middle;
+}
+.table-edit-link-btn:hover { color: var(--color-rose); background: var(--color-accentGlow); }
+
 .table-delete-btn {
   display: inline-flex; align-items: center; gap: 5px;
   background: rgba(255,107,138,0.1);
@@ -652,7 +661,7 @@ const componentCSS = `
 }
 
 .card-archive-btn {
-  position: absolute; bottom: 48px; right: 10px;
+  position: absolute; bottom: 86px; right: 10px;
   width: 28px; height: 28px; border-radius: 50%;
   background: rgba(45,15,42,0.7); border: 1px solid rgba(232,196,184,0.2);
   display: flex; align-items: center; justify-content: center;
@@ -661,6 +670,17 @@ const componentCSS = `
 }
 .watching-card:hover .card-archive-btn { opacity: 1; transform: scale(1); }
 .card-archive-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); }
+
+.card-edit-link-btn {
+  position: absolute; bottom: 48px; right: 10px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(45,15,42,0.7); border: 1px solid rgba(232,196,184,0.2);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0.7);
+  transition: var(--transition-fast); cursor: pointer;
+}
+.watching-card:hover .card-edit-link-btn { opacity: 1; transform: scale(1); }
+.card-edit-link-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); }
 
 .archive-empty {
   display: flex; align-items: center; gap: 10px;
