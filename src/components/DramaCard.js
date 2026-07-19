@@ -570,8 +570,24 @@ export function renderDramaCards(container, dramas) {
     // Watch button
     card.querySelector('.card-watch-btn')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (drama?.watchUrl) window.open(drama.watchUrl, '_blank');
-      console.log('[MOCK] Watch drama:', id);
+      if (!drama) return;
+
+      // sourceUrl — точная ссылка на страницу дорамы (введённая вручную или со скрейпера)
+      // watchUrl — URL сайта (может быть просто хост). Та же логика, что и в табличном виде.
+      const url = drama.sourceUrl || drama.source_url;
+      if (url) {
+        window.open(url, '_blank');
+        return;
+      }
+      if (drama.watchUrl) {
+        try {
+          const base = new URL(drama.watchUrl);
+          const searchUrl = `${base.origin}/search?q=${encodeURIComponent(drama.title)}`;
+          window.open(searchUrl, '_blank');
+        } catch {
+          window.open(drama.watchUrl, '_blank');
+        }
+      }
     });
 
     // Edit links button — открывает модалку редактирования ссылок (сайт + точная ссылка)
