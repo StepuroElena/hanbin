@@ -6,7 +6,7 @@ import { initRouter } from './router.js';
 import { buildCSSVariables } from './styles/theme.js';
 import { globalCSS } from './styles/global.js';
 import { setFavicon } from './utils/favicon.js';
-import { tooltipCSS } from './utils/tooltip.js';
+import { tooltipCSS, initTooltips } from './utils/tooltip.js';
 import { langToggleCSS } from './components/LangToggle.js';
 
 function injectStyles() {
@@ -364,9 +364,10 @@ const componentCSS = `
   width: 32px; height: 32px; border-radius: 50%;
   background: var(--color-rose); border: none;
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.7); transition: var(--transition-fast); cursor: pointer;
+  opacity: 1; transform: scale(1); transition: var(--transition-fast); cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
-.watching-card:hover .card-watch-btn { opacity: 1; transform: scale(1); }
+.card-watch-btn:hover { transform: scale(1.08); }
 .card-info { padding: 14px 14px 16px; }
 .card-title { font-family: var(--font-display); font-size: 16px; font-weight: 400; color: var(--color-text); margin-bottom: 6px; line-height: 1.3; }
 .card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -663,24 +664,24 @@ const componentCSS = `
 .card-archive-btn {
   position: absolute; bottom: 86px; right: 10px;
   width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(45,15,42,0.7); border: 1px solid rgba(232,196,184,0.2);
+  background: rgba(45,15,42,0.85); border: 1px solid rgba(232,196,184,0.2);
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.7);
+  opacity: 1; transform: scale(1);
   transition: var(--transition-fast); cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-.watching-card:hover .card-archive-btn { opacity: 1; transform: scale(1); }
-.card-archive-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); }
+.card-archive-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); transform: scale(1.08); }
 
 .card-edit-link-btn {
   position: absolute; bottom: 48px; right: 10px;
   width: 28px; height: 28px; border-radius: 50%;
-  background: rgba(45,15,42,0.7); border: 1px solid rgba(232,196,184,0.2);
+  background: rgba(45,15,42,0.85); border: 1px solid rgba(232,196,184,0.2);
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(0.7);
+  opacity: 1; transform: scale(1);
   transition: var(--transition-fast); cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
-.watching-card:hover .card-edit-link-btn { opacity: 1; transform: scale(1); }
-.card-edit-link-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); }
+.card-edit-link-btn:hover { background: rgba(201,123,138,0.3); border-color: var(--color-rose); transform: scale(1.08); }
 
 .archive-empty {
   display: flex; align-items: center; gap: 10px;
@@ -898,6 +899,7 @@ const unauthorizedCSS = `
 function init() {
   injectStyles();
   setFavicon('/assets/favicon.svg');
+  initTooltips();
   const app = document.getElementById('app');
   if (!app) { console.error('[Hanbin] #app element not found'); return; }
   initRouter(app);

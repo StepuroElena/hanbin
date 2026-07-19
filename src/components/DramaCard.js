@@ -628,7 +628,7 @@ function dramaCardHTML(d, index) {
           ${d.hasSubs ? '<span class="badge badge--ru">RU Озвучка</span>' : ''}
         </div>
 
-        <button class="card-watch-btn" title="${t('archive.btn')}">
+        <button class="card-watch-btn" data-tooltip="${t('table.watch_tooltip')}" data-tooltip-pos="left">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M5 3l14 9-14 9V3z"/></svg>
         </button>
         <button class="card-edit-link-btn" data-id="${d.id}" data-tooltip="${t('links.edit_tooltip')}" data-tooltip-pos="left">

@@ -35,7 +35,7 @@ const EDIT_LINKS_CSS = `
     display: flex; flex-direction: column;
   }
   #hb-modal-box.hb-edit-links-box #hb-modal-content {
-    padding: 36px 40px 32px; overflow-y: auto; flex: 1;
+    padding: 30px 40px 28px; overflow-y: auto; flex: 1;
     scrollbar-width: thin; scrollbar-color: rgba(201,123,138,0.3) transparent;
   }
   #hb-modal-box.hb-edit-links-box #hb-modal-content::-webkit-scrollbar { width: 4px; }
@@ -63,7 +63,7 @@ const EDIT_LINKS_CSS = `
   .hb-el-error-icon { font-size: 18px; flex-shrink: 0; }
   .hb-el-error-text { font-size: 12px; color: rgba(245,230,211,0.6); line-height: 1.4; }
 
-  .hb-el-summary { display: flex; gap: 16px; margin-bottom: 8px; }
+  .hb-el-summary { display: flex; gap: 16px; margin: 6px 0 4px; }
   .hb-el-poster {
     width: 84px; flex-shrink: 0; border-radius: 12px; overflow: hidden;
     aspect-ratio: 2/3; background: rgba(255,255,255,0.04);
@@ -156,7 +156,7 @@ const EDIT_LINKS_CSS = `
 
   .hb-section-label {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(245,230,211,0.3); margin: 20px 0 12px;
+    color: rgba(245,230,211,0.3); margin: 14px 0 10px;
     display: flex; align-items: center; gap: 10px;
   }
   .hb-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(232,196,184,0.08); }
@@ -177,7 +177,6 @@ function injectEditLinksCSS() {
 function shellHTML() {
   return `
     <div class="hb-modal-title">${t('modal.editlinks.title')}</div>
-    <div class="hb-modal-sub">${t('modal.editlinks.sub')}</div>
 
     <div id="hb-el-loading" class="hb-el-loader">
       <div class="hb-el-spinner"></div>
@@ -250,9 +249,7 @@ function infoRow(label, value) {
 function bodyHTML(drama) {
   const hasCover = Boolean(drama.cover);
   const flag = countryFlag(drama.country);
-  const episodesText = drama.episodesTotal
-    ? `${drama.episodesWatched ?? 0}/${drama.episodesTotal}`
-    : '—';
+  const episodesText = drama.episodesTotal ? String(drama.episodesTotal) : '—';
   const savedSite = STREAMING_SITES.find(s => s.url === drama.watchUrl);
 
   return `
