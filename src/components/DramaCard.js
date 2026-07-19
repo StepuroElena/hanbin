@@ -946,15 +946,12 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
             <th>${t('table.col.year')}</th>
             <th>${t('table.col.genre')}</th>
             <th>${t('table.col.country')}</th>
-            <th>${t('table.col.progress')}</th>
+            <th>${t('table.col.status')}</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           ${dramas.map(d => {
-            const watched  = d.episodesWatched ?? 0;
-            const total    = d.episodesTotal   ?? 0;
-            const progress = total > 0 ? Math.round(watched / total * 100) : 0;
             const countryFlag = { kr: '🇰🇷', cn: '🇨🇳', jp: '🇯🇵' };
             const flag = countryFlag[d.country] ?? '🌏';
             return `
@@ -968,16 +965,8 @@ export function renderArchiveTable(container, dramas, onUnarchive) {
               <td class="table-muted">${d.year ?? '—'}</td>
               <td class="table-muted">${d.genres[0] ?? '—'}</td>
               <td class="table-muted table-country">${flag} ${(d.country ?? '').toUpperCase()}</td>
-              <td class="table-muted table-progress">
-                ${total > 0 ? `
-                  <div class="table-progress-wrap">
-                    <div class="table-progress-bar archive-progress-bar">
-                      <div class="table-progress-fill archive-progress-fill" style="width:${progress}%"></div>
-                    </div>
-                    <span>${watched}/${total}</span>
-                    <span class="archive-progress-pct">${progress}%</span>
-                  </div>
-                ` : '<span class="table-no-tags">—</span>'}
+              <td>
+                <span class="badge badge--${d.status}">${statusLabel(d.status)}</span>
               </td>
               <td style="white-space:nowrap;display:flex;align-items:center;gap:6px;border-bottom:none">
                 <button class="table-unarchive-btn table-unarchive-btn--accent" data-id="${d.id}" data-tooltip="${t('archive.unarchive_tooltip')}" data-tooltip-pos="left">
