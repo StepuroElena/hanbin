@@ -17,8 +17,8 @@ const STATUS_OPTIONS = [
 // Фиксированный выбор количества сезонов для табличного вида — 1..5.
 const SEASONS_OPTIONS = [1, 2, 3, 4, 5];
 
-// Количество серий — выпадающий список 1..50.
-const EPISODE_COUNT_OPTIONS = Array.from({ length: 50 }, (_, i) => i + 1);
+// Количество серий — выпадающий список 1..100.
+const EPISODE_COUNT_OPTIONS = Array.from({ length: 100 }, (_, i) => i + 1);
 
 // Два независимых тега в столбце «Тэги» — выпуск/выходит и переведён/переводится.
 const RELEASE_OPTIONS = [
@@ -303,7 +303,7 @@ function attachTagDropdown(container, { selector, kind, options, updateFn }) {
 }
 
 /**
- * Аналогично attachSeasonsDropdown, но для общего количества серий (.episode-count-wrap) — выбор 1..50.
+ * Аналогично attachSeasonsDropdown, но для общего количества серий (.episode-count-wrap) — выбор 1..100.
  */
 function attachEpisodeCountDropdown(container) {
   container.querySelectorAll('.episode-count-wrap').forEach(wrap => {
@@ -323,7 +323,25 @@ function attachEpisodeCountDropdown(container) {
       menu.dataset.forId = id;
       menu.dataset.kind = 'episode-count';
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+
+      // Список из 100 пунктов заведомо выше, чем стандартный max-height (280px) —
+      // если открыть его ближе к низу экрана, часть списка (и сам скролл до конца) может
+      // оказаться за пределами viewport, т.к. position:fixed не обрезается окном браузера.
+      // Считаем, сколько места реально осталось ниже триггера, и ограничиваем высоту меню
+      // этим значением (с отступом от края), чтобы скролл всегда доходил до последнего пункта.
+      const viewportMargin = 12;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+      const spaceAbove = rect.top - viewportMargin;
+
+      if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
+        // Открываем вниз, как обычно, но не даём меню вылезти за нижний край окна
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.style.maxHeight = Math.max(120, Math.min(280, spaceBelow)) + 'px';
+      } else {
+        // Снизу слишком мало места (строка ближе к низу страницы) — открываем вверх от триггера
+        menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+        menu.style.maxHeight = Math.max(120, Math.min(280, spaceAbove)) + 'px';
+      }
 
       EPISODE_COUNT_OPTIONS.filter(v => v !== current).forEach(opt => {
         const item = document.createElement('div');
@@ -879,7 +897,7 @@ export function renderDramaTable(container, dramas) {
   // —— Смена количества сезонов из таблицы: клик —> выпадающий список 1–5
   attachSeasonsDropdown(container);
 
-  // —— Количество серий из таблицы: клик —> выпадающий список 1–50
+  // —— Количество серий из таблицы: клик —> выпадающий список 1–100
   attachEpisodeCountDropdown(container);
 
   // —— Длительность серии из таблицы: клик —> мини-форма часы/минуты (вводится вручную, не скрейпится)
