@@ -60,7 +60,7 @@ const SETTINGS_CSS = `
   }
   .settings-sites-group__label {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(245,230,211,0.3);
+    color: rgba(245,230,211,0.3); margin-bottom: 20px;
     display: flex; align-items: center; gap: 10px; flex: 1;
   }
   .settings-sites-group__label::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
