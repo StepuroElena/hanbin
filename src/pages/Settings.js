@@ -157,9 +157,7 @@ function buildSitesSection(sites) {
     <section class="settings-section">
       <div class="settings-section__head">
         <div class="settings-section__title">${t('settings.sites.title')}</div>
-        <div class="settings-section__count">${t('settings.sites.count', { n: sites.length })}</div>
       </div>
-      <div class="settings-section__sub">${t('settings.sites.sub')}</div>
 
       <div class="settings-sites-group">
         <div class="settings-sites-group__label">${t('settings.sites.ru_label')}</div>
