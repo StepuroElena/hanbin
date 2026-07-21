@@ -7,6 +7,9 @@
  * Каждый сайт можно включить/выключить тогглом — выключенные сайты пропадают из дропдауна
  * «Где смотреть» при добавлении дорамы, но остаются здесь, чтобы их можно было включить обратно.
  * По умолчанию все сайты включены (и у новых пользователей, и у уже существующих).
+ *
+ * В каждой языковой группе есть кнопка «+ Добавить сайт» — открывает модалку добавления
+ * собственного сайта (за пределами дефолтных 10). Гостю недоступно — нет аккаунта, некуда сохранять.
  */
 
 import { renderHeader } from '../components/Header.js';
@@ -51,12 +54,25 @@ const SETTINGS_CSS = `
 
   .settings-sites-group { margin-bottom: 22px; }
   .settings-sites-group:last-child { margin-bottom: 0; }
+  .settings-sites-group__head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 12px;
+  }
   .settings-sites-group__label {
     font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(245,230,211,0.3); margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px;
+    color: rgba(245,230,211,0.3);
+    display: flex; align-items: center; gap: 10px; flex: 1;
   }
   .settings-sites-group__label::after { content: ''; flex: 1; height: 1px; background: var(--color-border); }
+
+  .settings-add-site-btn {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid rgba(201,123,138,0.35); background: rgba(201,123,138,0.08);
+    color: var(--color-rose); font-size: 11px; font-family: var(--font-body);
+    letter-spacing: 0.04em; cursor: pointer; transition: var(--transition-fast);
+  }
+  .settings-add-site-btn:hover { background: rgba(201,123,138,0.18); border-color: rgba(201,123,138,0.6); }
 
   .settings-sites-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;
@@ -116,6 +132,16 @@ const SETTINGS_CSS = `
   .hb-toggle input:disabled + .hb-toggle-track { opacity: 0.4; cursor: not-allowed; }
   .hb-toggle input:focus-visible + .hb-toggle-track { box-shadow: 0 0 0 3px rgba(201,123,138,0.25); }
 
+  /* ── Плитка «Добавить сайт» в конце сетки ── */
+  .settings-add-site-tile {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 16px; border-radius: 14px; min-height: 62px;
+    border: 1px dashed rgba(201,123,138,0.35); background: rgba(201,123,138,0.04);
+    color: rgba(201,123,138,0.75); font-size: 13px; font-family: var(--font-body);
+    cursor: pointer; transition: var(--transition-fast);
+  }
+  .settings-add-site-tile:hover { background: rgba(201,123,138,0.12); border-color: rgba(201,123,138,0.6); color: var(--color-rose); }
+
   @media (max-width: 640px) {
     .settings-sites-grid { grid-template-columns: 1fr; }
     .settings-header__title { font-size: 28px; }
@@ -149,7 +175,18 @@ function siteCard(site) {
   `;
 }
 
-function buildSitesSection(sites) {
+function addSiteTileHTML(group) {
+  return `
+    <div class="settings-add-site-tile" data-group="${group}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      ${t('settings.sites.add_btn')}
+    </div>
+  `;
+}
+
+function buildSitesSection(sites, isGuest) {
   const ruSites    = sites.filter(s => s.language === 'ru');
   const intlSites  = sites.filter(s => s.language !== 'ru');
 
@@ -163,6 +200,7 @@ function buildSitesSection(sites) {
         <div class="settings-sites-group__label">${t('settings.sites.ru_label')}</div>
         <div class="settings-sites-grid">
           ${ruSites.map(siteCard).join('')}
+          ${isGuest ? '' : addSiteTileHTML('ru')}
         </div>
       </div>
 
@@ -170,6 +208,7 @@ function buildSitesSection(sites) {
         <div class="settings-sites-group__label">${t('settings.sites.intl_label')}</div>
         <div class="settings-sites-grid">
           ${intlSites.map(siteCard).join('')}
+          ${isGuest ? '' : addSiteTileHTML('intl')}
         </div>
       </div>
     </section>
@@ -217,8 +256,39 @@ function attachToggleHandlers(container, sites) {
   });
 }
 
+/**
+ * Навешивает обработчики на плитки «+ Добавить сайт». Открывает AddStreamingSiteModal
+ * с языком по умолчанию, соответствующим группе (ru → 'ru', intl → 'en', переключаемо внутри модалки).
+ * После успешного добавления — добавляет сайт в локальный массив и полностью перестраивает
+ * секцию (rerender), заново навешивая оба типа обработчиков.
+ */
+function attachAddSiteHandlers(container, sites, rerender) {
+  container.querySelectorAll('.settings-add-site-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const group = tile.dataset.group;
+      const defaultLanguage = group === 'ru' ? 'ru' : 'en';
+
+      import('../components/AddStreamingSiteModal.js').then(({ openAddStreamingSiteModal }) => {
+        openAddStreamingSiteModal({
+          defaultLanguage,
+          onAdded: (site) => {
+            sites.push(site);
+            // Сбрасываем кэш AddDramaModal.js, чтобы новый сайт сразу попал и в дропдаун «Где смотреть»
+            import('../components/AddDramaModal.js').then(({ loadStreamingSites: reload }) => {
+              reload({ forceRefresh: true });
+            });
+            rerender();
+          },
+        });
+      });
+    });
+  });
+}
+
 export async function renderSettings(container) {
   injectSettingsCSS();
+
+  const isGuest = !localStorage.getItem('hanbin_token');
 
   function buildShell() {
     return `
@@ -252,17 +322,21 @@ export async function renderSettings(container) {
   // Страница могла уйти, пока шёл запрос
   if (!container.isConnected) return;
 
-  const sectionsSlot = container.querySelector('#settings-sections');
-  sectionsSlot.innerHTML = buildSitesSection(sites);
-  attachToggleHandlers(sectionsSlot, sites);
+  function renderSection() {
+    const slot = container.querySelector('#settings-sections');
+    if (!slot) return;
+    slot.innerHTML = buildSitesSection(sites, isGuest);
+    attachToggleHandlers(slot, sites);
+    attachAddSiteHandlers(slot, sites, renderSection);
+  }
+
+  renderSection();
 
   onLangChange(() => {
     if (!container.isConnected) return;
     container.innerHTML = buildShell();
     renderHeader(container.querySelector('#header-slot'), {});
-    const slot = container.querySelector('#settings-sections');
-    slot.innerHTML = buildSitesSection(sites);
-    attachToggleHandlers(slot, sites);
+    renderSection();
     container.querySelector('#settings-back-btn')?.addEventListener('click', () => history.back());
   });
 }

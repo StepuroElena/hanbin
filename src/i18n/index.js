@@ -39,7 +39,24 @@ export const translations = {
     'settings.sites.count':       '{n} сайтов',
     'settings.sites.enable_tooltip':  'Включить в список выбора',
     'settings.sites.disable_tooltip': 'Скрыть из списка выбора',
+    'settings.sites.add_btn':      '+ Добавить сайт',
     'modal.add.sites.empty':      'Нет доступных сайтов — все выключены в Настройках',
+
+    // Add Streaming Site modal
+    'modal.addsite.title':        'Добавить сайт',
+    'modal.addsite.sub':          'Свой сайт в список выбора',
+    'modal.addsite.field.name':    'Название',
+    'modal.addsite.field.name_ph': 'Например: KinoPoisk HD',
+    'modal.addsite.field.url':     'Ссылка',
+    'modal.addsite.field.url_ph':  'https://…',
+    'modal.addsite.field.language': 'Язык',
+    'modal.addsite.lang.ru':      '🇷🇺 RU',
+    'modal.addsite.lang.en':      '🇬🇧 EN',
+    'modal.addsite.lang.multi':   '🌏 Multi',
+    'modal.addsite.btn':          'Добавить',
+    'modal.addsite.btn_loading':  'Добавляем…',
+    'modal.addsite.err_name':     'Введи название сайта',
+    'modal.addsite.err_url':      'Введи ссылку на сайт',
 
     // Stats block
     'stats.dramas_watched':       'Просмотрено дорам',
@@ -281,7 +298,24 @@ export const translations = {
     'settings.sites.count':       '{n} sites',
     'settings.sites.enable_tooltip':  'Show in the picker',
     'settings.sites.disable_tooltip': 'Hide from the picker',
+    'settings.sites.add_btn':      '+ Add site',
     'modal.add.sites.empty':      'No sites available — all are turned off in Settings',
+
+    // Add Streaming Site modal
+    'modal.addsite.title':        'Add a site',
+    'modal.addsite.sub':          'Add your own site to the picker',
+    'modal.addsite.field.name':    'Name',
+    'modal.addsite.field.name_ph': 'e.g. KinoPoisk HD',
+    'modal.addsite.field.url':     'URL',
+    'modal.addsite.field.url_ph':  'https://…',
+    'modal.addsite.field.language': 'Language',
+    'modal.addsite.lang.ru':      '🇷🇺 RU',
+    'modal.addsite.lang.en':      '🇬🇧 EN',
+    'modal.addsite.lang.multi':   '🌏 Multi',
+    'modal.addsite.btn':          'Add',
+    'modal.addsite.btn_loading':  'Adding…',
+    'modal.addsite.err_name':     'Enter the site name',
+    'modal.addsite.err_url':      'Enter the site URL',
 
     // Stats block
     'stats.dramas_watched':       'Dramas watched',
