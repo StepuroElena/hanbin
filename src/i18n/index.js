@@ -39,6 +39,7 @@ export const translations = {
     'settings.sites.count':       '{n} сайтов',
     'settings.sites.enable_tooltip':  'Включить в список выбора',
     'settings.sites.disable_tooltip': 'Скрыть из списка выбора',
+    'modal.add.sites.empty':      'Нет доступных сайтов — все выключены в Настройках',
 
     // Stats block
     'stats.dramas_watched':       'Просмотрено дорам',
@@ -280,6 +281,7 @@ export const translations = {
     'settings.sites.count':       '{n} sites',
     'settings.sites.enable_tooltip':  'Show in the picker',
     'settings.sites.disable_tooltip': 'Hide from the picker',
+    'modal.add.sites.empty':      'No sites available — all are turned off in Settings',
 
     // Stats block
     'stats.dramas_watched':       'Dramas watched',

@@ -338,6 +338,11 @@ const ADD_DRAMA_CSS = `
   }
   .hb-site-edit-hint a { color: rgba(201,123,138,0.85); text-decoration: none; border-bottom: 1px dashed rgba(201,123,138,0.4); }
   .hb-site-edit-hint a:hover { color: var(--color-rose, #c97b8a); border-bottom-color: currentColor; }
+
+  .hb-site-empty {
+    padding: 16px 14px; text-align: center;
+    font-size: 12px; color: rgba(245,230,211,0.35); font-style: italic;
+  }
 `;
 
 // ─────────────────────────────────────────────
@@ -378,6 +383,7 @@ function buildSiteDropdown(savedSiteUrl, savedSiteName) {
       <div class="hb-site-list" id="hb-site-list" role="listbox" style="display:none">
         ${ruSites.length ? `<div class="hb-site-divider">${t('modal.add.sites.ru_label')}</div>${ruSites.map(s => siteOptionHTML(s, 'RU')).join('')}` : ''}
         ${intlSites.length ? `<div class="hb-site-divider">${t('modal.add.sites.intl_label')}</div>${intlSites.map(s => siteOptionHTML(s, s.language === 'en' ? 'EN' : 'Multi')).join('')}` : ''}
+        ${(!ruSites.length && !intlSites.length) ? `<div class="hb-site-empty">${t('modal.add.sites.empty')}</div>` : ''}
       </div>
     </div>
     <div class="hb-site-edit-hint">${t('modal.add.field.where_edit_hint')} <a href="#/settings" id="hb-goto-settings-link">${t('modal.add.field.where_edit_link')}</a></div>
