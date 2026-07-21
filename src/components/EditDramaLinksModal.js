@@ -211,7 +211,7 @@ function buildSiteDropdownHTML(savedSiteUrl, savedSiteName) {
       </div>
       <div class="hb-site-list" id="hb-el-site-list" role="listbox" style="display:none">
         <div class="hb-site-divider">${t('modal.add.sites.ru_label')}</div>
-        ${STREAMING_SITES.filter(s => s.language === 'ru').map(s => `
+        ${STREAMING_SITES.filter(s => s.language === 'ru' && (s.enabled !== false || s.url === savedSiteUrl)).map(s => `
           <div class="hb-site-option ${savedSiteUrl === s.url ? 'hb-site-option--active' : ''}"
             role="option" data-url="${s.url}" data-name="${s.name}">
             <img class="hb-site-favicon" src="https://www.google.com/s2/favicons?domain=${s.url}&sz=32" alt="${s.name}">
@@ -222,7 +222,7 @@ function buildSiteDropdownHTML(savedSiteUrl, savedSiteName) {
             <span class="hb-site-lang hb-site-lang--ru">RU</span>
           </div>`).join('')}
         <div class="hb-site-divider">${t('modal.add.sites.intl_label')}</div>
-        ${STREAMING_SITES.filter(s => s.language !== 'ru').map(s => `
+        ${STREAMING_SITES.filter(s => s.language !== 'ru' && (s.enabled !== false || s.url === savedSiteUrl)).map(s => `
           <div class="hb-site-option ${savedSiteUrl === s.url ? 'hb-site-option--active' : ''}"
             role="option" data-url="${s.url}" data-name="${s.name}">
             <img class="hb-site-favicon" src="https://www.google.com/s2/favicons?domain=${s.url}&sz=32" alt="${s.name}">

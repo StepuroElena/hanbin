@@ -3,10 +3,15 @@
  *
  * Список сайтов для просмотра — персональный для каждого пользователя
  * (GET /api/v1/streaming-sites), тот же список, что и в дропдауне «Где смотреть» в AddDramaModal.
+ *
+ * Каждый сайт можно включить/выключить тогглом — выключенные сайты пропадают из дропдауна
+ * «Где смотреть» при добавлении дорамы, но остаются здесь, чтобы их можно было включить обратно.
+ * По умолчанию все сайты включены (и у новых пользователей, и у уже существующих).
  */
 
 import { renderHeader } from '../components/Header.js';
 import { loadStreamingSites } from '../components/AddDramaModal.js';
+import { updateStreamingSite } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 const SETTINGS_CSS = `
@@ -58,12 +63,18 @@ const SETTINGS_CSS = `
   }
 
   .settings-site-card {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 16px; border-radius: 14px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 14px 14px 16px; border-radius: 14px;
     background: var(--color-surface); border: 1px solid var(--color-border);
-    transition: var(--transition-fast); text-decoration: none;
+    transition: var(--transition-fast), opacity 0.2s ease;
   }
-  .settings-site-card:hover { border-color: rgba(201,123,138,0.35); transform: translateY(-2px); }
+  .settings-site-card:hover { border-color: rgba(201,123,138,0.35); }
+  .settings-site-card--disabled { opacity: 0.5; }
+
+  .settings-site-link {
+    display: flex; align-items: center; gap: 12px;
+    flex: 1; min-width: 0; text-decoration: none;
+  }
 
   .settings-site-favicon {
     width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
@@ -80,10 +91,30 @@ const SETTINGS_CSS = `
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;
   }
 
-  .settings-site-lang { font-size: 9px; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; letter-spacing: 0.06em; text-transform: uppercase; }
-  .settings-site-lang--ru    { background: rgba(122,171,142,0.2); color: var(--color-jade); border: 1px solid rgba(122,171,142,0.3); }
-  .settings-site-lang--en    { background: rgba(212,165,116,0.2); color: var(--color-gold); border: 1px solid rgba(212,165,116,0.3); }
-  .settings-site-lang--multi { background: rgba(201,123,138,0.18); color: var(--color-rose); border: 1px solid rgba(201,123,138,0.3); }
+  /* ── Тогл вкл/выкл ── */
+  .hb-toggle { position: relative; display: inline-flex; flex-shrink: 0; cursor: pointer; }
+  .hb-toggle input {
+    position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer;
+  }
+  .hb-toggle-track {
+    width: 38px; height: 22px; border-radius: 30px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(232,196,184,0.2);
+    display: inline-flex; align-items: center; padding: 2px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .hb-toggle-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(245,230,211,0.55);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .hb-toggle input:checked + .hb-toggle-track {
+    background: rgba(122,171,142,0.35); border-color: rgba(122,171,142,0.5);
+  }
+  .hb-toggle input:checked + .hb-toggle-track .hb-toggle-thumb {
+    transform: translateX(16px); background: var(--color-jade);
+  }
+  .hb-toggle input:disabled + .hb-toggle-track { opacity: 0.4; cursor: not-allowed; }
+  .hb-toggle input:focus-visible + .hb-toggle-track { box-shadow: 0 0 0 3px rgba(201,123,138,0.25); }
 
   @media (max-width: 640px) {
     .settings-sites-grid { grid-template-columns: 1fr; }
@@ -100,16 +131,21 @@ function injectSettingsCSS() {
 }
 
 function siteCard(site) {
-  const langLabel = site.language === 'ru' ? 'RU' : site.language === 'en' ? 'EN' : 'Multi';
+  const enabled = site.enabled !== false;
   return `
-    <a class="settings-site-card" href="${site.url}" target="_blank" rel="noopener noreferrer">
-      <img class="settings-site-favicon" src="https://www.google.com/s2/favicons?domain=${site.url}&sz=32" alt="${site.name}">
-      <div class="settings-site-info">
-        <div class="settings-site-name">${site.name}</div>
-        <div class="settings-site-url">${site.url}</div>
-      </div>
-      <span class="settings-site-lang settings-site-lang--${site.language}">${langLabel}</span>
-    </a>
+    <div class="settings-site-card ${enabled ? '' : 'settings-site-card--disabled'}" data-site-id="${site.id}">
+      <a class="settings-site-link" href="${site.url}" target="_blank" rel="noopener noreferrer">
+        <img class="settings-site-favicon" src="https://www.google.com/s2/favicons?domain=${site.url}&sz=32" alt="${site.name}">
+        <div class="settings-site-info">
+          <div class="settings-site-name">${site.name}</div>
+          <div class="settings-site-url">${site.url}</div>
+        </div>
+      </a>
+      <label class="hb-toggle" data-tooltip="${enabled ? t('settings.sites.disable_tooltip') : t('settings.sites.enable_tooltip')}">
+        <input type="checkbox" class="hb-toggle-input" data-site-id="${site.id}" ${enabled ? 'checked' : ''}>
+        <span class="hb-toggle-track"><span class="hb-toggle-thumb"></span></span>
+      </label>
+    </div>
   `;
 }
 
@@ -140,6 +176,47 @@ function buildSitesSection(sites) {
       </div>
     </section>
   `;
+}
+
+/**
+ * Навешивает обработчики на тогглы вкл/выкл. Оптимистично красит карточку сразу же,
+ * пишет на бэк (PATCH /streaming-sites/{id}), откатывает состояние, если запрос не удался.
+ * Гостю (нет токена) переключение недоступно — бэка для него нет, менять просто нечего.
+ */
+function attachToggleHandlers(container, sites) {
+  const isGuest = !localStorage.getItem('hanbin_token');
+
+  container.querySelectorAll('.hb-toggle-input').forEach(input => {
+    if (isGuest) {
+      input.disabled = true;
+      return;
+    }
+
+    input.addEventListener('change', async () => {
+      const siteId = input.dataset.siteId;
+      const nextEnabled = input.checked;
+      const card = input.closest('.settings-site-card');
+
+      input.disabled = true;
+      card?.classList.toggle('settings-site-card--disabled', !nextEnabled);
+
+      const { error } = await updateStreamingSite(siteId, { enabled: nextEnabled });
+
+      input.disabled = false;
+
+      if (error) {
+        // Откатываем — не удалось сохранить
+        input.checked = !nextEnabled;
+        card?.classList.toggle('settings-site-card--disabled', !!nextEnabled);
+        console.warn('[Settings] toggle streaming site failed:', error);
+        return;
+      }
+
+      // Обновляем локальный кэш sites, чтобы состояние пережило смену языка/повторный рендер
+      const site = sites.find(s => String(s.id) === String(siteId));
+      if (site) site.enabled = nextEnabled;
+    });
+  });
 }
 
 export async function renderSettings(container) {
@@ -177,13 +254,17 @@ export async function renderSettings(container) {
   // Страница могла уйти, пока шёл запрос
   if (!container.isConnected) return;
 
-  container.querySelector('#settings-sections').innerHTML = buildSitesSection(sites);
+  const sectionsSlot = container.querySelector('#settings-sections');
+  sectionsSlot.innerHTML = buildSitesSection(sites);
+  attachToggleHandlers(sectionsSlot, sites);
 
   onLangChange(() => {
     if (!container.isConnected) return;
     container.innerHTML = buildShell();
     renderHeader(container.querySelector('#header-slot'), {});
-    container.querySelector('#settings-sections').innerHTML = buildSitesSection(sites);
+    const slot = container.querySelector('#settings-sections');
+    slot.innerHTML = buildSitesSection(sites);
+    attachToggleHandlers(slot, sites);
     container.querySelector('#settings-back-btn')?.addEventListener('click', () => history.back());
   });
 }

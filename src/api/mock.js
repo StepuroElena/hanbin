@@ -1131,7 +1131,7 @@ export async function getStreamingSites() {
   const { data, error } = await authGet('/streaming-sites');
   if (data) {
     return {
-      data: data.map(s => ({ id: s.id, name: s.name, url: s.url, language: s.language })),
+      data: data.map(s => ({ id: s.id, name: s.name, url: s.url, language: s.language, enabled: s.enabled !== false })),
       error: null,
     };
   }
@@ -1148,12 +1148,12 @@ export async function addStreamingSite({ name, url, language }) {
   if (!token) return { data: null, error: 'Войди, чтобы добавить свой сайт' };
 
   const { data, error } = await authPost('/streaming-sites', { name, url, language });
-  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language }, error: null };
+  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language, enabled: data.enabled !== false }, error: null };
   return { data: null, error };
 }
 
-/** Обновляет свой сайт в персональном списке. Требует авторизации. */
-export async function updateStreamingSite(id, { name, url, language }) {
+/** Обновляет свой сайт в персональном списке — включая тогл вкл/выкл (enabled). Требует авторизации. */
+export async function updateStreamingSite(id, { name, url, language, enabled }) {
   const token = localStorage.getItem('hanbin_token');
   if (!token) return { data: null, error: 'Войди, чтобы изменить сайт' };
 
@@ -1161,9 +1161,10 @@ export async function updateStreamingSite(id, { name, url, language }) {
   if (name !== undefined) body.name = name;
   if (url !== undefined) body.url = url;
   if (language !== undefined) body.language = language;
+  if (enabled !== undefined) body.enabled = enabled;
 
   const { data, error } = await authPatch(`/streaming-sites/${id}`, body);
-  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language }, error: null };
+  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language, enabled: data.enabled !== false }, error: null };
   return { data: null, error };
 }
 
