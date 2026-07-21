@@ -1,12 +1,12 @@
 /**
  * HANBIN — Settings Page
  *
- * Шаг 1: показываем список сайтов для просмотра — тот же STREAMING_SITES,
- * что используется в дропдауне «Где смотреть» в AddDramaModal.
+ * Список сайтов для просмотра — персональный для каждого пользователя
+ * (GET /api/v1/streaming-sites), тот же список, что и в дропдауне «Где смотреть» в AddDramaModal.
  */
 
 import { renderHeader } from '../components/Header.js';
-import { STREAMING_SITES } from '../components/AddDramaModal.js';
+import { loadStreamingSites } from '../components/AddDramaModal.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 const SETTINGS_CSS = `
@@ -113,15 +113,15 @@ function siteCard(site) {
   `;
 }
 
-function buildSitesSection() {
-  const ruSites    = STREAMING_SITES.filter(s => s.language === 'ru');
-  const intlSites  = STREAMING_SITES.filter(s => s.language !== 'ru');
+function buildSitesSection(sites) {
+  const ruSites    = sites.filter(s => s.language === 'ru');
+  const intlSites  = sites.filter(s => s.language !== 'ru');
 
   return `
     <section class="settings-section">
       <div class="settings-section__head">
         <div class="settings-section__title">${t('settings.sites.title')}</div>
-        <div class="settings-section__count">${t('settings.sites.count', { n: STREAMING_SITES.length })}</div>
+        <div class="settings-section__count">${t('settings.sites.count', { n: sites.length })}</div>
       </div>
       <div class="settings-section__sub">${t('settings.sites.sub')}</div>
 
@@ -154,7 +154,9 @@ export async function renderSettings(container) {
           <div class="settings-header__title">${t('settings.title')}</div>
           <div class="settings-header__sub">${t('settings.sub')}</div>
         </div>
-        <div id="settings-sections"></div>
+        <div id="settings-sections">
+          <div class="loading-dots">${t('loading')}</div>
+        </div>
       </div>
     `;
   }
@@ -164,17 +166,24 @@ export async function renderSettings(container) {
   const headerSlot = container.querySelector('#header-slot');
   renderHeader(headerSlot, {});
 
-  container.querySelector('#settings-sections').innerHTML = buildSitesSection();
-
   container.querySelector('#settings-back-btn')?.addEventListener('click', () => {
     history.back();
   });
+
+  // Тянем персональный список с бэка (или дефолтный для гостя) — обычно мгновенно из-за кэша,
+  // но при первом открытии показываем индикатор загрузки выше, чтобы не показать пустоту.
+  let sites = await loadStreamingSites();
+
+  // Страница могла уйти, пока шёл запрос
+  if (!container.isConnected) return;
+
+  container.querySelector('#settings-sections').innerHTML = buildSitesSection(sites);
 
   onLangChange(() => {
     if (!container.isConnected) return;
     container.innerHTML = buildShell();
     renderHeader(container.querySelector('#header-slot'), {});
-    container.querySelector('#settings-sections').innerHTML = buildSitesSection();
+    container.querySelector('#settings-sections').innerHTML = buildSitesSection(sites);
     container.querySelector('#settings-back-btn')?.addEventListener('click', () => history.back());
   });
 }

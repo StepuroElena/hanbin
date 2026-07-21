@@ -8,6 +8,7 @@
  */
 
 import { API_BASE, authGet, authPost, authPatch, authDelete } from './client.js';
+import { DEFAULT_STREAMING_SITES } from '../data/streamingSites.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -1105,4 +1106,71 @@ export async function scrapeDrama(title, siteUrl) {
         : 'Ошибка парсинга. Попробуй позже.',
     };
   }
+}
+
+// ───────────────────────────────────
+// STREAMING SITES
+// ───────────────────────────────────
+
+/**
+ * Список сайтов для просмотра — теперь персональный для каждого профиля (раньше был
+ * захардкожен STREAMING_SITES в AddDramaModal.js, одинаковый для всех пользователей).
+ * Бэк лениво засеивает дефолтный набор при первом запросе нового/старого профиля.
+ * GET /api/v1/streaming-sites
+ *
+ * Гость (нет токена) — бэка для него всё равно нет, отдаём дефолтный список локально.
+ */
+export async function getStreamingSites() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (!token) {
+    await delay(50);
+    return { data: DEFAULT_STREAMING_SITES, error: null };
+  }
+
+  const { data, error } = await authGet('/streaming-sites');
+  if (data) {
+    return {
+      data: data.map(s => ({ id: s.id, name: s.name, url: s.url, language: s.language })),
+      error: null,
+    };
+  }
+  console.warn('[API] getStreamingSites failed, falling back to defaults:', error);
+  return { data: DEFAULT_STREAMING_SITES, error };
+}
+
+/**
+ * Добавляет свой сайт в персональный список (за пределами дефолтных 10).
+ * Требует авторизации — гостю недоступно.
+ */
+export async function addStreamingSite({ name, url, language }) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы добавить свой сайт' };
+
+  const { data, error } = await authPost('/streaming-sites', { name, url, language });
+  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language }, error: null };
+  return { data: null, error };
+}
+
+/** Обновляет свой сайт в персональном списке. Требует авторизации. */
+export async function updateStreamingSite(id, { name, url, language }) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы изменить сайт' };
+
+  const body = {};
+  if (name !== undefined) body.name = name;
+  if (url !== undefined) body.url = url;
+  if (language !== undefined) body.language = language;
+
+  const { data, error } = await authPatch(`/streaming-sites/${id}`, body);
+  if (data) return { data: { id: data.id, name: data.name, url: data.url, language: data.language }, error: null };
+  return { data: null, error };
+}
+
+/** Удаляет свой сайт из персонального списка. Требует авторизации. */
+export async function deleteStreamingSite(id) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы удалить сайт' };
+
+  return authDelete(`/streaming-sites/${id}`);
 }

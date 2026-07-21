@@ -21,7 +21,7 @@
 
 import { closeModal, injectModalCSS } from './LoginModal.js';
 import { getDrama, updateDramaLinks } from '../api/mock.js';
-import { STREAMING_SITES } from './AddDramaModal.js';
+import { STREAMING_SITES, loadStreamingSites } from './AddDramaModal.js';
 import { statusLabel, renderStars, countryFlag, defaultPosterURI } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 
@@ -456,8 +456,12 @@ export async function openEditDramaLinksModal(dramaId) {
   });
 
   // Отдельный запрос к бэку за полной информацией — намеренно не переиспользует
-  // данные уже отрендеренной строки/карточки.
-  const { data, error } = await getDrama(dramaId);
+  // данные уже отрендеренной строки/карточки. Параллельно тянем свежий персональный
+  // список сайтов (обычно мгновенно из-за кэша).
+  const [{ data, error }] = await Promise.all([
+    getDrama(dramaId),
+    loadStreamingSites(),
+  ]);
 
   // Модалка могла быть закрыта, пока шёл запрос
   if (!document.getElementById('hb-modal-overlay')) return;

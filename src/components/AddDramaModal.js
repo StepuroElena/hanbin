@@ -10,10 +10,11 @@
  */
 
 import { closeModal, injectModalCSS } from './LoginModal.js';
-import { addDrama, getDramas, invalidateUserCache, scrapeDrama } from '../api/mock.js';
+import { addDrama, getDramas, invalidateUserCache, scrapeDrama, getStreamingSites } from '../api/mock.js';
 import { API_BASE } from '../api/client.js';
 import { debounce, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
+import { DEFAULT_STREAMING_SITES } from '../data/streamingSites.js';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -35,18 +36,31 @@ const LOGO_SVG = `
   </svg>
 `;
 
-export const STREAMING_SITES = [
-  { id: 1,  name: 'DoramaTV',      url: 'https://m.doramatv.one',  language: 'ru' },
-  { id: 2,  name: 'Dorama.land',   url: 'https://dorama.land',     language: 'ru' },
-  { id: 3,  name: 'Doramy.club',   url: 'https://doramy.club',     language: 'ru' },
-  { id: 4,  name: 'Doramy.info',   url: 'https://doramy.info',     language: 'ru' },
-  { id: 5,  name: 'Doramiru',      url: 'https://doram-ru.org',    language: 'ru' },
-  { id: 6,  name: 'Dorama24',      url: 'https://dorama24.su',     language: 'ru' },
-  { id: 7,  name: 'Rakuten Viki',  url: 'https://viki.com',        language: 'en' },
-  { id: 8,  name: 'Netflix',       url: 'https://netflix.com',     language: 'multi' },
-  { id: 9,  name: 'iQiyi',         url: 'https://iq.com',          language: 'multi' },
-  { id: 10, name: 'MyDramaList',   url: 'https://mydramalist.com', language: 'en' },
-];
+export let STREAMING_SITES = DEFAULT_STREAMING_SITES;
+
+let sitesLoaded = false;
+let sitesLoadingPromise = null;
+
+/**
+ * Загружает персональный список сайтов пользователя с бэка (или дефолтный для гостя)
+ * и обновляет STREAMING_SITES. Раньше этот массив был захардкожен и одинаков для всех пользователей —
+ * теперь он тянется с GET /api/v1/streaming-sites. Кэшируется на время жизни вкладки —
+ * повторные открытия модалки/страницы настроек переиспользуют уже загруженный список, а не бьют по бэку заново.
+ */
+export async function loadStreamingSites({ forceRefresh = false } = {}) {
+  if (sitesLoaded && !forceRefresh) return STREAMING_SITES;
+  if (sitesLoadingPromise && !forceRefresh) return sitesLoadingPromise;
+
+  sitesLoadingPromise = (async () => {
+    const { data } = await getStreamingSites();
+    STREAMING_SITES = (data && data.length) ? data : DEFAULT_STREAMING_SITES;
+    sitesLoaded = true;
+    sitesLoadingPromise = null;
+    return STREAMING_SITES;
+  })();
+
+  return sitesLoadingPromise;
+}
 
 const GENRE_KEYS = [
   { key: 'modal.add.genres.romance',     value: 'Romance' },
@@ -1247,11 +1261,22 @@ function statusLabel(status) {
 // OPEN
 // ─────────────────────────────────────────────
 
-export function openAddDramaModal() {
-  if (document.getElementById('hb-modal-overlay')) return;
+let _addModalOpening = false;
+
+export async function openAddDramaModal() {
+  if (document.getElementById('hb-modal-overlay') || _addModalOpening) return;
+  _addModalOpening = true;
 
   injectAddDramaCSS();
   injectModalCSS();
+
+  // Тянем свежий персональный список сайтов ДО первого рендера дропдауна — обычно мгновенно,
+  // т.к. кэшируется после первого запроса за время жизни вкладки.
+  await loadStreamingSites();
+  _addModalOpening = false;
+
+  // Пока шёл запрос — модалка могла уже открыться другим кликом/вызовом.
+  if (document.getElementById('hb-modal-overlay')) return;
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = `
