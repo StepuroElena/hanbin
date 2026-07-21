@@ -15,6 +15,7 @@ import { API_BASE } from '../api/client.js';
 import { debounce, VOICEOVER_OPTIONS } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { DEFAULT_STREAMING_SITES } from '../data/streamingSites.js';
+import { navigate } from '../router.js';
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -331,6 +332,12 @@ const ADD_DRAMA_CSS = `
 
   .hb-form-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .hb-form-col .hb-field { margin-bottom: 0; }
+
+  .hb-site-edit-hint {
+    font-size: 11px; color: rgba(245,230,211,0.3); margin-top: 8px; line-height: 1.4;
+  }
+  .hb-site-edit-hint a { color: rgba(201,123,138,0.85); text-decoration: none; border-bottom: 1px dashed rgba(201,123,138,0.4); }
+  .hb-site-edit-hint a:hover { color: var(--color-rose, #c97b8a); border-bottom-color: currentColor; }
 `;
 
 // ─────────────────────────────────────────────
@@ -338,6 +345,20 @@ const ADD_DRAMA_CSS = `
 // ─────────────────────────────────────────────
 
 function buildSiteDropdown(savedSiteUrl, savedSiteName) {
+  const ruSites   = STREAMING_SITES.filter(s => s.language === 'ru' && s.enabled !== false);
+  const intlSites = STREAMING_SITES.filter(s => s.language !== 'ru' && s.enabled !== false);
+
+  const siteOptionHTML = (s, langLabel) => `
+    <div class="hb-site-option ${savedSiteUrl === s.url ? 'hb-site-option--active' : ''}"
+      role="option" data-url="${s.url}" data-name="${s.name}" data-lang="${s.language}">
+      <img class="hb-site-favicon" src="https://www.google.com/s2/favicons?domain=${s.url}&sz=32" alt="${s.name}">
+      <div class="hb-site-option-info">
+        <div class="hb-site-option-name">${s.name}</div>
+        <div class="hb-site-option-url">${s.url}</div>
+      </div>
+      <span class="hb-site-lang hb-site-lang--${s.language}">${langLabel}</span>
+    </div>`;
+
   return `
     <div class="hb-site-dropdown" id="hb-site-dropdown">
       <div class="hb-site-trigger" id="hb-site-trigger" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
@@ -355,30 +376,11 @@ function buildSiteDropdown(savedSiteUrl, savedSiteName) {
         </svg>
       </div>
       <div class="hb-site-list" id="hb-site-list" role="listbox" style="display:none">
-        <div class="hb-site-divider">${t('modal.add.sites.ru_label')}</div>
-        ${STREAMING_SITES.filter(s => s.language === 'ru' && s.enabled !== false).map(s => `
-          <div class="hb-site-option ${savedSiteUrl === s.url ? 'hb-site-option--active' : ''}"
-            role="option" data-url="${s.url}" data-name="${s.name}" data-lang="${s.language}">
-            <img class="hb-site-favicon" src="https://www.google.com/s2/favicons?domain=${s.url}&sz=32" alt="${s.name}">
-            <div class="hb-site-option-info">
-              <div class="hb-site-option-name">${s.name}</div>
-              <div class="hb-site-option-url">${s.url}</div>
-            </div>
-            <span class="hb-site-lang hb-site-lang--ru">RU</span>
-          </div>`).join('')}
-        <div class="hb-site-divider">${t('modal.add.sites.intl_label')}</div>
-        ${STREAMING_SITES.filter(s => s.language !== 'ru' && s.enabled !== false).map(s => `
-          <div class="hb-site-option ${savedSiteUrl === s.url ? 'hb-site-option--active' : ''}"
-            role="option" data-url="${s.url}" data-name="${s.name}" data-lang="${s.language}">
-            <img class="hb-site-favicon" src="https://www.google.com/s2/favicons?domain=${s.url}&sz=32" alt="${s.name}">
-            <div class="hb-site-option-info">
-              <div class="hb-site-option-name">${s.name}</div>
-              <div class="hb-site-option-url">${s.url}</div>
-            </div>
-            <span class="hb-site-lang hb-site-lang--${s.language}">${s.language === 'en' ? 'EN' : 'Multi'}</span>
-          </div>`).join('')}
+        ${ruSites.length ? `<div class="hb-site-divider">${t('modal.add.sites.ru_label')}</div>${ruSites.map(s => siteOptionHTML(s, 'RU')).join('')}` : ''}
+        ${intlSites.length ? `<div class="hb-site-divider">${t('modal.add.sites.intl_label')}</div>${intlSites.map(s => siteOptionHTML(s, s.language === 'en' ? 'EN' : 'Multi')).join('')}` : ''}
       </div>
     </div>
+    <div class="hb-site-edit-hint">${t('modal.add.field.where_edit_hint')} <a href="#/settings" id="hb-goto-settings-link">${t('modal.add.field.where_edit_link')}</a></div>
   `;
 }
 
@@ -1081,6 +1083,14 @@ export function mountAddDramaContent(content, savedState = {}) {
 
   document.addEventListener('click', e => {
     if (!document.getElementById('hb-site-dropdown')?.contains(e.target)) closeSiteList();
+  });
+
+  // Ссылка «Настройки» под дропдауном — закрывает модалку и ведёт на страницу настроек,
+  // где можно включить/выключить конкретные сайты.
+  document.getElementById('hb-goto-settings-link')?.addEventListener('click', e => {
+    e.preventDefault();
+    closeModal();
+    navigate('#/settings');
   });
 
   // ── Кнопка «заполнить вручную» ───────────────────────────────────────────
