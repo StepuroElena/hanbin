@@ -28,6 +28,16 @@ export const translations = {
     'header.dropdown.logout':      'Выйти из аккаунта',
     'header.search_not_found':    'Ничего не найдено по «{q}»',
 
+    // Settings page
+    'settings.title':             'Настройки',
+    'settings.sub':               'Управляй тем, как устроен твой Hanbin',
+    'settings.back':              '← Назад',
+    'settings.sites.title':       'Сайты для просмотра',
+    'settings.sites.sub':         'Список сайтов, которые предлагаются в форме «Где смотреть» при добавлении дорамы',
+    'settings.sites.ru_label':    'Русскоязычные',
+    'settings.sites.intl_label':  'Международные',
+    'settings.sites.count':       '{n} сайтов',
+
     // Stats block
     'stats.dramas_watched':       'Просмотрено дорам',
     'stats.dramas_unit':          'завершённых сериалов',
@@ -254,6 +264,16 @@ export const translations = {
     'header.dropdown.settings':    'Settings',
     'header.dropdown.logout':      'Sign out',
     'header.search_not_found':    'Nothing found for "{q}"',
+
+    // Settings page
+    'settings.title':             'Settings',
+    'settings.sub':               'Manage how your Hanbin is set up',
+    'settings.back':              '← Back',
+    'settings.sites.title':       'Streaming sites',
+    'settings.sites.sub':         'Sites offered in the "Where to watch" field when adding a drama',
+    'settings.sites.ru_label':    'Russian-language',
+    'settings.sites.intl_label':  'International',
+    'settings.sites.count':       '{n} sites',
 
     // Stats block
     'stats.dramas_watched':       'Dramas watched',

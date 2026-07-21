@@ -9,22 +9,22 @@
 
 import { renderHome }         from './pages/Home.js';
 import { renderUnauthorized } from './pages/Unauthorized.js';
+import { renderSettings }     from './pages/Settings.js';
 import { getAuthState }       from './api/mock.js';
 // TODO: раскомментируй когда создашь эти страницы:
 // import { renderSearch }    from './pages/Search.js';
 // import { renderDrama }     from './pages/Drama.js';
 // import { renderProfile }   from './pages/Profile.js';
-// import { renderSettings }  from './pages/Settings.js';
 
 // ─── Маршруты ────────────────────────────────
 const ROUTES = {
   '#/':         renderHome,
   '#/home':     renderHome,
   '#/guest':    renderUnauthorized,  // Публичная страница для незалогиненных
+  '#/settings': renderSettings,
   // '#/search':   renderSearch,
   // '#/drama/:id':renderDrama,
   // '#/profile':  renderProfile,
-  // '#/settings': renderSettings,
 };
 
 // ─── Навигация ────────────────────────────────
