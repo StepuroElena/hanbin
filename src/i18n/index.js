@@ -39,7 +39,7 @@ export const translations = {
     'settings.sites.count':       '{n} сайтов',
     'settings.sites.enable_tooltip':  'Включить в список выбора',
     'settings.sites.disable_tooltip': 'Скрыть из списка выбора',
-    'settings.sites.add_btn':      '+ Добавить сайт',
+    'settings.sites.add_btn':      'Добавить сайт',
     'modal.add.sites.empty':      'Нет доступных сайтов — все выключены в Настройках',
 
     // Add Streaming Site modal
@@ -298,7 +298,7 @@ export const translations = {
     'settings.sites.count':       '{n} sites',
     'settings.sites.enable_tooltip':  'Show in the picker',
     'settings.sites.disable_tooltip': 'Hide from the picker',
-    'settings.sites.add_btn':      '+ Add site',
+    'settings.sites.add_btn':      'Add site',
     'modal.add.sites.empty':      'No sites available — all are turned off in Settings',
 
     // Add Streaming Site modal
