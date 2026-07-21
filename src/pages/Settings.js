@@ -37,7 +37,7 @@ const SETTINGS_CSS = `
   .settings-header__sub { font-size: 13px; color: var(--color-text-muted); }
 
   .settings-section { margin-bottom: 40px; }
-  .settings-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .settings-section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
   .settings-section__title {
     font-family: var(--font-display); font-size: 20px; font-weight: 400;
     color: var(--color-text); display: flex; align-items: center; gap: 10px;
@@ -52,7 +52,7 @@ const SETTINGS_CSS = `
   }
   .settings-section__sub { font-size: 13px; color: var(--color-text-muted); margin: 8px 0 20px; max-width: 560px; line-height: 1.5; }
 
-  .settings-sites-group { margin-bottom: 22px; }
+  .settings-sites-group { margin-bottom: 36px; }
   .settings-sites-group:last-child { margin-bottom: 0; }
   .settings-sites-group__head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
