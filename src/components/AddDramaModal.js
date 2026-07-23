@@ -441,7 +441,7 @@ function buildHTML(savedState = {}) {
       </div>
       <div class="hb-form-col">
         <div class="hb-field">
-          <div class="hb-field-label"><span>${t('modal.add.field.where')}</span></div>
+          <div class="hb-field-label"><span>${t('modal.add.field.where')} <span class="hb-required">*</span></span></div>
           ${buildSiteDropdown(savedState.selectedSiteUrl ?? null, savedState.selectedSiteName ?? null)}
           <div id="hb-scrape-loader" class="hb-scrape-loader" style="display:none">
             <div class="hb-scrape-spinner"></div>
