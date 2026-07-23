@@ -20,9 +20,8 @@ export const DEFAULT_STREAMING_SITES = [
   { id: 'default-3',  name: 'Doramy.club',  url: 'https://doramy.club',     language: 'ru',    enabled: true },
   { id: 'default-4',  name: 'Doramy.info',  url: 'https://doramy.info',     language: 'ru',    enabled: true },
   { id: 'default-5',  name: 'Doramiru',     url: 'https://doram-ru.org',    language: 'ru',    enabled: true },
-  { id: 'default-6',  name: 'Dorama24',     url: 'https://dorama24.su',     language: 'ru',    enabled: true },
-  { id: 'default-7',  name: 'Rakuten Viki', url: 'https://viki.com',        language: 'en',    enabled: true },
-  { id: 'default-8',  name: 'Netflix',      url: 'https://netflix.com',     language: 'multi', enabled: true },
-  { id: 'default-9',  name: 'iQiyi',        url: 'https://iq.com',          language: 'multi', enabled: true },
-  { id: 'default-10', name: 'MyDramaList',  url: 'https://mydramalist.com', language: 'en',    enabled: true },
+  { id: 'default-6',  name: 'Rakuten Viki', url: 'https://viki.com',        language: 'en',    enabled: true },
+  { id: 'default-7',  name: 'Netflix',      url: 'https://netflix.com',     language: 'multi', enabled: true },
+  { id: 'default-8',  name: 'iQiyi',        url: 'https://iq.com',          language: 'multi', enabled: true },
+  { id: 'default-9',  name: 'MyDramaList',  url: 'https://mydramalist.com', language: 'en',    enabled: true },
 ];
