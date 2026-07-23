@@ -792,7 +792,7 @@ async function fetchPoster(pageUrl, siteName, isStale = () => false) {
   }
 }
 
-function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSubTag, syncSubmit }) {
+function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSubTag, setRating, syncSubmit }) {
   // ── Название ──────────────────────────────────────────────────────────────
   // Если сай႐ вернул другое название — обновляем поле
   if (scraped.title) {
@@ -856,6 +856,18 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
   if (scraped.episode_duration_min) {
     const durationInput = document.getElementById('hb-add-duration');
     if (durationInput) durationInput.value = scraped.episode_duration_min;
+  }
+
+  // ── Рейтинг ────────────────────────────────────────────────────────
+  // Сайты отдают рейтинг по 10-балльной шкале, у нас — 5 звёздочек — делим пополам и округляем
+  // до целого (9.3 → 4.65 → 5). Клампим в 1–5 — звёздочек меньше 1 или больше 5 в UI нет.
+  if (typeof scraped.rating === 'number' && scraped.rating > 0) {
+    const stars = Math.min(5, Math.max(1, Math.round(scraped.rating / 2)));
+    document.querySelectorAll('#hb-add-stars .hb-star').forEach(s =>
+      s.classList.toggle('hb-star--active', parseInt(s.dataset.value, 10) <= stars));
+    const starsHintEl = document.getElementById('hb-add-stars-hint');
+    if (starsHintEl) starsHintEl.textContent = t(`modal.add.rating.${stars}`);
+    setRating(stars);
   }
 
   syncSubmit();
@@ -1042,6 +1054,7 @@ export function mountAddDramaContent(content, savedState = {}) {
           setGenres:     v => { selectedGenres  = v; },
           setReleaseTag: v => { releaseTag = v; },
           setSubTag:     v => { subTag = v; },
+          setRating:     v => { selectedRating = v; },
           syncSubmit,
         });
         showBannerFound(scraped, originalTitle);
