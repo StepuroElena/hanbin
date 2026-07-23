@@ -519,6 +519,19 @@ function buildHTML(savedState = {}) {
         </select>
       </div>
 
+      <div class="hb-add-row" style="margin-top:16px">
+        <div class="hb-field" style="margin-bottom:0">
+          <div class="hb-field-label"><span>${t('modal.add.field.episodes')}</span></div>
+          <input class="hb-field-input" id="hb-add-episodes" type="number" min="1" max="1000" inputmode="numeric"
+            placeholder="${t('modal.add.field.episodes_ph')}" value="${savedState.episodesTotal ?? ''}">
+        </div>
+        <div class="hb-field" style="margin-bottom:0">
+          <div class="hb-field-label"><span>${t('modal.add.field.duration')}</span></div>
+          <input class="hb-field-input" id="hb-add-duration" type="number" min="1" max="500" inputmode="numeric"
+            placeholder="${t('modal.add.field.duration_ph')}" value="${savedState.episodeDurationMin ?? ''}">
+        </div>
+      </div>
+
       <div class="hb-section-label">${t('modal.add.section.tags')}</div>
 
       <div class="hb-add-row" style="margin-bottom:14px">
@@ -831,6 +844,20 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
       if (match) voiceoverSelect.value = match;
     }
   }
+
+  // ── Серии и длительность ─────────────────────────────────────────────────
+  // Бэк отдаёт seasons как массив сезонов — берём число серий из первого (большинство дорам — один сезон).
+  // Если сайт ничего не вернул — поле остаётся пустым, пользователь вводит вручную.
+  const episodeCount = scraped.seasons?.[0]?.episode_count;
+  if (episodeCount) {
+    const episodesInput = document.getElementById('hb-add-episodes');
+    if (episodesInput) episodesInput.value = episodeCount;
+  }
+  if (scraped.episode_duration_min) {
+    const durationInput = document.getElementById('hb-add-duration');
+    if (durationInput) durationInput.value = scraped.episode_duration_min;
+  }
+
   syncSubmit();
 }
 
@@ -896,6 +923,10 @@ export function mountAddDramaContent(content, savedState = {}) {
     lastScraped = null;
     const voiceoverInput = document.getElementById('hb-add-voiceover');
     if (voiceoverInput) voiceoverInput.value = '';
+    const episodesInput = document.getElementById('hb-add-episodes');
+    if (episodesInput) episodesInput.value = '';
+    const durationInput = document.getElementById('hb-add-duration');
+    if (durationInput) durationInput.value = '';
     persistState();
   }
 
@@ -934,6 +965,11 @@ export function mountAddDramaContent(content, savedState = {}) {
     syncSubmit();
     debouncedTitleRescrape();
   });
+
+  // Серии/длительность — не влияют на syncSubmit (многие сайты их не отдают), но персистим ввод,
+  // чтобы он не терялся при смене языка.
+  document.getElementById('hb-add-episodes')?.addEventListener('input', () => requestAnimationFrame(persistState));
+  document.getElementById('hb-add-duration')?.addEventListener('input', () => requestAnimationFrame(persistState));
 
   // ── Дропдаун сайтов ──────────────────────────────────────────────────────
   const trigger    = document.getElementById('hb-site-trigger');
@@ -1208,6 +1244,9 @@ export function mountAddDramaContent(content, savedState = {}) {
         } catch (e) { console.warn('[AddDramaModal] getDramas check failed:', e); }
       }
 
+      const episodesTotal = parseInt(document.getElementById('hb-add-episodes')?.value ?? '', 10) || 0;
+      const episodeDurationMin = parseInt(document.getElementById('hb-add-duration')?.value ?? '', 10) || null;
+
       const dramaData = {
         title, year,
         country: selectedCountry, genres: selectedGenres,
@@ -1215,7 +1254,8 @@ export function mountAddDramaContent(content, savedState = {}) {
         watchUrl: selectedSiteUrl || null,
         sourceUrl: lastScraped?.source_url || null,
         tags: [releaseTag, subTag],
-        episodesWatched: 0, episodesTotal: 0,
+        episodesWatched: 0, episodesTotal,
+        episodeDurationMin,
         ongoing: releaseTag === 'ongoing',
         hasSubs: subTag === 'translated',
         voiceover: document.getElementById('hb-add-voiceover')?.value.trim() || null,
@@ -1261,6 +1301,8 @@ export function mountAddDramaContent(content, savedState = {}) {
     el.dataset.selectedSiteName = selectedSiteName ?? '';
     el.dataset.showDetails      = JSON.stringify(showDetails);
     el.dataset.voiceover        = document.getElementById('hb-add-voiceover')?.value ?? '';
+    el.dataset.episodesTotal       = document.getElementById('hb-add-episodes')?.value ?? '';
+    el.dataset.episodeDurationMin  = document.getElementById('hb-add-duration')?.value ?? '';
   }
 
   persistState();
@@ -1331,6 +1373,8 @@ export async function openAddDramaModal() {
       selectedSiteName: _getState('selectedSiteName'),
       showDetails:      _getState('showDetails'),
       voiceover:        _getState('voiceover'),
+      episodesTotal:       _getState('episodesTotal'),
+      episodeDurationMin:  _getState('episodeDurationMin'),
     };
     mountAddDramaContent(content, state);
   });

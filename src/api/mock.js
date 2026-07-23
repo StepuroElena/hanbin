@@ -512,6 +512,10 @@ export async function addDrama(drama) {
     voiceover:       drama.voiceover ?? '',
     poster_url:      drama.posterUrl ?? '',
     ...(drama.rating != null ? { rating: drama.rating * 2 } : {}),
+    // Серии/длительность — вводятся в модалке добавления вручную или подтягиваются со скрейпера —
+    // оба опциональны, отправляются, только если заполнены (0/null значит «пользователь не указал»).
+    ...(drama.episodesTotal > 0 ? { seasons: [{ season_number: 1, episode_count: drama.episodesTotal }] } : {}),
+    ...(drama.episodeDurationMin != null ? { episode_duration_min: drama.episodeDurationMin } : {}),
   };
 
   console.log('[API] addDrama payload:', payload);
