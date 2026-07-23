@@ -838,9 +838,18 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
   if (scraped.voiceover) {
     const voiceoverSelect = document.getElementById('hb-add-voiceover');
     if (voiceoverSelect) {
-      // Селект — фиксированный список, произвольный текст со скрейпа в него не подставить —
-      // выбираем совпадение по имени, если есть; иначе оставляем текущий выбор как есть.
-      const match = VOICEOVER_OPTIONS.find(v => v.toLowerCase() === scraped.voiceover.trim().toLowerCase());
+      // Селект — фиксированный список. Со скрейпа может прийти сразу несколько студий через
+      // запятую (напр. "DubLikTV, Light Breeze, Русские субтитры"), а названия могут немного
+      // отличаться от нашего списка (напр. "DubLikTV" vs "DubLik.TV") — поэтому сравниваем не точно,
+      // а по нормализованной форме (только буквы/цифры, без точек/пробелов/регистра), и пробуем
+      // каждую перечисленную студию по отдельности, а не только строку целиком.
+      const normalize = s => s.toLowerCase().replace(/[^a-z0-9а-яё]/gi, '');
+      const candidates = scraped.voiceover.split(',').map(s => s.trim()).filter(Boolean);
+      let match = null;
+      for (const candidate of candidates) {
+        const found = VOICEOVER_OPTIONS.find(v => normalize(v) === normalize(candidate));
+        if (found) { match = found; break; }
+      }
       if (match) voiceoverSelect.value = match;
     }
   }
