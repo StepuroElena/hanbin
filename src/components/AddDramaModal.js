@@ -503,7 +503,7 @@ function buildHTML(savedState = {}) {
       </div>
 
       <div class="hb-field" style="margin-top:16px">
-        <div class="hb-field-label"><span>${t('modal.add.field.genre')}</span></div>
+        <div class="hb-field-label"><span>${t('modal.add.field.genre')} <span class="hb-required">*</span></span></div>
         <div class="hb-chips" id="hb-add-genre-chips">
           ${GENRE_KEYS.map(g => `
             <div class="hb-chip ${selectedGenres.includes(g.value) ? 'hb-chip--active' : ''}" data-value="${g.value}">${t(g.key)}</div>
