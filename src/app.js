@@ -58,7 +58,7 @@ const componentCSS = `
 .nav-link {
   padding: 7px 14px;
   border-radius: 30px;
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
   text-decoration: none;

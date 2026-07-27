@@ -10,6 +10,7 @@
 import { renderHome }         from './pages/Home.js';
 import { renderUnauthorized } from './pages/Unauthorized.js';
 import { renderSettings }     from './pages/Settings.js';
+import { renderMovies }       from './pages/Movies.js';
 import { getAuthState }       from './api/mock.js';
 // TODO: раскомментируй когда создашь эти страницы:
 // import { renderSearch }    from './pages/Search.js';
@@ -22,6 +23,7 @@ const ROUTES = {
   '#/home':     renderHome,
   '#/guest':    renderUnauthorized,  // Публичная страница для незалогиненных
   '#/settings': renderSettings,
+  '#/movies':   renderMovies,
   // '#/search':   renderSearch,
   // '#/drama/:id':renderDrama,
   // '#/profile':  renderProfile,

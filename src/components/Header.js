@@ -2,7 +2,7 @@
  * HANBIN — Header Component
  */
 
-import { navigate } from '../router.js';
+import { navigate, getCurrentRoute } from '../router.js';
 import { searchDramas, setViewMode, getAuthState } from '../api/mock.js';
 import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
@@ -31,6 +31,10 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
   function buildHTML() {
     const mode = currentMode;
+    // Табы «Дорамы/Фильмы» — подсвечиваем активный пункт по текущему роуту.
+    // Шапка перерисовывается целиком на каждой странице (router.js), поэтому чтение хэша здесь всегда актуально.
+    const currentHash = getCurrentRoute();
+    const isMoviesRoute = currentHash === '#/movies';
     const avatarHTML = auth.isLoggedIn
       ? `<div class="avatar-wrap" id="avatar-wrap">
           <div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>
@@ -68,6 +72,11 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
             <div class="logo-tagline">${t('header.tagline')}</div>
           </a>
         </div>
+
+        <nav class="header__nav">
+          <a href="#/" class="nav-link ${isMoviesRoute ? '' : 'nav-link--active'}">${t('header.nav.dramas')}</a>
+          <a href="#/movies" class="nav-link ${isMoviesRoute ? 'nav-link--active' : ''}">${t('header.nav.movies')}</a>
+        </nav>
 
         <div class="header__right">
           <div class="search-bar" id="search-bar">
