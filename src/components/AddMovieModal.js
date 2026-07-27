@@ -543,6 +543,14 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
   syncSubmit();
   persistState();
   setTimeout(() => titleInput.focus(), 80);
+
+  // Если модалка скроллится (контент теперь выше max-height и скроллится внутри) — закрываем открытые
+  // панели страны/категории, чтобы они не «отвязывались» от триггера — панели позиционированы
+  // через position:fixed относительно viewport и не следуют за скроллом своего контейнера.
+  content.addEventListener('scroll', () => {
+    closeCountryPanel();
+    closeCategoryPanel();
+  });
 }
 
 let _addMovieModalOpening = false;

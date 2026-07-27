@@ -20,6 +20,7 @@ const MODAL_CSS = `
     background: rgba(18,6,18,0.78);
     backdrop-filter: blur(14px);
     display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; box-sizing: border-box;
     animation: hb-fadeIn 0.25s ease;
   }
   #hb-modal-overlay.hb-closing {
@@ -29,17 +30,23 @@ const MODAL_CSS = `
 
   #hb-modal-box {
     width: 420px;
+    max-height: 100%;
     border-radius: 24px;
     background: linear-gradient(145deg, rgba(74,25,66,0.96), rgba(45,15,42,0.99));
     border: 1px solid rgba(201,123,138,0.28);
     box-shadow: 0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,123,138,0.07);
     position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
     animation: hb-slideUp 0.32s cubic-bezier(0.34,1.56,0.64,1);
   }
 
   #hb-modal-content {
     padding: 44px 40px 40px; position: relative;
+    overflow-y: auto; min-height: 0;
+    scrollbar-width: thin; scrollbar-color: rgba(201,123,138,0.35) transparent;
   }
+  #hb-modal-content::-webkit-scrollbar { width: 6px; }
+  #hb-modal-content::-webkit-scrollbar-thumb { background: rgba(201,123,138,0.3); border-radius: 4px; }
   #hb-modal-content.hb-exit-left  { animation: hb-slideLeft  0.22s ease forwards; pointer-events:none; }
   #hb-modal-content.hb-exit-right { animation: hb-slideRight 0.22s ease forwards; pointer-events:none; }
   #hb-modal-content.hb-enter-left  { animation: hb-enterLeft  0.28s cubic-bezier(0.34,1.26,0.64,1) both; }
