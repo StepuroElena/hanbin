@@ -66,6 +66,10 @@ export const translations = {
     'modal.addmovie.field.country_ph':   'Необязательно',
     'modal.addmovie.field.country_search_ph': 'Поиск по стране…',
     'modal.addmovie.field.country_empty':     'Ничего не найдено',
+    'modal.addmovie.field.category':      'Категория',
+    'modal.addmovie.field.category_ph':   'Необязательно',
+    'modal.addmovie.field.category_search_ph': 'Поиск по категориям…',
+    'modal.addmovie.field.category_empty':     'Ничего не найдено',
     'modal.addmovie.btn':          'Добавить в список',
     'modal.addmovie.btn_loading':  'Добавляем…',
     'modal.addmovie.btn_success':  'Добавлено ✓',
@@ -83,6 +87,23 @@ export const translations = {
     'settings.sites.disable_tooltip': 'Скрыть из списка выбора',
     'settings.sites.add_btn':      'Добавить сайт',
     'modal.add.sites.empty':      'Нет доступных сайтов — все выключены в Настройках',
+
+    // Movie categories (Сеттингс)
+    'settings.categories.title':          'Категории фильмов',
+    'settings.categories.sub':            'Короткие теги, которые можно выбрать при добавлении фильма — свой набор для каждого профиля',
+    'settings.categories.enable_tooltip':  'Включить в список выбора',
+    'settings.categories.disable_tooltip': 'Скрыть из списка выбора',
+    'settings.categories.add_btn':         'Добавить категорию',
+    'settings.categories.delete_tooltip':  'Удалить категорию',
+
+    // Add Movie Category modal
+    'modal.addcategory.title':        'Новая категория',
+    'modal.addcategory.sub':          'Свой тег в список выбора',
+    'modal.addcategory.field.name':    'Название',
+    'modal.addcategory.field.name_ph': 'Например: Уютный вечер',
+    'modal.addcategory.btn':          'Добавить',
+    'modal.addcategory.btn_loading':  'Добавляем…',
+    'modal.addcategory.err_name':     'Введи название категории',
 
     // Add Streaming Site modal
     'modal.addsite.title':        'Добавить сайт',
@@ -277,6 +298,10 @@ export const translations = {
     'modal.add.genres.mystery':         'Мистерия',
     'modal.add.genres.horror':          'Ужасы',
     'modal.add.genres.documentary':     'Документальный',
+    'modal.add.genres.scifi':           'Фантастика',
+    'modal.add.genres.adventure':       'Приключения',
+    'modal.add.genres.bodyhorror':      'Боди-хоррор',
+    'modal.add.genres.detective':       'Детектив',
     'modal.add.country.kr':             '🇰🇷 Корея',
     'modal.add.country.cn':             '🇨🇳 Китай',
     'modal.add.country.jp':             '🇯🇵 Япония',
@@ -371,6 +396,10 @@ export const translations = {
     'modal.addmovie.field.country_ph':   'Optional',
     'modal.addmovie.field.country_search_ph': 'Search country…',
     'modal.addmovie.field.country_empty':     'Nothing found',
+    'modal.addmovie.field.category':      'Category',
+    'modal.addmovie.field.category_ph':   'Optional',
+    'modal.addmovie.field.category_search_ph': 'Search categories…',
+    'modal.addmovie.field.category_empty':     'Nothing found',
     'modal.addmovie.btn':          'Add to list',
     'modal.addmovie.btn_loading':  'Adding…',
     'modal.addmovie.btn_success':  'Added ✓',
@@ -388,6 +417,23 @@ export const translations = {
     'settings.sites.disable_tooltip': 'Hide from the picker',
     'settings.sites.add_btn':      'Add site',
     'modal.add.sites.empty':      'No sites available — all are turned off in Settings',
+
+    // Movie categories (Settings)
+    'settings.categories.title':          'Movie categories',
+    'settings.categories.sub':            'Short tags you can pick when adding a movie — your own set for each profile',
+    'settings.categories.enable_tooltip':  'Show in the picker',
+    'settings.categories.disable_tooltip': 'Hide from the picker',
+    'settings.categories.add_btn':         'Add category',
+    'settings.categories.delete_tooltip':  'Delete category',
+
+    // Add Movie Category modal
+    'modal.addcategory.title':        'New category',
+    'modal.addcategory.sub':          'Add your own tag to the picker',
+    'modal.addcategory.field.name':    'Name',
+    'modal.addcategory.field.name_ph': 'e.g. Cozy night in',
+    'modal.addcategory.btn':          'Add',
+    'modal.addcategory.btn_loading':  'Adding…',
+    'modal.addcategory.err_name':     'Enter the category name',
 
     // Add Streaming Site modal
     'modal.addsite.title':        'Add a site',
@@ -582,6 +628,10 @@ export const translations = {
     'modal.add.genres.mystery':         'Mystery',
     'modal.add.genres.horror':          'Horror',
     'modal.add.genres.documentary':     'Documentary',
+    'modal.add.genres.scifi':           'Sci-Fi',
+    'modal.add.genres.adventure':       'Adventure',
+    'modal.add.genres.bodyhorror':      'Body Horror',
+    'modal.add.genres.detective':       'Detective',
     'modal.add.country.kr':             '🇰🇷 Korea',
     'modal.add.country.cn':             '🇨🇳 China',
     'modal.add.country.jp':             '🇯🇵 Japan',

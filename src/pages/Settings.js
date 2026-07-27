@@ -14,7 +14,7 @@
 
 import { renderHeader } from '../components/Header.js';
 import { loadStreamingSites } from '../components/AddDramaModal.js';
-import { updateStreamingSite } from '../api/mock.js';
+import { updateStreamingSite, getMovieCategories, updateMovieCategory, deleteMovieCategory } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 const SETTINGS_CSS = `
@@ -141,6 +141,28 @@ const SETTINGS_CSS = `
     cursor: pointer; transition: var(--transition-fast);
   }
   .settings-add-site-tile:hover { background: rgba(201,123,138,0.12); border-color: rgba(201,123,138,0.6); color: var(--color-rose); }
+
+  /* ── Категории фильмов ── */
+  .settings-categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .settings-category-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 10px 12px 16px; border-radius: 14px;
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    transition: var(--transition-fast), opacity 0.2s ease;
+  }
+  .settings-category-card:hover { border-color: rgba(201,123,138,0.35); }
+  .settings-category-card--disabled { opacity: 0.5; }
+  .settings-category-name {
+    flex: 1; min-width: 0; font-family: var(--font-display); font-size: 15px; color: var(--color-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .settings-category-delete {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: rgba(245,230,211,0.35);
+    cursor: pointer; font-size: 14px; line-height: 1; transition: var(--transition-fast);
+  }
+  .settings-category-delete:hover { background: rgba(255,107,138,0.18); color: #ff9db0; }
 
   @media (max-width: 640px) {
     .settings-sites-grid { grid-template-columns: 1fr; }
@@ -285,6 +307,123 @@ function attachAddSiteHandlers(container, sites, rerender) {
   });
 }
 
+// ────────────────────────
+// Категории фильмов (тот же паттерн, что и выше с сайтами, но без языковых групп)
+// ────────────────────────
+
+function categoryCard(category) {
+  const enabled = category.enabled !== false;
+  return `
+    <div class="settings-category-card ${enabled ? '' : 'settings-category-card--disabled'}" data-category-id="${category.id}">
+      <span class="settings-category-name">${category.name}</span>
+      <button type="button" class="settings-category-delete" data-category-id="${category.id}" data-tooltip="${t('settings.categories.delete_tooltip')}" data-tooltip-pos="top">×</button>
+      <label class="hb-toggle" data-tooltip="${enabled ? t('settings.categories.disable_tooltip') : t('settings.categories.enable_tooltip')}">
+        <input type="checkbox" class="hb-toggle-input hb-category-toggle-input" data-category-id="${category.id}" ${enabled ? 'checked' : ''}>
+        <span class="hb-toggle-track"><span class="hb-toggle-thumb"></span></span>
+      </label>
+    </div>
+  `;
+}
+
+function addCategoryTileHTML() {
+  return `
+    <div class="settings-add-site-tile" id="settings-add-category-tile">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      ${t('settings.categories.add_btn')}
+    </div>
+  `;
+}
+
+function buildCategoriesSection(categories, isGuest) {
+  return `
+    <section class="settings-section">
+      <div class="settings-section__head">
+        <div class="settings-section__title">${t('settings.categories.title')}</div>
+      </div>
+      <div class="settings-section__sub">${t('settings.categories.sub')}</div>
+      <div class="settings-categories-grid">
+        ${categories.map(categoryCard).join('')}
+        ${isGuest ? '' : addCategoryTileHTML()}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Навешивает обработчики на тоглы вкл/выкл категорий — тот же оптимистичный паттерн, что и attachToggleHandlers.
+ */
+function attachCategoryToggleHandlers(container, categories) {
+  const isGuest = !localStorage.getItem('hanbin_token');
+
+  container.querySelectorAll('.hb-category-toggle-input').forEach(input => {
+    if (isGuest) {
+      input.disabled = true;
+      return;
+    }
+
+    input.addEventListener('change', async () => {
+      const categoryId = input.dataset.categoryId;
+      const nextEnabled = input.checked;
+      const card = input.closest('.settings-category-card');
+
+      input.disabled = true;
+      card?.classList.toggle('settings-category-card--disabled', !nextEnabled);
+
+      const { error } = await updateMovieCategory(categoryId, { enabled: nextEnabled });
+
+      input.disabled = false;
+
+      if (error) {
+        input.checked = !nextEnabled;
+        card?.classList.toggle('settings-category-card--disabled', !!nextEnabled);
+        console.warn('[Settings] toggle movie category failed:', error);
+        return;
+      }
+
+      const category = categories.find(c => String(c.id) === String(categoryId));
+      if (category) category.enabled = nextEnabled;
+    });
+  });
+}
+
+/** Навешивает удаление категории — без подтверждения, так как это просто личный тег, а не данные о фильмах. */
+function attachCategoryDeleteHandlers(container, categories, rerender) {
+  container.querySelectorAll('.settings-category-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const categoryId = btn.dataset.categoryId;
+      const card = btn.closest('.settings-category-card');
+      if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
+
+      const { error } = await deleteMovieCategory(categoryId);
+      if (error) {
+        console.warn('[Settings] delete movie category failed:', error);
+        if (card) { card.style.opacity = ''; card.style.pointerEvents = ''; }
+        return;
+      }
+
+      const idx = categories.findIndex(c => String(c.id) === String(categoryId));
+      if (idx !== -1) categories.splice(idx, 1);
+      rerender();
+    });
+  });
+}
+
+/** Навешивает кнопку «+ Добавить категорию» — открывает AddMovieCategoryModal, добавляет в локальный список и перерисовывает секцию. */
+function attachAddCategoryHandler(container, categories, rerender) {
+  container.querySelector('#settings-add-category-tile')?.addEventListener('click', () => {
+    import('../components/AddMovieCategoryModal.js').then(({ openAddMovieCategoryModal }) => {
+      openAddMovieCategoryModal({
+        onAdded: (category) => {
+          categories.push(category);
+          rerender();
+        },
+      });
+    });
+  });
+}
+
 export async function renderSettings(container) {
   injectSettingsCSS();
 
@@ -318,6 +457,8 @@ export async function renderSettings(container) {
   // Тянем персональный список с бэка (или дефолтный для гостя) — обычно мгновенно из-за кэша,
   // но при первом открытии показываем индикатор загрузки выше, чтобы не показать пустоту.
   let sites = await loadStreamingSites();
+  const { data: categoriesData } = await getMovieCategories();
+  let categories = categoriesData ?? [];
 
   // Страница могла уйти, пока шёл запрос
   if (!container.isConnected) return;
@@ -325,9 +466,12 @@ export async function renderSettings(container) {
   function renderSection() {
     const slot = container.querySelector('#settings-sections');
     if (!slot) return;
-    slot.innerHTML = buildSitesSection(sites, isGuest);
+    slot.innerHTML = buildSitesSection(sites, isGuest) + buildCategoriesSection(categories, isGuest);
     attachToggleHandlers(slot, sites);
     attachAddSiteHandlers(slot, sites, renderSection);
+    attachCategoryToggleHandlers(slot, categories);
+    attachCategoryDeleteHandlers(slot, categories, renderSection);
+    attachAddCategoryHandler(slot, categories, renderSection);
   }
 
   renderSection();

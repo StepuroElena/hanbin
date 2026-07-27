@@ -55,7 +55,7 @@ const MOVIES_CSS = `
 
   .movies-table-title { font-family: var(--font-display); font-size: 17px; color: var(--color-text); }
   .movies-table-year { font-size: 13px; color: var(--color-text-muted); }
-  .movies-table-genre { font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(255,255,255,0.07); color: var(--color-text-muted); }
+  .movies-table-genre { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(255,255,255,0.07); color: var(--color-text-muted); margin: 2px 4px 2px 0; }
 
   .movies-archive-section { margin-top: 44px; opacity: 0.72; transition: opacity 0.25s ease; }
   .movies-archive-section:hover { opacity: 1; }
@@ -87,6 +87,14 @@ const STATUS_META = {
 };
 const STATUS_ORDER = ['watching', 'completed', 'planned', 'dropped'];
 
+// Жанр хранится одним строковым полем на бэке (VARCHAR) — несколько выбранных жанров приходят склеенными
+// через запятую (см. AddMovieModal.js) — разбиваем обратно и рендерим каждый отдельным бейджиком.
+function movieGenresHTML(genreStr) {
+  const genres = (genreStr ?? '').split(',').map(g => g.trim()).filter(Boolean);
+  if (!genres.length) return '<span class="table-no-tags">—</span>';
+  return genres.map(g => `<span class="movies-table-genre">${g}</span>`).join(' ');
+}
+
 function movieCountryHTML(code) {
   if (!code) return '<span class="table-no-tags">—</span>';
   const c = COUNTRIES.find(x => x.code === code);
@@ -116,7 +124,7 @@ function movieRowHTML(movie) {
   return `
     <tr class="drama-table__row" data-id="${movie.id}">
       <td><span class="movies-table-title">${movie.title}</span></td>
-      <td>${movie.genre ? `<span class="movies-table-genre">${movie.genre}</span>` : '<span class="table-no-tags">—</span>'}</td>
+      <td>${movieGenresHTML(movie.genre)}</td>
       <td>${movieCountryHTML(movie.country)}</td>
       <td><span class="movies-table-year">${movie.year ?? '—'}</span></td>
       <td>${statusBadgeHTML(movie.status, movie.id)}</td>
@@ -136,7 +144,7 @@ function archivedRowHTML(movie) {
   return `
     <tr class="drama-table__row drama-table__row--archived" data-id="${movie.id}">
       <td><span class="movies-table-title">${movie.title}</span></td>
-      <td>${movie.genre ? `<span class="movies-table-genre">${movie.genre}</span>` : '<span class="table-no-tags">—</span>'}</td>
+      <td>${movieGenresHTML(movie.genre)}</td>
       <td>${movieCountryHTML(movie.country)}</td>
       <td><span class="movies-table-year">${movie.year ?? '—'}</span></td>
       <td><span class="badge badge--${meta.badgeClass}">${t(meta.labelKey)}</span></td>

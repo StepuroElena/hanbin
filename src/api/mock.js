@@ -9,6 +9,7 @@
 
 import { API_BASE, authGet, authPost, authPatch, authDelete } from './client.js';
 import { DEFAULT_STREAMING_SITES } from '../data/streamingSites.js';
+import { DEFAULT_MOVIE_CATEGORIES } from '../data/movieCategories.js';
 
 const MOCK_DELAY = 300; // ms, имитация latency
 
@@ -763,6 +764,7 @@ function adaptMovieFromApi(m) {
     year:       m.release_year ?? null,
     genre:      m.genre ?? '',
     country:    m.country ?? '',
+    category:   m.category ?? '',
     status:     m.watch_status ?? 'planned',
     isArchived: Boolean(m.is_archived),
   };
@@ -828,9 +830,12 @@ export async function getArchivedMovies() {
 
 /**
  * Добавить фильм — POST /api/v1/movies. Гостю недоступно — нет аккаунта, некуда сохранять.
- * @param {{ title: string, genre: string, country?: string, year?: number|null }} movie
+ * Бэк хранит жанр одним строковым полем (VARCHAR(100)) — если в модалке выбрано несколько жанров,
+ * они уже приходят сюда склеенными через запятую (см. AddMovieModal.js).
+ * category — опциональное значение из персонального списка категорий (см. getMovieCategories).
+ * @param {{ title: string, genre: string, country?: string, category?: string, year?: number|null }} movie
  */
-export async function addMovie({ title, genre, country, year }) {
+export async function addMovie({ title, genre, country, category, year }) {
   const token = localStorage.getItem('hanbin_token');
   if (!token) return { data: null, error: 'Войди, чтобы добавить фильм' };
 
@@ -838,6 +843,7 @@ export async function addMovie({ title, genre, country, year }) {
     title,
     genre,
     ...(country ? { country } : {}),
+    ...(category ? { category } : {}),
     ...(year ? { release_year: year } : {}),
   });
   if (data) return { data: adaptMovieFromApi(data), error: null };
@@ -1362,4 +1368,69 @@ export async function deleteStreamingSite(id) {
   if (!token) return { data: null, error: 'Войди, чтобы удалить сайт' };
 
   return authDelete(`/streaming-sites/${id}`);
+}
+
+// ────────────────────────
+// MOVIE CATEGORIES
+// ────────────────────────
+
+/**
+ * Список коротких тегов/категорий фильма — персональный для каждого профиля (тот же паттерн,
+ * что и getStreamingSites). Используется дропдауном «Категория» в AddMovieModal.js и страницей Настроек.
+ * GET /api/v1/movie-categories
+ *
+ * Гость (нет токена) — бэка для него всё равно нет, отдаём дефолтный список локально.
+ */
+export async function getMovieCategories() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (!token) {
+    await delay(50);
+    return { data: DEFAULT_MOVIE_CATEGORIES, error: null };
+  }
+
+  const { data, error } = await authGet('/movie-categories');
+  if (data) {
+    return {
+      data: data.map(c => ({ id: c.id, name: c.name, enabled: c.enabled !== false })),
+      error: null,
+    };
+  }
+  console.warn('[API] getMovieCategories failed, falling back to defaults:', error);
+  return { data: DEFAULT_MOVIE_CATEGORIES, error };
+}
+
+/**
+ * Добавляет свою категорию в персональный список (за пределами дефолтных 8).
+ * Требует авторизации — гостю недоступно.
+ */
+export async function addMovieCategory({ name }) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы добавить свою категорию' };
+
+  const { data, error } = await authPost('/movie-categories', { name });
+  if (data) return { data: { id: data.id, name: data.name, enabled: data.enabled !== false }, error: null };
+  return { data: null, error };
+}
+
+/** Обновляет свою категорию в персональном списке — включая тогл вкл/выкл (enabled). Требует авторизации. */
+export async function updateMovieCategory(id, { name, enabled }) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы изменить категорию' };
+
+  const body = {};
+  if (name !== undefined) body.name = name;
+  if (enabled !== undefined) body.enabled = enabled;
+
+  const { data, error } = await authPatch(`/movie-categories/${id}`, body);
+  if (data) return { data: { id: data.id, name: data.name, enabled: data.enabled !== false }, error: null };
+  return { data: null, error };
+}
+
+/** Удаляет свою категорию из персонального списка. Требует авторизации. */
+export async function deleteMovieCategory(id) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы удалить категорию' };
+
+  return authDelete(`/movie-categories/${id}`);
 }
