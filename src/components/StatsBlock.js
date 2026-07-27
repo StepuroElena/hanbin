@@ -112,6 +112,33 @@ export async function renderStatsBlock(container) {
   onLangChange(async () => await render());
 }
 
+/**
+ * Лёгкое обновление только цифр в уже отрендеренном блоке статистики — используется после изменения статуса/сезонов/серий
+ * в таблице дорам (событие hanbin:stats-changed в Home.js) — в отличие от renderStatsBlock НЕ стирает
+ * разметку в скелетон, не трогает карточку цитаты и не дергает остальные элементы страницы —
+ * только сами числа плавно пересчитываются к новому значению (тот же эффект, что и у фильмов).
+ */
+export async function refreshStatsNumbers(container) {
+  if (!container) return;
+
+  const dramasEl  = container.querySelector('#stat-dramas');
+  const plannedEl = container.querySelector('#stat-planned');
+  const hoursEl   = container.querySelector('#stat-hours');
+
+  // Блок ещё ни разу не рендерился (например первый заход на страницу) — нечего
+  // обновлять точечно, делаем полный рендер как обычно.
+  if (!dramasEl || !plannedEl || !hoursEl) {
+    return renderStatsBlock(container);
+  }
+
+  const { data: stats } = await getStats();
+  if (!stats) return;
+
+  animateNumber(dramasEl, stats.dramasWatched);
+  animateNumber(plannedEl, stats.dramasPlanned);
+  animateNumber(hoursEl, stats.totalHours);
+}
+
 function animateNumber(el, target) {
   if (!el) return;
   let current = 0;

@@ -3,7 +3,7 @@
  */
 
 import { renderHeader }      from '../components/Header.js';
-import { renderStatsBlock }  from '../components/StatsBlock.js';
+import { renderStatsBlock, refreshStatsNumbers }  from '../components/StatsBlock.js';
 import { renderFilters }     from '../components/Filters.js';
 import { renderDramaCards, renderDramaTable, renderArchiveTable } from '../components/DramaCard.js';
 import { renderSidebar }     from '../components/Sidebar.js';
@@ -176,10 +176,11 @@ export async function renderHome(container) {
   window.addEventListener('hanbin:data-changed', onDataChanged);
 
   // Лёгкое событие от DramaCard.js: статус/сезоны/серии/длительность в таблице влияют на карточки
-  // «Просмотрено дорам» / «Запланировано» / «Часов дорам» — перерисовываем ТОЛЬКО блок
-  // статистики, а не всю таблицу/архив/сайдбар.
+  // «Просмотрено дорам» / «Запланировано» / «Часов дорам» — обновляем ТОЛЬКО цифры в
+  // блоке статистики (refreshStatsNumbers) — без скелетона и перерисовки карточки цитаты —
+  // не всю таблицу/архив/сайдбар, а только сами числа (тот же эффект, что и у фильмов).
   const onStatsChanged = () => {
-    renderStatsBlock(container.querySelector('#stats-slot'));
+    refreshStatsNumbers(container.querySelector('#stats-slot'));
   };
   window.addEventListener('hanbin:stats-changed', onStatsChanged);
 
