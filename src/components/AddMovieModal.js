@@ -131,6 +131,42 @@ const ADD_MOVIE_CSS = `
   /* Категория — дропдаун с поиском, та же верстка, что и у страны — переиспользуем те же классы через общий селектор */
   .hb-country-dropdown.hb-category-dropdown { position: relative; }
   .hb-category-empty-note { padding: 10px 14px; text-align: center; font-size: 12px; color: rgba(245,230,211,0.35); font-style: italic; }
+
+  /* Категория — мультивыбор, выбранные отображаются чипсами прямо в триггере */
+  .hb-category-multi { position: relative; }
+  .hb-category-multi-trigger {
+    width: 100%; min-height: 46px; padding: 8px 12px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(232,196,184,0.18);
+    border-radius: 12px; outline: none; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box; display: flex; align-items: center; flex-wrap: wrap;
+    gap: 6px; user-select: none;
+  }
+  .hb-category-multi-trigger:hover, .hb-category-multi-trigger--open {
+    border-color: rgba(201,123,138,0.55); box-shadow: 0 0 0 3px rgba(201,123,138,0.08);
+  }
+  .hb-category-multi-trigger--open .hb-country-chevron { transform: rotate(180deg); }
+  .hb-category-multi-trigger .hb-country-chevron { flex-shrink: 0; margin-left: auto; color: rgba(245,230,211,0.35); transition: transform 0.2s ease; }
+  .hb-category-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+  .hb-category-placeholder { color: rgba(245,230,211,0.3); font-size: 14px; padding: 4px 2px; }
+  .hb-category-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 6px 4px 11px; border-radius: 20px;
+    background: rgba(201,123,138,0.2); border: 1px solid rgba(201,123,138,0.4);
+    color: #f5e6d3; font-size: 12px; font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  }
+  .hb-category-chip-remove {
+    width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.1); border: none; color: rgba(245,230,211,0.6);
+    font-size: 12px; line-height: 1; cursor: pointer; padding: 0;
+  }
+  .hb-category-chip-remove:hover { background: rgba(255,107,138,0.25); color: #ff9db0; }
+  .hb-country-option.hb-category-option--selected {
+    background: rgba(122,171,142,0.14);
+  }
+  .hb-country-option.hb-category-option--selected::after {
+    content: '✓'; margin-left: auto; color: var(--color-jade, #7aab8e); font-size: 12px;
+  }
 `;
 
 function injectAddMovieCSS() {
@@ -185,16 +221,15 @@ function buildHTML(savedState = {}) {
 
     <div class="hb-field">
       <div class="hb-field-label"><span>${t('modal.addmovie.field.category')}</span></div>
-      <div class="hb-country-dropdown hb-category-dropdown" id="hb-category-dropdown">
-        <button type="button" class="hb-country-trigger" id="hb-category-trigger">
-          <span class="hb-country-trigger-label ${savedState.category ? '' : 'hb-country-trigger-label--placeholder'}" id="hb-category-trigger-label">
-            ${savedState.category ? savedState.category : t('modal.addmovie.field.category_ph')}
-          </span>
-          ${savedState.category ? `<button type="button" class="hb-country-clear" id="hb-category-clear">×</button>` : ''}
+      <div class="hb-category-multi" id="hb-category-dropdown">
+        <div class="hb-category-multi-trigger" id="hb-category-trigger" tabindex="0" role="button">
+          <div class="hb-category-chips" id="hb-category-chips-inline">
+            ${categoryChipsInlineHTML(savedState.categories ?? [])}
+          </div>
           <svg class="hb-country-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
-        </button>
+        </div>
       </div>
     </div>
 
@@ -218,6 +253,19 @@ function buildHTML(savedState = {}) {
   `;
 }
 
+/** Чипсы выбранных категорий внутри триггера дропдауна — каждая со своим × для быстрого удаления без открытия панели. */
+function categoryChipsInlineHTML(categories) {
+  if (!categories.length) {
+    return `<span class="hb-category-placeholder">${t('modal.addmovie.field.category_ph')}</span>`;
+  }
+  return categories.map(name => `
+    <span class="hb-category-chip" data-name="${name}">
+      ${name}
+      <button type="button" class="hb-category-chip-remove" data-name="${name}">×</button>
+    </span>
+  `).join('');
+}
+
 function countryOptionHTML(c, lang, isActive) {
   const label = lang === 'en' ? c.en : c.ru;
   return `
@@ -225,6 +273,33 @@ function countryOptionHTML(c, lang, isActive) {
       <span>${c.flag}</span><span>${label}</span>
     </div>
   `;
+}
+
+/**
+ * Позиционирует плавающую панель (страна/категория) относительно триггера — если снизу не хватает места до края
+ * экрана (особенно актуально для последнего поля перед кнопкой сабмита) — открываем вверх,
+ * а не обрезаем по низу экрана. Тот же принцип, что и в attachEpisodeCountDropdown (DramaCard.js).
+ */
+function positionFloatingPanel(panel, rect) {
+  const viewportMargin = 12;
+  const searchAreaHeight = 60; // примерная высота строки поиска с отступами
+  const listMaxHeight = 220; // совпадает с max-height в .hb-country-list
+
+  const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+  const spaceAbove = rect.top - viewportMargin;
+  const listEl = panel.querySelector('.hb-country-list');
+
+  if (spaceBelow >= (listMaxHeight + searchAreaHeight) || spaceBelow >= spaceAbove) {
+    // Открываем вниз, как обычно, но не даём списку вылезть за нижний край окна
+    panel.style.top = (rect.bottom + 6) + 'px';
+    panel.style.bottom = '';
+    if (listEl) listEl.style.maxHeight = Math.max(120, Math.min(listMaxHeight, spaceBelow - searchAreaHeight)) + 'px';
+  } else {
+    // Снизу слишком мало места (поле ближе к низу экрана/модалки) — открываем вверх от триггера
+    panel.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    panel.style.top = '';
+    if (listEl) listEl.style.maxHeight = Math.max(120, Math.min(listMaxHeight, spaceAbove - searchAreaHeight)) + 'px';
+  }
 }
 
 export function mountAddMovieContent(content, savedState = {}, { onAdded } = {}) {
@@ -237,18 +312,18 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
 
   let selectedGenres = Array.isArray(savedState.genres) ? [...savedState.genres] : [];
   let selectedCountry = savedState.country ?? '';
-  let selectedCategory = savedState.category ?? '';
+  let selectedCategories = Array.isArray(savedState.categories) ? [...savedState.categories] : [];
 
   // Категории — персональный список пользователя (редактируется в Настройках) — тянем сразу
   // при открытии модалки, панель ожидает этот промис перед рендером списка.
   const categoriesPromise = getMovieCategories();
 
   function persistState() {
-    content.dataset.title    = titleInput.value;
-    content.dataset.year     = yearSelect.value;
-    content.dataset.genres   = JSON.stringify(selectedGenres);
-    content.dataset.country  = selectedCountry;
-    content.dataset.category = selectedCategory;
+    content.dataset.title      = titleInput.value;
+    content.dataset.year       = yearSelect.value;
+    content.dataset.genres     = JSON.stringify(selectedGenres);
+    content.dataset.country    = selectedCountry;
+    content.dataset.categories = JSON.stringify(selectedCategories);
   }
 
   function syncSubmit() {
@@ -326,7 +401,6 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     const panel = document.createElement('div');
     panel.className = 'hb-country-panel';
     panel.style.left = rect.left + 'px';
-    panel.style.top = (rect.bottom + 6) + 'px';
     panel.style.width = rect.width + 'px';
     panel.innerHTML = `
       <div class="hb-country-search-wrap">
@@ -338,6 +412,7 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     document.body.appendChild(panel);
     countryPanelEl = panel;
     countryTrigger.classList.add('hb-country-trigger--open');
+    positionFloatingPanel(panel, rect);
 
     renderCountryList(panel, '');
 
@@ -384,20 +459,44 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     countryPanelEl ? closeCountryPanel() : openCountryPanel();
   });
 
-  // ── Категория — дропдаун с поиском, та же верстка, что и у страны, но список тянется асинхронно из categoriesPromise ──
+  // ── Категория — мультивыбор с поиском, выбранные отображаются чипсами прямо в триггере, список тянется асинхронно из categoriesPromise ──
   const categoryTrigger = document.getElementById('hb-category-trigger');
+  const categoryChipsInline = document.getElementById('hb-category-chips-inline');
   const categoryDropdown = document.getElementById('hb-category-dropdown');
   let categoryPanelEl = null;
 
   function closeCategoryPanel() {
     categoryPanelEl?.remove();
     categoryPanelEl = null;
-    categoryTrigger?.classList.remove('hb-country-trigger--open');
+    categoryTrigger?.classList.remove('hb-category-multi-trigger--open');
   }
 
-  function categoryOptionHTML(cat, isActive) {
+  function renderCategoryChipsInline() {
+    categoryChipsInline.innerHTML = categoryChipsInlineHTML(selectedCategories);
+    categoryChipsInline.querySelectorAll('.hb-category-chip-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedCategories = selectedCategories.filter(c => c !== btn.dataset.name);
+        renderCategoryChipsInline();
+        if (categoryPanelEl) renderCategoryList(categoryPanelEl, categoryPanelEl.querySelector('#hb-category-search')?.value ?? '');
+        persistState();
+      });
+    });
+  }
+
+  function toggleCategory(name) {
+    if (selectedCategories.includes(name)) {
+      selectedCategories = selectedCategories.filter(c => c !== name);
+    } else {
+      selectedCategories.push(name);
+    }
+    renderCategoryChipsInline();
+    persistState();
+  }
+
+  function categoryOptionHTML(cat, isSelected) {
     return `
-      <div class="hb-country-option ${isActive ? 'hb-country-option--active' : ''}" data-name="${cat.name}">
+      <div class="hb-country-option ${isSelected ? 'hb-category-option--selected' : ''}" data-name="${cat.name}">
         <span>${cat.name}</span>
       </div>
     `;
@@ -421,13 +520,12 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
       return;
     }
 
-    listEl.innerHTML = filtered.map(c => categoryOptionHTML(c, c.name === selectedCategory)).join('');
+    listEl.innerHTML = filtered.map(c => categoryOptionHTML(c, selectedCategories.includes(c.name))).join('');
+    // Клик по опции не закрывает панель — можно отметить сразу несколько категорий подряд.
     listEl.querySelectorAll('.hb-country-option').forEach(opt => {
       opt.addEventListener('click', () => {
-        selectedCategory = opt.dataset.name;
-        updateCategoryTrigger();
-        closeCategoryPanel();
-        persistState();
+        toggleCategory(opt.dataset.name);
+        opt.classList.toggle('hb-category-option--selected', selectedCategories.includes(opt.dataset.name));
       });
     });
   }
@@ -440,7 +538,6 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     const panel = document.createElement('div');
     panel.className = 'hb-country-panel';
     panel.style.left = rect.left + 'px';
-    panel.style.top = (rect.bottom + 6) + 'px';
     panel.style.width = rect.width + 'px';
     panel.innerHTML = `
       <div class="hb-country-search-wrap">
@@ -451,7 +548,8 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     panel.addEventListener('click', (e) => e.stopPropagation());
     document.body.appendChild(panel);
     categoryPanelEl = panel;
-    categoryTrigger.classList.add('hb-country-trigger--open');
+    categoryTrigger.classList.add('hb-category-multi-trigger--open');
+    positionFloatingPanel(panel, rect);
 
     renderCategoryList(panel, '');
 
@@ -464,37 +562,12 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     }, 0);
   }
 
-  function updateCategoryTrigger() {
-    const label = document.getElementById('hb-category-trigger-label');
-    if (!label) return;
-    if (selectedCategory) {
-      label.textContent = selectedCategory;
-      label.classList.remove('hb-country-trigger-label--placeholder');
-    } else {
-      label.textContent = t('modal.addmovie.field.category_ph');
-      label.classList.add('hb-country-trigger-label--placeholder');
-    }
-    document.getElementById('hb-category-clear')?.remove();
-    if (selectedCategory) {
-      const clearBtn = document.createElement('button');
-      clearBtn.type = 'button';
-      clearBtn.className = 'hb-country-clear';
-      clearBtn.id = 'hb-category-clear';
-      clearBtn.textContent = '×';
-      clearBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectedCategory = '';
-        updateCategoryTrigger();
-        persistState();
-      });
-      label.insertAdjacentElement('afterend', clearBtn);
-    }
-  }
-
   categoryTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     categoryPanelEl ? closeCategoryPanel() : openCategoryPanel();
   });
+
+  renderCategoryChipsInline();
 
   async function submit() {
     if (submitBtn.disabled) return;
@@ -503,7 +576,7 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
     // Бэк принимает жанр одним строковым полем (VARCHAR) — несколько выбранных жанров склеиваем через запятую.
     const genre = selectedGenres.join(', ');
     const country = selectedCountry;
-    const category = selectedCategory;
+    const category = selectedCategories.join(', ');
     const year  = yearSelect.value ? parseInt(yearSelect.value, 10) : null;
 
     let valid = true;
@@ -589,12 +662,14 @@ export function openAddMovieModal({ onAdded } = {}) {
     if (!overlay) { unsub(); return; }
     let restoredGenres = [];
     try { restoredGenres = JSON.parse(content.dataset.genres ?? '[]'); } catch { restoredGenres = []; }
+    let restoredCategories = [];
+    try { restoredCategories = JSON.parse(content.dataset.categories ?? '[]'); } catch { restoredCategories = []; }
     const state = {
-      title:   content.dataset.title ?? '',
-      year:    content.dataset.year ?? '',
-      genres:  restoredGenres,
-      country: content.dataset.country ?? '',
-      category: content.dataset.category ?? '',
+      title:      content.dataset.title ?? '',
+      year:       content.dataset.year ?? '',
+      genres:     restoredGenres,
+      country:    content.dataset.country ?? '',
+      categories: restoredCategories,
     };
     mountAddMovieContent(content, state, { onAdded });
   });

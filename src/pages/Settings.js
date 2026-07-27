@@ -164,6 +164,15 @@ const SETTINGS_CSS = `
   }
   .settings-category-delete:hover { background: rgba(255,107,138,0.18); color: #ff9db0; }
 
+  .settings-add-category-tile {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 16px; border-radius: 14px; min-height: 62px;
+    border: 1px dashed rgba(201,123,138,0.35); background: rgba(201,123,138,0.04);
+    color: rgba(201,123,138,0.75); font-size: 13px; font-family: var(--font-body);
+    cursor: pointer; transition: var(--transition-fast);
+  }
+  .settings-add-category-tile:hover { background: rgba(201,123,138,0.12); border-color: rgba(201,123,138,0.6); color: var(--color-rose); }
+
   @media (max-width: 640px) {
     .settings-sites-grid { grid-template-columns: 1fr; }
     .settings-header__title { font-size: 28px; }
@@ -327,7 +336,7 @@ function categoryCard(category) {
 
 function addCategoryTileHTML() {
   return `
-    <div class="settings-add-site-tile" id="settings-add-category-tile">
+    <div class="settings-add-category-tile" id="settings-add-category-tile">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
       </svg>
