@@ -56,6 +56,7 @@ const MOVIES_CSS = `
   .movies-table-title { font-family: var(--font-display); font-size: 17px; color: var(--color-text); }
   .movies-table-year { font-size: 13px; color: var(--color-text-muted); }
   .movies-table-genre { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(255,255,255,0.07); color: var(--color-text-muted); margin: 2px 4px 2px 0; }
+  .movies-table-category { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(122,171,142,0.14); border: 1px solid rgba(122,171,142,0.25); color: var(--color-jade); margin: 2px 4px 2px 0; }
 
   .movies-archive-section { margin-top: 44px; opacity: 0.72; transition: opacity 0.25s ease; }
   .movies-archive-section:hover { opacity: 1; }
@@ -95,6 +96,14 @@ function movieGenresHTML(genreStr) {
   return genres.map(g => `<span class="movies-table-genre">${g}</span>`).join(' ');
 }
 
+// Категория тоже хранится одним строковым полем на бэке — несколько выбранных категорий приходят склеенными
+// через запятую (см. AddMovieModal.js) — тот же паттерн, что и у жанров, но свой цвет бейджика для отличия.
+function movieCategoriesHTML(categoryStr) {
+  const categories = (categoryStr ?? '').split(',').map(c => c.trim()).filter(Boolean);
+  if (!categories.length) return '<span class="table-no-tags">—</span>';
+  return categories.map(c => `<span class="movies-table-category">${c}</span>`).join(' ');
+}
+
 function movieCountryHTML(code) {
   if (!code) return '<span class="table-no-tags">—</span>';
   const c = COUNTRIES.find(x => x.code === code);
@@ -125,6 +134,7 @@ function movieRowHTML(movie) {
     <tr class="drama-table__row" data-id="${movie.id}">
       <td><span class="movies-table-title">${movie.title}</span></td>
       <td>${movieGenresHTML(movie.genre)}</td>
+      <td>${movieCategoriesHTML(movie.category)}</td>
       <td>${movieCountryHTML(movie.country)}</td>
       <td><span class="movies-table-year">${movie.year ?? '—'}</span></td>
       <td>${statusBadgeHTML(movie.status, movie.id)}</td>
@@ -145,6 +155,7 @@ function archivedRowHTML(movie) {
     <tr class="drama-table__row drama-table__row--archived" data-id="${movie.id}">
       <td><span class="movies-table-title">${movie.title}</span></td>
       <td>${movieGenresHTML(movie.genre)}</td>
+      <td>${movieCategoriesHTML(movie.category)}</td>
       <td>${movieCountryHTML(movie.country)}</td>
       <td><span class="movies-table-year">${movie.year ?? '—'}</span></td>
       <td><span class="badge badge--${meta.badgeClass}">${t(meta.labelKey)}</span></td>
@@ -401,6 +412,7 @@ export async function renderMovies(container) {
             <tr>
               <th>${t('movies.table.title')}</th>
               <th>${t('movies.table.genre')}</th>
+              <th>${t('movies.table.category')}</th>
               <th>${t('movies.table.country')}</th>
               <th>${t('movies.table.year')}</th>
               <th>${t('movies.table.status')}</th>
@@ -454,6 +466,7 @@ export async function renderMovies(container) {
             <tr>
               <th>${t('movies.table.title')}</th>
               <th>${t('movies.table.genre')}</th>
+              <th>${t('movies.table.category')}</th>
               <th>${t('movies.table.country')}</th>
               <th>${t('movies.table.year')}</th>
               <th>${t('movies.table.status')}</th>
