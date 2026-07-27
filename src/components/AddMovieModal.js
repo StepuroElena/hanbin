@@ -47,6 +47,14 @@ const GENRE_KEYS = [
 const ADD_MOVIE_CSS = `
   #hb-modal-box.hb-add-movie-box { width: 460px; }
 
+  .hb-modal-scroll-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 46px;
+    background: linear-gradient(to bottom, rgba(45,15,42,0) 0%, rgba(45,15,42,0.9) 65%, rgba(45,15,42,0.98) 100%);
+    pointer-events: none; border-radius: 0 0 24px 24px;
+    opacity: 0; transition: opacity 0.25s ease; z-index: 5;
+  }
+  .hb-modal-scroll-fade--visible { opacity: 1; }
+
   .hb-field-select {
     width: 100%; padding: 13px 16px;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(232,196,184,0.18);
@@ -620,10 +628,24 @@ export function mountAddMovieContent(content, savedState = {}, { onAdded } = {})
   // Если модалка скроллится (контент теперь выше max-height и скроллится внутри) — закрываем открытые
   // панели страны/категории, чтобы они не «отвязывались» от триггера — панели позиционированы
   // через position:fixed относительно viewport и не следуют за скроллом своего контейнера.
+  //
+  // Также подсвечиваем мягкое затухание внизу модалки — показываем его, только пока есть что докручивать вниз,
+  // чтобы обрез контента по нижнему краю не выглядел как обрезанный баг, а читался как «можно проскроллить ещё».
+  const scrollFade = document.getElementById('hb-modal-scroll-fade');
+  function updateScrollFade() {
+    if (!scrollFade) return;
+    const hasMoreBelow = content.scrollHeight - content.scrollTop - content.clientHeight > 8;
+    scrollFade.classList.toggle('hb-modal-scroll-fade--visible', hasMoreBelow);
+  }
+
   content.addEventListener('scroll', () => {
     closeCountryPanel();
     closeCategoryPanel();
+    updateScrollFade();
   });
+
+  // Первый расчёт после того как браузер реально отрисует контент и считает scrollHeight.
+  setTimeout(updateScrollFade, 0);
 }
 
 let _addMovieModalOpening = false;
@@ -640,6 +662,7 @@ export function openAddMovieModal({ onAdded } = {}) {
       <div id="hb-modal-box" class="hb-add-movie-box">
         <button id="hb-modal-close" aria-label="${t('modal.close')}">×</button>
         <div id="hb-modal-content"></div>
+        <div class="hb-modal-scroll-fade" id="hb-modal-scroll-fade"></div>
       </div>
     </div>
   `;
