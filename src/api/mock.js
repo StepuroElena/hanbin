@@ -743,6 +743,190 @@ export async function getLatestDramas(limit = 10) {
 }
 
 // ─────────────────────────────────────────────
+// MOVIES
+// ─────────────────────────────────────────────
+
+// Минимальный мок — просто список для гостя (бэка всё равно нет). Статус — четыре значения,
+// так же как и в бэке: 'planned'/'watching'/'completed'/'dropped'.
+const MOCK_MOVIES = [
+  { id: 'movie_001', title: 'Decision to Leave', year: 2022, genre: 'Mystery', status: 'completed' },
+  { id: 'movie_002', title: 'Parasite', year: 2019, genre: 'Drama', status: 'completed' },
+  { id: 'movie_003', title: 'The Handmaiden', year: 2016, genre: 'Thriller', status: 'watching' },
+  { id: 'movie_004', title: 'Broker', year: 2022, genre: 'Drama', status: 'planned' },
+  { id: 'movie_005', title: 'Burning', year: 2018, genre: 'Mystery', status: 'dropped' },
+];
+
+function adaptMovieFromApi(m) {
+  return {
+    id:         String(m.id),
+    title:      m.title,
+    year:       m.release_year ?? null,
+    genre:      m.genre ?? '',
+    country:    m.country ?? '',
+    status:     m.watch_status ?? 'planned',
+    isArchived: Boolean(m.is_archived),
+  };
+}
+
+function _getArchivedMovieIds() {
+  try {
+    return JSON.parse(localStorage.getItem('hanbin_archived_movies') || '[]');
+  } catch { return []; }
+}
+
+function _getDeletedMovieIds() {
+  try {
+    return JSON.parse(localStorage.getItem('hanbin_deleted_movies') || '[]');
+  } catch { return []; }
+}
+
+/**
+ * Список фильмов пользователя — GET /api/v1/movies (требует авторизации).
+ * Бэк возвращает ВСЕ фильмы — архивированные отфильтровываются тут, так же как и у дорам.
+ * Гость (нет токена) — отдаём мок-данные локально, бэка всё равно нет.
+ */
+export async function getMovies() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet('/movies');
+    if (data) {
+      return { data: data.map(adaptMovieFromApi).filter(m => !m.isArchived), error: null };
+    }
+    console.warn('[API] getMovies failed:', error);
+    return { data: [], error };
+  }
+
+  await delay();
+  const archived = _getArchivedMovieIds();
+  const deleted = _getDeletedMovieIds();
+  return { data: MOCK_MOVIES.filter(m => !archived.includes(m.id) && !deleted.includes(m.id)), error: null };
+}
+
+/**
+ * Список архивированных фильмов — использует тот же GET /api/v1/movies, фильтрует по is_archived === true.
+ */
+export async function getArchivedMovies() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet('/movies');
+    if (data) {
+      return { data: data.map(adaptMovieFromApi).filter(m => m.isArchived), error: null };
+    }
+    console.warn('[API] getArchivedMovies failed:', error);
+    return { data: [], error };
+  }
+
+  await delay();
+  const archivedIds = _getArchivedMovieIds();
+  const deleted = _getDeletedMovieIds();
+  const visibleArchivedIds = archivedIds.filter(id => !deleted.includes(id));
+  if (!visibleArchivedIds.length) return { data: [], error: null };
+  return { data: MOCK_MOVIES.filter(m => visibleArchivedIds.includes(m.id)), error: null };
+}
+
+/**
+ * Добавить фильм — POST /api/v1/movies. Гостю недоступно — нет аккаунта, некуда сохранять.
+ * @param {{ title: string, genre: string, country?: string, year?: number|null }} movie
+ */
+export async function addMovie({ title, genre, country, year }) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы добавить фильм' };
+
+  const { data, error } = await authPost('/movies', {
+    title,
+    genre,
+    ...(country ? { country } : {}),
+    ...(year ? { release_year: year } : {}),
+  });
+  if (data) return { data: adaptMovieFromApi(data), error: null };
+  return { data: null, error };
+}
+
+/**
+ * Меняет статус просмотра фильма — PATCH /api/v1/movies/{id}. Клик по статусу в таблице переключает
+ * planned ↔ watched (только два состояния, в отличие от дорам без выпадающего списка).
+ * Гостю недоступно — меняем только локально (мок-данные всё равно сбрасываются при рефреше).
+ * @param {string} id
+ * @param {'planned'|'watched'} status
+ */
+export async function updateMovieStatus(id, status) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) {
+    await delay(50);
+    console.log('[MOCK] updateMovieStatus:', id, '->', status);
+    return { data: { id, status }, error: null };
+  }
+
+  const { data, error } = await authPatch(`/movies/${id}`, { watch_status: status });
+  if (data) return { data: adaptMovieFromApi(data), error: null };
+  return { data: null, error };
+}
+
+/**
+ * Архивирует фильм — PATCH /api/v1/movies/{id}/archive. Гостю — локально в localStorage
+ * (мок-данные всё равно сбрасываются при рефреше), так же как и архив дорам.
+ */
+export async function archiveMovie(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authPatch(`/movies/${id}/archive`);
+    if (data) return { data: adaptMovieFromApi(data), error: null };
+    console.warn('[API] archiveMovie failed:', error);
+    return { data: null, error };
+  }
+
+  await delay(50);
+  const archived = _getArchivedMovieIds();
+  if (!archived.includes(id)) archived.push(id);
+  localStorage.setItem('hanbin_archived_movies', JSON.stringify(archived));
+  return { data: { id, isArchived: true }, error: null };
+}
+
+/**
+ * Возвращает фильм из архива — PATCH /api/v1/movies/{id}/unarchive.
+ */
+export async function unarchiveMovie(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authPatch(`/movies/${id}/unarchive`);
+    if (data) return { data: adaptMovieFromApi(data), error: null };
+    console.warn('[API] unarchiveMovie failed:', error);
+    return { data: null, error };
+  }
+
+  await delay(50);
+  const archived = _getArchivedMovieIds().filter(x => x !== id);
+  localStorage.setItem('hanbin_archived_movies', JSON.stringify(archived));
+  return { data: { id, isArchived: false }, error: null };
+}
+
+/**
+ * Удаляет фильм навсегда — DELETE /api/v1/movies/{id}. Бэк требует, чтобы фильм был
+ * уже в архиве (так же, как и у дорам). Гостю — локально через список удалённых id в localStorage,
+ * так как MOCK_MOVIES — статический массив и его нельзя удалить навсегда.
+ */
+export async function deleteMovie(id) {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { error } = await authDelete(`/movies/${id}`);
+    if (!error) return { data: { id, deleted: true }, error: null };
+    console.warn('[API] deleteMovie failed:', error);
+    return { data: null, error };
+  }
+
+  await delay(50);
+  const deleted = _getDeletedMovieIds();
+  if (!deleted.includes(id)) deleted.push(id);
+  localStorage.setItem('hanbin_deleted_movies', JSON.stringify(deleted));
+  return { data: { id, deleted: true }, error: null };
+}
+
+// ─────────────────────────────────────────────
 // AUTH
 // ─────────────────────────────────────────────
 
