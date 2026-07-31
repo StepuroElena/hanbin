@@ -871,6 +871,26 @@ export async function updateMovieStatus(id, status) {
 }
 
 /**
+ * Частичное обновление любых полей фильма — PATCH /api/v1/movies/{id}, тот же эндпоинт, что и updateMovieStatus,
+ * но бэк (см. Update в movie.service.go) теперь принимает любой набор опциональных полей за один запрос.
+ * Используется редактируемыми ячейками таблицы фильмов в Movies.js (название/жанр/категория/страна/год).
+ * @param {string} id
+ * @param {{ title?: string, genre?: string, category?: string, country?: string, release_year?: number, clear_year?: boolean }} patch
+ */
+export async function updateMovieField(id, patch) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) {
+    await delay(50);
+    console.log('[MOCK] updateMovieField:', id, '->', patch);
+    return { data: { id, ...patch }, error: null };
+  }
+
+  const { data, error } = await authPatch(`/movies/${id}`, patch);
+  if (data) return { data: adaptMovieFromApi(data), error: null };
+  return { data: null, error };
+}
+
+/**
  * Архивирует фильм — PATCH /api/v1/movies/{id}/archive. Гостю — локально в localStorage
  * (мок-данные всё равно сбрасываются при рефреше), так же как и архив дорам.
  */

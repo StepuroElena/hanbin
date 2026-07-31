@@ -27,7 +27,7 @@ const LOGO_SVG = `
   </svg>
 `;
 
-const GENRE_KEYS = [
+export const GENRE_KEYS = [
   { key: 'modal.add.genres.romance',     value: 'Romance' },
   { key: 'modal.add.genres.thriller',    value: 'Thriller' },
   { key: 'modal.add.genres.historical',  value: 'Historical' },

@@ -5,12 +5,22 @@
  * архив + фильтр-чипсы по статусу (Все/Смотрю/Просмотрено/Запланировано/Брошено) —
  * тот же стиль, что и у дорам. Статус в строке — кликабельный бейдж, открывает
  * выпадающее меню с остальными тремя статусами (как у дорам, не просто toggle).
+ *
+ * Редактируемые столбцы (тот же принцип, что и статус — клик открывает плавающее меню,
+ * PATCH уходит сразу на бэк, без отдельной кнопки «Сохранить»):
+ *   — название: карандаш → инлайн текстовый инпут (Enter/blur — сохранить, Esc — отмена);
+ *   — жанр/категория: клик по ячейке → чекбокс-меню, мультивыбор, сохраняется на каждый тоггл;
+ *   — страна: клик → меню с поиском (тот же список COUNTRIES, что и в модалке добавления);
+ *   — год: клик → инлайн числовой инпут.
+ * Архивные строки НЕ редактируются — так же, как и у дорам (архив — «замороженная» запись).
+ *
  * Данные — GET /api/v1/movies (см. src/api/mock.js), гостю показывается локальный мок.
  */
 
 import { renderHeader } from '../components/Header.js';
-import { getMovies, getArchivedMovies, updateMovieStatus, archiveMovie, unarchiveMovie, deleteMovie } from '../api/mock.js';
+import { getMovies, getArchivedMovies, updateMovieStatus, updateMovieField, getMovieCategories, archiveMovie, unarchiveMovie, deleteMovie } from '../api/mock.js';
 import { renderPagination, PAGE_SIZE_OPTIONS } from '../components/Pagination.js';
+import { GENRE_KEYS } from '../components/AddMovieModal.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { COUNTRIES } from '../data/countries.js';
 
@@ -62,6 +72,51 @@ const MOVIES_CSS = `
   .movies-table-year { font-size: 13px; color: var(--color-text-muted); }
   .movies-table-genre { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(255,255,255,0.07); color: var(--color-text-muted); margin: 2px 4px 2px 0; }
   .movies-table-category { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(122,171,142,0.14); border: 1px solid rgba(122,171,142,0.25); color: var(--color-jade); margin: 2px 4px 2px 0; }
+
+  /* ── Редактируемые ячейки таблицы фильмов ── */
+  .movies-editable-title { display: inline-flex; align-items: center; gap: 6px; }
+  .movies-edit-pencil {
+    flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: rgba(245,230,211,0.3);
+    cursor: pointer; transition: var(--transition-fast);
+  }
+  .movies-edit-pencil:hover { background: var(--color-accent-glow); color: var(--color-rose); }
+  .movies-title-input {
+    padding: 5px 9px; border-radius: 8px; min-width: 160px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(232,196,184,0.3);
+    color: var(--color-text); font-family: var(--font-display); font-size: 15px;
+  }
+  .movies-title-input:focus { outline: none; border-color: var(--color-rose); }
+
+  .movies-editable-cell { cursor: pointer; display: inline-block; border-radius: 8px; padding: 2px 4px; margin: -2px -4px; transition: background 0.15s ease; }
+  .movies-editable-cell:hover { background: rgba(255,255,255,0.05); }
+
+  .movies-year-input {
+    width: 76px; padding: 5px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(232,196,184,0.3);
+    color: var(--color-text); font-family: var(--font-body); font-size: 13px;
+  }
+  .movies-year-input:focus { outline: none; border-color: var(--color-rose); }
+
+  .movies-multiselect-menu { padding: 4px; max-height: 260px; overflow-y: auto; }
+  .movies-multiselect-option {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; color: var(--color-text); transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+  .movies-multiselect-option:hover { background: rgba(201,123,138,0.12); }
+  .movies-multiselect-option--active { color: var(--color-rose); }
+  .movies-multiselect-option__check { width: 14px; flex-shrink: 0; text-align: center; font-size: 12px; }
+  .movies-multiselect-empty { padding: 14px; text-align: center; font-size: 12px; color: var(--color-text-muted); font-style: italic; }
+
+  .movies-country-search {
+    width: 100%; padding: 8px 10px; border-radius: 8px; box-sizing: border-box;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(232,196,184,0.18);
+    color: var(--color-text); font-size: 12px; font-family: var(--font-body);
+  }
+  .movies-country-search:focus { outline: none; border-color: var(--color-rose); }
+  .movies-country-options { max-height: 220px; overflow-y: auto; }
 
   .movies-archive-section { margin-top: 44px; opacity: 0.72; transition: opacity 0.25s ease; }
   .movies-archive-section:hover { opacity: 1; }
@@ -117,6 +172,10 @@ function movieCountryHTML(code) {
   return `<span class="movies-table-year">${c.flag} ${lang === 'en' ? c.en : c.ru}</span>`;
 }
 
+function movieYearHTML(year) {
+  return `<span class="movies-table-year">${year ?? '—'}</span>`;
+}
+
 function statCardHTML({ label, number, unit }) {
   return `
     <div class="stat-card glass-card">
@@ -137,11 +196,18 @@ function statusBadgeHTML(status, movieId) {
 function movieRowHTML(movie) {
   return `
     <tr class="drama-table__row" data-id="${movie.id}">
-      <td><span class="movies-table-title">${movie.title}</span></td>
-      <td>${movieGenresHTML(movie.genre)}</td>
-      <td>${movieCategoriesHTML(movie.category)}</td>
-      <td>${movieCountryHTML(movie.country)}</td>
-      <td><span class="movies-table-year">${movie.year ?? '—'}</span></td>
+      <td>
+        <span class="movies-editable-title">
+          <span class="movies-table-title">${movie.title}</span>
+          <button type="button" class="movies-edit-pencil" data-id="${movie.id}" data-tooltip="${t('profile.edit_tooltip')}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
+        </span>
+      </td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="genre">${movieGenresHTML(movie.genre)}</span></td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="category">${movieCategoriesHTML(movie.category)}</span></td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="country">${movieCountryHTML(movie.country)}</span></td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="year">${movieYearHTML(movie.year)}</span></td>
       <td>${statusBadgeHTML(movie.status, movie.id)}</td>
       <td style="white-space:nowrap">
         <button class="table-archive-btn" data-id="${movie.id}" data-tooltip="${t('archive.btn')}" data-tooltip-pos="left">
@@ -178,6 +244,7 @@ function archivedRowHTML(movie) {
   `;
 }
 
+// Единое плавающее меню для статуса, мультивыбора (жанр/категория) и страны — только одно открыто одновременно.
 let _movieMenuEl = null;
 function closeMovieStatusMenu() {
   _movieMenuEl?.remove();
@@ -189,6 +256,16 @@ export async function renderMovies(container) {
 
   let allMovies = [];       // полный список (без архива) — фильтр-чипсы режут именно его, без повторного запроса
   let currentFilter = 'all';
+
+  // Персональный список категорий — тянется лениво при первом открытии меню категорий и кэшируется
+  // на весь визит страницы (перезагрузится сам при следующем заходе на страницу).
+  let movieCategoriesCache = null;
+  async function getCategoriesList() {
+    if (movieCategoriesCache) return movieCategoriesCache;
+    const { data } = await getMovieCategories();
+    movieCategoriesCache = (data ?? []).filter(c => c.enabled !== false).map(c => c.name);
+    return movieCategoriesCache;
+  }
 
   // ── Пагинация ──
   // Тот же принцип, что у дорам в Home.js: весь отфильтрованный список уже на руках,
@@ -270,7 +347,7 @@ export async function renderMovies(container) {
       wrap.addEventListener('click', (e) => {
         e.stopPropagation();
 
-        const alreadyOpenForThis = _movieMenuEl?.dataset.forId === wrap.dataset.id;
+        const alreadyOpenForThis = _movieMenuEl?.dataset.forId === wrap.dataset.id && _movieMenuEl?.dataset.kind === 'status';
         closeMovieStatusMenu();
         if (alreadyOpenForThis) return;
 
@@ -281,6 +358,7 @@ export async function renderMovies(container) {
         const menu = document.createElement('div');
         menu.className = 'status-dropdown-menu';
         menu.dataset.forId = id;
+        menu.dataset.kind = 'status';
         menu.style.left = rect.left + 'px';
         menu.style.top = (rect.bottom + 6) + 'px';
 
@@ -320,6 +398,307 @@ export async function renderMovies(container) {
         }, 0);
       });
     });
+  }
+
+  /**
+   * Открывает плавающее меню-чекбокс-лист для мультивыбора (жанр/категория) — тот же
+   * визуальный класс .status-dropdown-menu, что и у статуса, но с чекбоксами и БЕЗ закрытия
+   * при клике по опции — можно отметить сразу несколько подряд, каждый клик сам шлёт PATCH.
+   */
+  function openMultiSelectMenu(wrap, { kind, options, currentValues, onToggle }) {
+    const alreadyOpenForThis = _movieMenuEl?.dataset.forId === wrap.dataset.id && _movieMenuEl?.dataset.kind === kind;
+    closeMovieStatusMenu();
+    if (alreadyOpenForThis) return;
+
+    const rect = wrap.getBoundingClientRect();
+    const menu = document.createElement('div');
+    menu.className = 'status-dropdown-menu movies-multiselect-menu';
+    menu.dataset.forId = wrap.dataset.id;
+    menu.dataset.kind = kind;
+    menu.style.left = rect.left + 'px';
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.addEventListener('click', (e) => e.stopPropagation());
+
+    if (!options.length) {
+      menu.innerHTML = `<div class="movies-multiselect-empty">${t('movies.filter_empty')}</div>`;
+    } else {
+      options.forEach(opt => {
+        const active = currentValues.includes(opt.value);
+        const item = document.createElement('div');
+        item.className = `movies-multiselect-option ${active ? 'movies-multiselect-option--active' : ''}`;
+        item.innerHTML = `<span class="movies-multiselect-option__check">${active ? '✓' : ''}</span><span>${opt.label}</span>`;
+        item.addEventListener('click', () => onToggle(opt.value, item));
+        menu.appendChild(item);
+      });
+    }
+
+    document.body.appendChild(menu);
+    _movieMenuEl = menu;
+
+    setTimeout(() => {
+      document.addEventListener('click', closeMovieStatusMenu, { once: true });
+    }, 0);
+  }
+
+  /** Клик по ячейке жанра — мультивыбор из фиксированного списка GENRE_KEYS (тот же, что и в модалке добавления). */
+  function attachGenreEdit(slot) {
+    slot.querySelectorAll('.movies-editable-cell[data-field="genre"]').forEach(wrap => {
+      wrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = wrap.dataset.id;
+        const movie = allMovies.find(m => m.id === id);
+        if (!movie) return;
+        let selected = (movie.genre ?? '').split(',').map(g => g.trim()).filter(Boolean);
+
+        openMultiSelectMenu(wrap, {
+          kind: 'genre',
+          options: GENRE_KEYS.map(g => ({ value: g.value, label: t(g.key) })),
+          currentValues: selected,
+          onToggle: async (value, itemEl) => {
+            selected = selected.includes(value) ? selected.filter(v => v !== value) : [...selected, value];
+            itemEl.classList.toggle('movies-multiselect-option--active', selected.includes(value));
+            itemEl.querySelector('.movies-multiselect-option__check').textContent = selected.includes(value) ? '✓' : '';
+
+            const genreStr = selected.join(', ');
+            const { data, error } = await updateMovieField(id, { genre: genreStr });
+            if (error) {
+              console.warn('[Movies] updateMovieField(genre) failed:', error);
+              return;
+            }
+            movie.genre = data?.genre ?? genreStr;
+            wrap.innerHTML = movieGenresHTML(movie.genre);
+          },
+        });
+      });
+    });
+  }
+
+  /** Клик по ячейке категории — мультивыбор из персонального списка (getMovieCategories, кэшируется). */
+  function attachCategoryEdit(slot) {
+    slot.querySelectorAll('.movies-editable-cell[data-field="category"]').forEach(wrap => {
+      wrap.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = wrap.dataset.id;
+        const movie = allMovies.find(m => m.id === id);
+        if (!movie) return;
+
+        const categories = await getCategoriesList();
+        let selected = (movie.category ?? '').split(',').map(c => c.trim()).filter(Boolean);
+
+        openMultiSelectMenu(wrap, {
+          kind: 'category',
+          options: categories.map(name => ({ value: name, label: name })),
+          currentValues: selected,
+          onToggle: async (value, itemEl) => {
+            selected = selected.includes(value) ? selected.filter(v => v !== value) : [...selected, value];
+            itemEl.classList.toggle('movies-multiselect-option--active', selected.includes(value));
+            itemEl.querySelector('.movies-multiselect-option__check').textContent = selected.includes(value) ? '✓' : '';
+
+            const categoryStr = selected.join(', ');
+            const { data, error } = await updateMovieField(id, { category: categoryStr });
+            if (error) {
+              console.warn('[Movies] updateMovieField(category) failed:', error);
+              return;
+            }
+            movie.category = data?.category ?? categoryStr;
+            wrap.innerHTML = movieCategoriesHTML(movie.category);
+          },
+        });
+      });
+    });
+  }
+
+  /** Клик по ячейке страны — одиночный выбор с поиском (тот же список COUNTRIES, что и в модалке добавления). */
+  function attachCountryEdit(slot) {
+    slot.querySelectorAll('.movies-editable-cell[data-field="country"]').forEach(wrap => {
+      wrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const alreadyOpenForThis = _movieMenuEl?.dataset.forId === wrap.dataset.id && _movieMenuEl?.dataset.kind === 'country';
+        closeMovieStatusMenu();
+        if (alreadyOpenForThis) return;
+
+        const id = wrap.dataset.id;
+        const movie = allMovies.find(m => m.id === id);
+        if (!movie) return;
+
+        const rect = wrap.getBoundingClientRect();
+        const menu = document.createElement('div');
+        menu.className = 'status-dropdown-menu';
+        menu.dataset.forId = id;
+        menu.dataset.kind = 'country';
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 6) + 'px';
+        menu.addEventListener('click', (ev) => ev.stopPropagation());
+
+        menu.innerHTML = `
+          <div style="padding:6px 8px;border-bottom:1px solid rgba(232,196,184,0.1)">
+            <input type="text" class="movies-country-search" placeholder="${t('modal.addmovie.field.country_search_ph')}" autocomplete="off">
+          </div>
+          <div class="movies-country-options"></div>
+        `;
+
+        const optionsEl = menu.querySelector('.movies-country-options');
+        const lang = document.documentElement.lang === 'en' ? 'en' : 'ru';
+
+        const applyCountry = async (code) => {
+          closeMovieStatusMenu();
+          wrap.style.opacity = '0.5';
+          const { data, error } = await updateMovieField(id, { country: code });
+          wrap.style.opacity = '';
+          if (error) {
+            console.warn('[Movies] updateMovieField(country) failed:', error);
+            return;
+          }
+          movie.country = data?.country ?? code;
+          wrap.innerHTML = movieCountryHTML(movie.country);
+        };
+
+        function renderOptions(query) {
+          const q = query.trim().toLowerCase();
+          const filtered = q
+            ? COUNTRIES.filter(c => c.ru.toLowerCase().includes(q) || c.en.toLowerCase().includes(q))
+            : COUNTRIES;
+          if (!filtered.length) {
+            optionsEl.innerHTML = `<div class="movies-multiselect-empty">${t('modal.addmovie.field.country_empty')}</div>`;
+            return;
+          }
+          optionsEl.innerHTML = filtered.map(c => `<div class="status-dropdown-option" data-code="${c.code}">${c.flag} ${lang === 'en' ? c.en : c.ru}</div>`).join('');
+          optionsEl.querySelectorAll('[data-code]').forEach(opt => {
+            opt.addEventListener('click', () => applyCountry(opt.dataset.code));
+          });
+        }
+        renderOptions('');
+
+        const searchInput = menu.querySelector('.movies-country-search');
+        searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+
+        document.body.appendChild(menu);
+        _movieMenuEl = menu;
+        setTimeout(() => searchInput.focus(), 30);
+
+        setTimeout(() => {
+          document.addEventListener('click', closeMovieStatusMenu, { once: true });
+        }, 0);
+      });
+    });
+  }
+
+  /** Клик по ячейке года — инлайн числовой инпут, Enter/blur сохраняет, Esc отменяет. Пустое значение сбрасывает год. */
+  function attachYearEdit(slot) {
+    slot.querySelectorAll('.movies-editable-cell[data-field="year"]').forEach(wrap => {
+      wrap.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (wrap.querySelector('.movies-year-input')) return; // уже в режиме редактирования
+
+        const id = wrap.dataset.id;
+        const movie = allMovies.find(m => m.id === id);
+        if (!movie) return;
+        const currentYear = movie.year ?? '';
+
+        wrap.innerHTML = `<input type="number" class="movies-year-input" min="1900" max="2100">`;
+        const input = wrap.querySelector('.movies-year-input');
+        input.value = currentYear;
+        input.focus();
+        input.select();
+
+        let settled = false;
+        const restore = (year) => {
+          if (settled) return;
+          settled = true;
+          wrap.innerHTML = movieYearHTML(year);
+        };
+
+        const save = async () => {
+          if (settled) return;
+          const raw = input.value.trim();
+          if (raw === String(currentYear || '')) { restore(currentYear); return; }
+          settled = true;
+          input.disabled = true;
+
+          const patch = raw ? { release_year: Number(raw) } : { clear_year: true };
+          const { data, error } = await updateMovieField(id, patch);
+          settled = false;
+
+          if (error) {
+            console.warn('[Movies] updateMovieField(year) failed:', error);
+            restore(currentYear);
+            return;
+          }
+          const finalYear = data?.year ?? (raw ? Number(raw) : null);
+          movie.year = finalYear;
+          restore(finalYear);
+        };
+
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+          if (ev.key === 'Escape') { settled = true; restore(currentYear); }
+        });
+      });
+    });
+  }
+
+  /** Навешивает карандаш-редактирование названия на одну кнопку — самодостаточно, без пересканирования всей таблицы. */
+  function bindTitlePencil(btn) {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const movie = allMovies.find(m => m.id === id);
+      if (!movie) return;
+      const wrap = btn.closest('.movies-editable-title');
+      const currentTitle = movie.title;
+
+      wrap.innerHTML = `<input type="text" class="movies-title-input" maxlength="200">`;
+      const input = wrap.querySelector('.movies-title-input');
+      input.value = currentTitle;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+
+      let settled = false;
+
+      const restore = (title) => {
+        if (settled) return;
+        settled = true;
+        wrap.innerHTML = `
+          <span class="movies-table-title">${title}</span>
+          <button type="button" class="movies-edit-pencil" data-id="${id}" data-tooltip="${t('profile.edit_tooltip')}">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
+        `;
+        bindTitlePencil(wrap.querySelector('.movies-edit-pencil'));
+      };
+
+      const save = async () => {
+        if (settled) return;
+        const newTitle = input.value.trim();
+        if (!newTitle || newTitle === currentTitle) { restore(currentTitle); return; }
+        settled = true;
+        input.disabled = true;
+
+        const { data, error } = await updateMovieField(id, { title: newTitle });
+        settled = false;
+
+        if (error) {
+          console.warn('[Movies] updateMovieField(title) failed:', error);
+          restore(currentTitle);
+          return;
+        }
+        const finalTitle = data?.title ?? newTitle;
+        movie.title = finalTitle;
+        restore(finalTitle);
+      };
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+        if (ev.key === 'Escape') { settled = true; restore(currentTitle); }
+      });
+    });
+  }
+
+  function attachTitleEdit(slot) {
+    slot.querySelectorAll('.movies-edit-pencil').forEach(bindTitlePencil);
   }
 
   function attachArchiveButtons(slot) {
@@ -476,6 +855,11 @@ export async function renderMovies(container) {
     `;
 
     attachStatusDropdown(slot);
+    attachTitleEdit(slot);
+    attachGenreEdit(slot);
+    attachCategoryEdit(slot);
+    attachCountryEdit(slot);
+    attachYearEdit(slot);
     attachArchiveButtons(slot);
   }
 
