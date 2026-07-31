@@ -10,6 +10,7 @@
 
 import { renderHeader } from '../components/Header.js';
 import { getMovies, getArchivedMovies, updateMovieStatus, archiveMovie, unarchiveMovie, deleteMovie } from '../api/mock.js';
+import { renderPagination, PAGE_SIZE_OPTIONS } from '../components/Pagination.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { COUNTRIES } from '../data/countries.js';
 
@@ -50,6 +51,10 @@ const MOVIES_CSS = `
   }
   .movies-section-title--archive { color: var(--color-text-muted); font-size: 20px; }
   .movies-section-title--archive::before { background: rgba(232,196,184,0.35); }
+
+  /* Заголовок списка фильмов теперь внутри .section-header (рядом с пагинацией) —
+     собственный нижний отступ больше не нужен, зазор уже даёт .section-header. */
+  .section-header .movies-section-title { margin-bottom: 0; }
 
   .movies-status-badge { cursor: pointer; user-select: none; }
 
@@ -185,6 +190,20 @@ export async function renderMovies(container) {
   let allMovies = [];       // полный список (без архива) — фильтр-чипсы режут именно его, без повторного запроса
   let currentFilter = 'all';
 
+  // ── Пагинация ──
+  // Тот же принцип, что у дорам в Home.js: весь отфильтрованный список уже на руках,
+  // резка на страницы происходит на фронте. sessionStorage переживает обычный рефреш,
+  // но очищается при закрытии вкладки — свои ключи, чтобы не путать со страницей дорам.
+  const savedMoviesPageSize = Number(sessionStorage.getItem('hanbin_movies_page_size'));
+  let pageSize = PAGE_SIZE_OPTIONS.includes(savedMoviesPageSize) ? savedMoviesPageSize : PAGE_SIZE_OPTIONS[0];
+  const savedMoviesPage = Number(sessionStorage.getItem('hanbin_movies_page'));
+  let currentPage = savedMoviesPage >= 1 ? savedMoviesPage : 1;
+
+  function persistPagination() {
+    sessionStorage.setItem('hanbin_movies_page_size', String(pageSize));
+    sessionStorage.setItem('hanbin_movies_page', String(currentPage));
+  }
+
   function buildShell() {
     return `
       <div id="header-slot"></div>
@@ -212,7 +231,10 @@ export async function renderMovies(container) {
           <button class="filter-chip status-dropped" data-filter="dropped">${t('filter.dropped')}</button>
         </div>
         <section class="section" style="margin-bottom:0">
-          <div class="movies-section-title">${t('movies.section.list')}</div>
+          <div class="section-header">
+            <div class="movies-section-title">${t('movies.section.list')}</div>
+            <div class="pagination-slot" id="movies-pagination-slot"></div>
+          </div>
           <div id="movies-list-slot">
             <div class="loading-dots">${t('loading')}</div>
           </div>
@@ -386,11 +408,13 @@ export async function renderMovies(container) {
 
   function renderTable() {
     const slot = container.querySelector('#movies-list-slot');
+    const paginationSlot = container.querySelector('#movies-pagination-slot');
     if (!slot) return;
 
     const filtered = currentFilter === 'all' ? allMovies : allMovies.filter(m => m.status === currentFilter);
 
     if (!allMovies.length) {
+      if (paginationSlot) paginationSlot.innerHTML = '';
       slot.innerHTML = `
         <div class="empty-state">
           <div class="empty-state__icon">🎬</div>
@@ -401,8 +425,35 @@ export async function renderMovies(container) {
     }
 
     if (!filtered.length) {
+      if (paginationSlot) paginationSlot.innerHTML = '';
       slot.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🎬</div><div>${t('movies.filter_empty')}</div></div>`;
       return;
+    }
+
+    // Пагинация режется на фронте — тот же принцип, что у дорам (см. Home.js loadWatching).
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIdx = (currentPage - 1) * pageSize;
+    const pageData = filtered.slice(startIdx, startIdx + pageSize);
+
+    if (paginationSlot) {
+      renderPagination(paginationSlot, {
+        total,
+        pageSize,
+        currentPage,
+        onPageChange: (page) => {
+          currentPage = page;
+          persistPagination();
+          renderTable();
+        },
+        onPageSizeChange: (size) => {
+          pageSize = size;
+          currentPage = 1; // меняется общее число страниц — начинаем с первой
+          persistPagination();
+          renderTable();
+        },
+      });
     }
 
     slot.innerHTML = `
@@ -419,7 +470,7 @@ export async function renderMovies(container) {
               <th></th>
             </tr>
           </thead>
-          <tbody>${filtered.map(movieRowHTML).join('')}</tbody>
+          <tbody>${pageData.map(movieRowHTML).join('')}</tbody>
         </table>
       </div>
     `;
@@ -488,6 +539,8 @@ export async function renderMovies(container) {
       container.querySelectorAll('#movies-filters-row .filter-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       currentFilter = chip.dataset.filter;
+      currentPage = 1; // новый фильтр — другое общее число страниц, начинаем с первой
+      persistPagination();
       renderTable();
     });
   });
