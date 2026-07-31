@@ -11,7 +11,7 @@
  *   — название: карандаш → инлайн текстовый инпут (Enter/blur — сохранить, Esc — отмена);
  *   — жанр/категория: клик по ячейке → чекбокс-меню, мультивыбор, сохраняется на каждый тоггл;
  *   — страна: клик → меню с поиском (тот же список COUNTRIES, что и в модалке добавления);
- *   — год: клик → инлайн числовой инпут.
+ *   — год: клик → дропдаун (1980..текущий+3).
  * Архивные строки НЕ редактируются — так же, как и у дорам (архив — «замороженная» запись).
  *
  * Данные — GET /api/v1/movies (см. src/api/mock.js), гостю показывается локальный мок.
@@ -74,7 +74,7 @@ const MOVIES_CSS = `
   .movies-table-category { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 20px; background: rgba(122,171,142,0.14); border: 1px solid rgba(122,171,142,0.25); color: var(--color-jade); margin: 2px 4px 2px 0; }
 
   /* ── Редактируемые ячейки таблицы фильмов ── */
-  .movies-editable-title { display: inline-flex; align-items: center; gap: 6px; }
+  .movies-editable-title { display: flex; align-items: center; gap: 6px; width: 100%; }
   .movies-edit-pencil {
     flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -83,7 +83,8 @@ const MOVIES_CSS = `
   }
   .movies-edit-pencil:hover { background: var(--color-accent-glow); color: var(--color-rose); }
   .movies-title-input {
-    padding: 5px 9px; border-radius: 8px; min-width: 160px;
+    flex: 1; width: 100%; box-sizing: border-box;
+    padding: 6px 10px; border-radius: 8px;
     background: rgba(255,255,255,0.07); border: 1px solid rgba(232,196,184,0.3);
     color: var(--color-text); font-family: var(--font-display); font-size: 15px;
   }
@@ -92,12 +93,9 @@ const MOVIES_CSS = `
   .movies-editable-cell { cursor: pointer; display: inline-block; border-radius: 8px; padding: 2px 4px; margin: -2px -4px; transition: background 0.15s ease; }
   .movies-editable-cell:hover { background: rgba(255,255,255,0.05); }
 
-  .movies-year-input {
-    width: 76px; padding: 5px 8px; border-radius: 8px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(232,196,184,0.3);
-    color: var(--color-text); font-family: var(--font-body); font-size: 13px;
-  }
-  .movies-year-input:focus { outline: none; border-color: var(--color-rose); }
+  /* Карет рядом с бейджами жанра/категории — без него не видно, что по ячейке вообще можно кликать. */
+  .movies-cell-caret { display: inline-block; vertical-align: middle; margin-left: 3px; color: rgba(245,230,211,0.25); transition: var(--transition-fast); }
+  .movies-editable-cell:hover .movies-cell-caret { color: var(--color-rose); }
 
   .movies-multiselect-menu { padding: 4px; max-height: 260px; overflow-y: auto; }
   .movies-multiselect-option {
@@ -148,6 +146,12 @@ const STATUS_META = {
 };
 const STATUS_ORDER = ['watching', 'completed', 'planned', 'dropped'];
 
+// Год выпуска — выбор из дропдауна (как и статус), не свободный ввод. Нижняя граница 1980 — верхняя
+// с небольшим запасом вперёд — в таблице уже есть анонсированные, но ещё не вышедшие фильмы (напр. 2026).
+const MOVIE_YEAR_MIN = 1980;
+const MOVIE_YEAR_MAX = new Date().getFullYear() + 3;
+const MOVIE_YEAR_OPTIONS = Array.from({ length: MOVIE_YEAR_MAX - MOVIE_YEAR_MIN + 1 }, (_, i) => MOVIE_YEAR_MAX - i);
+
 // Жанр хранится одним строковым полем на бэке (VARCHAR) — несколько выбранных жанров приходят склеенными
 // через запятую (см. AddMovieModal.js) — разбиваем обратно и рендерим каждый отдельным бейджиком.
 function movieGenresHTML(genreStr) {
@@ -174,6 +178,12 @@ function movieCountryHTML(code) {
 
 function movieYearHTML(year) {
   return `<span class="movies-table-year">${year ?? '—'}</span>`;
+}
+
+// Карет-иконка после бейджей жанра/категории — только в редактируемых строках (не в архиве) —
+// без неё обычные бейджи-теги ничем не отличались от кликабельного текста.
+function editableTagsCellHTML(innerHTML) {
+  return `${innerHTML}<svg class="movies-cell-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
 }
 
 function statCardHTML({ label, number, unit }) {
@@ -204,8 +214,8 @@ function movieRowHTML(movie) {
           </button>
         </span>
       </td>
-      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="genre">${movieGenresHTML(movie.genre)}</span></td>
-      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="category">${movieCategoriesHTML(movie.category)}</span></td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="genre">${editableTagsCellHTML(movieGenresHTML(movie.genre))}</span></td>
+      <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="category">${editableTagsCellHTML(movieCategoriesHTML(movie.category))}</span></td>
       <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="country">${movieCountryHTML(movie.country)}</span></td>
       <td><span class="movies-editable-cell" data-id="${movie.id}" data-field="year">${movieYearHTML(movie.year)}</span></td>
       <td>${statusBadgeHTML(movie.status, movie.id)}</td>
@@ -466,7 +476,7 @@ export async function renderMovies(container) {
               return;
             }
             movie.genre = data?.genre ?? genreStr;
-            wrap.innerHTML = movieGenresHTML(movie.genre);
+            wrap.innerHTML = editableTagsCellHTML(movieGenresHTML(movie.genre));
           },
         });
       });
@@ -501,7 +511,7 @@ export async function renderMovies(container) {
               return;
             }
             movie.category = data?.category ?? categoryStr;
-            wrap.innerHTML = movieCategoriesHTML(movie.category);
+            wrap.innerHTML = editableTagsCellHTML(movieCategoriesHTML(movie.category));
           },
         });
       });
@@ -584,57 +594,79 @@ export async function renderMovies(container) {
     });
   }
 
-  /** Клик по ячейке года — инлайн числовой инпут, Enter/blur сохраняет, Esc отменяет. Пустое значение сбрасывает год. */
+  /** Клик по ячейке года — одиночный выбор из дропдауна (MOVIE_YEAR_OPTIONS, 1980..текущий+3) —
+   * тот же паттерн позиционирования длинного списка, что и attachEpisodeCountDropdown в DramaCard.js —
+   * считаем реально доступное место до края экрана, чтобы скролл всегда доходил до конца.
+   */
   function attachYearEdit(slot) {
     slot.querySelectorAll('.movies-editable-cell[data-field="year"]').forEach(wrap => {
       wrap.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (wrap.querySelector('.movies-year-input')) return; // уже в режиме редактирования
+
+        const alreadyOpenForThis = _movieMenuEl?.dataset.forId === wrap.dataset.id && _movieMenuEl?.dataset.kind === 'year';
+        closeMovieStatusMenu();
+        if (alreadyOpenForThis) return;
 
         const id = wrap.dataset.id;
         const movie = allMovies.find(m => m.id === id);
         if (!movie) return;
-        const currentYear = movie.year ?? '';
+        const current = movie.year ?? null;
+        const rect = wrap.getBoundingClientRect();
 
-        wrap.innerHTML = `<input type="number" class="movies-year-input" min="1900" max="2100">`;
-        const input = wrap.querySelector('.movies-year-input');
-        input.value = currentYear;
-        input.focus();
-        input.select();
+        const menu = document.createElement('div');
+        menu.className = 'status-dropdown-menu';
+        menu.dataset.forId = id;
+        menu.dataset.kind = 'year';
+        menu.style.left = rect.left + 'px';
 
-        let settled = false;
-        const restore = (year) => {
-          if (settled) return;
-          settled = true;
-          wrap.innerHTML = movieYearHTML(year);
-        };
+        const viewportMargin = 12;
+        const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+        const spaceAbove = rect.top - viewportMargin;
+        if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
+          menu.style.top = (rect.bottom + 6) + 'px';
+          menu.style.maxHeight = Math.max(120, Math.min(280, spaceBelow)) + 'px';
+        } else {
+          menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+          menu.style.maxHeight = Math.max(120, Math.min(280, spaceAbove)) + 'px';
+        }
 
-        const save = async () => {
-          if (settled) return;
-          const raw = input.value.trim();
-          if (raw === String(currentYear || '')) { restore(currentYear); return; }
-          settled = true;
-          input.disabled = true;
-
-          const patch = raw ? { release_year: Number(raw) } : { clear_year: true };
+        const applyYear = async (year) => {
+          closeMovieStatusMenu();
+          wrap.style.opacity = '0.5';
+          const patch = year == null ? { clear_year: true } : { release_year: year };
           const { data, error } = await updateMovieField(id, patch);
-          settled = false;
-
+          wrap.style.opacity = '';
           if (error) {
             console.warn('[Movies] updateMovieField(year) failed:', error);
-            restore(currentYear);
             return;
           }
-          const finalYear = data?.year ?? (raw ? Number(raw) : null);
-          movie.year = finalYear;
-          restore(finalYear);
+          movie.year = data?.year ?? year;
+          wrap.innerHTML = movieYearHTML(movie.year);
         };
 
-        input.addEventListener('blur', save);
-        input.addEventListener('keydown', (ev) => {
-          if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
-          if (ev.key === 'Escape') { settled = true; restore(currentYear); }
+        // Пункт «—» — сбросить год, только если он уже указан.
+        if (current != null) {
+          const clearItem = document.createElement('div');
+          clearItem.className = 'status-dropdown-option';
+          clearItem.textContent = '—';
+          clearItem.addEventListener('click', (ev) => { ev.stopPropagation(); applyYear(null); });
+          menu.appendChild(clearItem);
+        }
+
+        MOVIE_YEAR_OPTIONS.filter(y => y !== current).forEach(y => {
+          const item = document.createElement('div');
+          item.className = 'status-dropdown-option';
+          item.textContent = String(y);
+          item.addEventListener('click', (ev) => { ev.stopPropagation(); applyYear(y); });
+          menu.appendChild(item);
         });
+
+        document.body.appendChild(menu);
+        _movieMenuEl = menu;
+
+        setTimeout(() => {
+          document.addEventListener('click', closeMovieStatusMenu, { once: true });
+        }, 0);
       });
     });
   }
