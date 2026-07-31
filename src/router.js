@@ -11,11 +11,11 @@ import { renderHome }         from './pages/Home.js';
 import { renderUnauthorized } from './pages/Unauthorized.js';
 import { renderSettings }     from './pages/Settings.js';
 import { renderMovies }       from './pages/Movies.js';
+import { renderProfile }      from './pages/Profile.js';
 import { getAuthState }       from './api/mock.js';
 // TODO: раскомментируй когда создашь эти страницы:
 // import { renderSearch }    from './pages/Search.js';
 // import { renderDrama }     from './pages/Drama.js';
-// import { renderProfile }   from './pages/Profile.js';
 
 // ─── Маршруты ────────────────────────────────
 const ROUTES = {
@@ -24,9 +24,9 @@ const ROUTES = {
   '#/guest':    renderUnauthorized,  // Публичная страница для незалогиненных
   '#/settings': renderSettings,
   '#/movies':   renderMovies,
+  '#/profile':  renderProfile,
   // '#/search':   renderSearch,
   // '#/drama/:id':renderDrama,
-  // '#/profile':  renderProfile,
 };
 
 // ─── Навигация ────────────────────────────────

@@ -89,6 +89,15 @@ export const translations = {
     'settings.sites.add_btn':      'Добавить сайт',
     'modal.add.sites.empty':      'Нет доступных сайтов — все выключены в Настройках',
 
+    // Profile page
+    'profile.title':               'Профиль',
+    'profile.sub':                 'Информация об аккаунте',
+    'profile.field.name':          'Имя',
+    'profile.field.email':         'Email',
+    'profile.field.empty':         'Не указано',
+    'profile.guest.text':          'Войди в аккаунт, чтобы увидеть профиль',
+    'profile.guest.btn':           'Войти',
+
     // Movie categories (Сеттингс)
     'settings.categories.title':          'Категории фильмов',
     'settings.categories.sub':            'Короткие теги, которые можно выбрать при добавлении фильма — свой набор для каждого профиля',
@@ -419,6 +428,15 @@ export const translations = {
     'settings.sites.disable_tooltip': 'Hide from the picker',
     'settings.sites.add_btn':      'Add site',
     'modal.add.sites.empty':      'No sites available — all are turned off in Settings',
+
+    // Profile page
+    'profile.title':               'Profile',
+    'profile.sub':                 'Your account information',
+    'profile.field.name':          'Name',
+    'profile.field.email':         'Email',
+    'profile.field.empty':         'Not set',
+    'profile.guest.text':          'Sign in to see your profile',
+    'profile.guest.btn':           'Sign in',
 
     // Movie categories (Settings)
     'settings.categories.title':          'Movie categories',
