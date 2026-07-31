@@ -1260,6 +1260,29 @@ export async function updateProfileName(id, name) {
   return { data: null, error };
 }
 
+/**
+ * Обновляет email пользователя — PATCH /api/v1/profiles/{id}, тот же эндпоинт, что и updateProfileName.
+ * Бэк проверяет формат и уникальность — если такой email уже занят, вернётся 409,
+ * текст которого прокидывается как error и показывается под полем в Profile.js.
+ * Логин идёт по той же таблице profiles, которую меняет этот PATCH — после смены
+ * входить надо уже по новому email.
+ *
+ * @param {string|number} id
+ * @param {string} email
+ */
+export async function updateProfileEmail(id, email) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы изменить email' };
+
+  const { data, error } = await authPatch(`/profiles/${id}`, { email });
+  if (data) {
+    invalidateUserCache();
+    return { data, error: null };
+  }
+  console.warn('[API] updateProfileEmail failed:', error);
+  return { data: null, error };
+}
+
 export function invalidateUserCache() {
   _getMeCache = null;
   _getMeInflight = null;

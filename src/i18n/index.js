@@ -102,6 +102,7 @@ export const translations = {
     'profile.cancel_btn':          'Отмена',
     'profile.saving':              'Сохраняем…',
     'profile.err_name_empty':      'Имя не может быть пустым',
+    'profile.err_field_empty':     'Поле не может быть пустым',
 
     // Movie categories (Сеттингс)
     'settings.categories.title':          'Категории фильмов',
@@ -447,6 +448,7 @@ export const translations = {
     'profile.cancel_btn':          'Cancel',
     'profile.saving':              'Saving…',
     'profile.err_name_empty':      'Name cannot be empty',
+    'profile.err_field_empty':     'This field cannot be empty',
 
     // Movie categories (Settings)
     'settings.categories.title':          'Movie categories',

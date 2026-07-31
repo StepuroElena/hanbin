@@ -1,26 +1,28 @@
 /**
  * HANBIN — Profile Page
  *
- * Простая страница профиля — показывает имя и email авторизованного пользователя.
- * Имя редактируется инлайн (карандаш → инпут → Сохранить/Отмена), пишет на бэк через
- * PATCH /api/v1/profiles/{id} (см. updateProfileName в api/mock.js).
- * Email пока НЕ редактируется — на бэке это поле в PATCH тихо игнорируется, редактирование
- * добавим только когда там появится реальная поддержка (см. заметку в mock.js).
+ * Простая страница профиля — показывает имя и email авторизованного пользователя,
+ * оба поля редактируются инлайн (карандаш → инпут → Сохранить/Отмена), пишут на бэк через
+ * PATCH /api/v1/profiles/{id} (см. updateProfileName/updateProfileEmail в api/mock.js).
  * Пароль на этой странице не показываем и не редактируем — отдельного безопасного
  * эндпоинта смены пароля («текущий пароль → новый») на бэке пока нет.
  *
  * Открывается через пункт «Профиль» в дропдауне аватара (Header.js → navigate('#/profile')).
  * Гостю (нет токена) показываем заглушку с призывом войти — сама страница не требует
  * авторизации для рендера, но данных показывать нечего.
+ *
+ * Выравнивание — как у Settings.js: .container без max-width-override, левый край совпадает
+ * с логотипом в шапке. Сама карточка профиля визуально ограничена по ширине через .profile-card,
+ * а не через весь контейнер (иначе «Назад»/заголовок сдвинулись бы вправо от логотипа).
  */
 
 import { renderHeader } from '../components/Header.js';
 import { navigate } from '../router.js';
-import { getAuthState, updateProfileName } from '../api/mock.js';
+import { getAuthState, updateProfileName, updateProfileEmail } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
 
 const PROFILE_CSS = `
-  .profile-page { animation: fadeUp 0.5s ease both; max-width: 640px; }
+  .profile-page { animation: fadeUp 0.5s ease both; }
 
   .profile-back {
     display: inline-flex; align-items: center; gap: 6px;
@@ -41,6 +43,7 @@ const PROFILE_CSS = `
   .profile-card {
     display: flex; align-items: center; gap: 24px;
     padding: 32px; border-radius: 20px;
+    max-width: 640px;
   }
 
   .profile-avatar {
@@ -62,7 +65,7 @@ const PROFILE_CSS = `
   }
   .profile-field__value--empty { color: var(--color-text-muted); font-style: italic; font-size: 15px; }
 
-  /* ── Редактируемое поле (имя) ── */
+  /* ── Редактируемое поле (имя, email) ── */
   .profile-field__row { display: flex; align-items: center; gap: 8px; }
   .profile-field__edit-btn {
     flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
@@ -93,7 +96,7 @@ const PROFILE_CSS = `
   .profile-field__cancel-btn:hover { color: var(--color-text); border-color: rgba(232,196,184,0.3); }
   .profile-field__error { font-size: 11px; color: #ff9db0; margin-top: 6px; min-height: 14px; }
 
-  .profile-guest { padding: 40px; text-align: center; border-radius: 20px; }
+  .profile-guest { padding: 40px; text-align: center; border-radius: 20px; max-width: 640px; }
   .profile-guest__icon { font-size: 40px; margin-bottom: 14px; }
   .profile-guest__text { color: var(--color-text-muted); font-size: 14px; margin-bottom: 20px; }
   .profile-guest__btn {
@@ -124,26 +127,15 @@ function injectProfileCSS() {
   document.head.appendChild(style);
 }
 
-// email (и любое другое не-редактируемое поле) — просто лейбл + значение
-function fieldHTML(label, value) {
+// Разметка одного редактируемого поля — карандаш открывает инлайн-форму (см. attachEditableFieldHandlers).
+function editableFieldHTML(fieldId, label, value) {
   const isEmpty = !value;
   return `
-    <div class="profile-field">
+    <div class="profile-field" id="${fieldId}">
       <div class="profile-field__label">${label}</div>
-      <div class="profile-field__value ${isEmpty ? 'profile-field__value--empty' : ''}">${isEmpty ? t('profile.field.empty') : value}</div>
-    </div>
-  `;
-}
-
-// name — лейбл + значение + карандаш-кнопка, разворачивающая инлайн-форму редактирования
-function editableNameFieldHTML(name) {
-  const isEmpty = !name;
-  return `
-    <div class="profile-field" id="profile-name-field">
-      <div class="profile-field__label">${t('profile.field.name')}</div>
       <div class="profile-field__row">
-        <div class="profile-field__value ${isEmpty ? 'profile-field__value--empty' : ''}" id="profile-name-value">${isEmpty ? t('profile.field.empty') : name}</div>
-        <button type="button" class="profile-field__edit-btn" id="profile-name-edit-btn" data-tooltip="${t('profile.edit_tooltip')}">
+        <div class="profile-field__value ${isEmpty ? 'profile-field__value--empty' : ''}" id="${fieldId}-value">${isEmpty ? t('profile.field.empty') : value}</div>
+        <button type="button" class="profile-field__edit-btn" id="${fieldId}-edit-btn" data-tooltip="${t('profile.edit_tooltip')}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
@@ -151,6 +143,92 @@ function editableNameFieldHTML(name) {
       </div>
     </div>
   `;
+}
+
+/**
+ * Навешивает обработчики на карандаш редактирования одного поля (имя ИЛИ email — параметризовано).
+ * user — объект auth.user, мутируется на месте при успешном сохранении, чтобы renderContent()
+ * при повторном вызове (напр. после смены языка) уже видел новое значение.
+ *
+ * @param {HTMLElement} slot
+ * @param {object} opts
+ * @param {string} opts.fieldId — id обёртки поля, напр. 'profile-name-field'
+ * @param {string} opts.label
+ * @param {object} opts.user
+ * @param {string} opts.key — ключ в user, напр. 'name' | 'email'
+ * @param {string} [opts.inputType] — 'text' | 'email'
+ * @param {number} [opts.maxLength]
+ * @param {string} [opts.autocomplete]
+ * @param {(id: string|number, value: string) => Promise<{data:any,error:string|null}>} opts.updater
+ * @param {() => void} opts.renderContent — полный ре-рендер карточки (используется и как «отмена»)
+ * @param {() => void} [opts.onSaved] — доп. побочный эффект после успешного сохранения (напр. обновить шапку)
+ */
+function attachEditableFieldHandlers(slot, { fieldId, label, user, key, inputType = 'text', maxLength, autocomplete, updater, renderContent, onSaved }) {
+  const field = slot.querySelector(`#${fieldId}`);
+  const editBtn = slot.querySelector(`#${fieldId}-edit-btn`);
+  if (!field || !editBtn) return;
+
+  editBtn.addEventListener('click', () => {
+    const currentValue = user[key] || '';
+    field.innerHTML = `
+      <div class="profile-field__label">${label}</div>
+      <div class="profile-field__edit-row">
+        <input class="profile-field__input" id="${fieldId}-input" type="${inputType}" ${maxLength ? `maxlength="${maxLength}"` : ''} autocomplete="${autocomplete || 'off'}">
+        <button type="button" class="profile-field__save-btn" id="${fieldId}-save-btn">${t('profile.save_btn')}</button>
+        <button type="button" class="profile-field__cancel-btn" id="${fieldId}-cancel-btn">${t('profile.cancel_btn')}</button>
+      </div>
+      <div class="profile-field__error" id="${fieldId}-error"></div>
+    `;
+
+    const input = field.querySelector(`#${fieldId}-input`);
+    input.value = currentValue;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    const cancel = () => renderContent();
+    field.querySelector(`#${fieldId}-cancel-btn`).addEventListener('click', cancel);
+
+    const save = async () => {
+      const newValue = input.value.trim();
+      const errorEl = field.querySelector(`#${fieldId}-error`);
+
+      if (!newValue) {
+        errorEl.textContent = t('profile.err_field_empty');
+        return;
+      }
+      if (newValue === user[key]) {
+        cancel();
+        return;
+      }
+
+      const saveBtn = field.querySelector(`#${fieldId}-save-btn`);
+      const cancelBtn = field.querySelector(`#${fieldId}-cancel-btn`);
+      saveBtn.disabled = true;
+      cancelBtn.disabled = true;
+      saveBtn.textContent = t('profile.saving');
+      errorEl.textContent = '';
+
+      const { data, error } = await updater(user.id, newValue);
+
+      if (error) {
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+        saveBtn.textContent = t('profile.save_btn');
+        errorEl.textContent = error;
+        return;
+      }
+
+      user[key] = data?.[key] ?? newValue;
+      renderContent();
+      onSaved?.();
+    };
+
+    field.querySelector(`#${fieldId}-save-btn`).addEventListener('click', save);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') save();
+      if (e.key === 'Escape') cancel();
+    });
+  });
 }
 
 export async function renderProfile(container) {
@@ -183,79 +261,6 @@ export async function renderProfile(container) {
   const { data: auth } = await getAuthState();
   if (!container.isConnected) return;
 
-  // Переключает поле «Имя» в режим редактирования: инпут + Сохранить/Отмена.
-  // user — тот же объект, что и в auth.user, мутируется на месте при успешном сохранении,
-  // чтобы renderContent() при повторном вызове (напр. после смены языка) уже видел новое имя.
-  function attachNameEditHandlers(slot, user) {
-    const field = slot.querySelector('#profile-name-field');
-    const editBtn = slot.querySelector('#profile-name-edit-btn');
-    if (!field || !editBtn) return;
-
-    editBtn.addEventListener('click', () => {
-      const currentName = user.name || '';
-      field.innerHTML = `
-        <div class="profile-field__label">${t('profile.field.name')}</div>
-        <div class="profile-field__edit-row">
-          <input class="profile-field__input" id="profile-name-input" type="text" maxlength="40" autocomplete="name">
-          <button type="button" class="profile-field__save-btn" id="profile-name-save-btn">${t('profile.save_btn')}</button>
-          <button type="button" class="profile-field__cancel-btn" id="profile-name-cancel-btn">${t('profile.cancel_btn')}</button>
-        </div>
-        <div class="profile-field__error" id="profile-name-error"></div>
-      `;
-
-      const input = field.querySelector('#profile-name-input');
-      input.value = currentName;
-      input.focus();
-      input.setSelectionRange(input.value.length, input.value.length);
-
-      const cancel = () => renderContent();
-      field.querySelector('#profile-name-cancel-btn').addEventListener('click', cancel);
-
-      const save = async () => {
-        const newName = input.value.trim();
-        const errorEl = field.querySelector('#profile-name-error');
-
-        if (!newName) {
-          errorEl.textContent = t('profile.err_name_empty');
-          return;
-        }
-        if (newName === user.name) {
-          cancel();
-          return;
-        }
-
-        const saveBtn = field.querySelector('#profile-name-save-btn');
-        const cancelBtn = field.querySelector('#profile-name-cancel-btn');
-        saveBtn.disabled = true;
-        cancelBtn.disabled = true;
-        saveBtn.textContent = t('profile.saving');
-        errorEl.textContent = '';
-
-        const { data, error } = await updateProfileName(user.id, newName);
-
-        if (error) {
-          saveBtn.disabled = false;
-          cancelBtn.disabled = false;
-          saveBtn.textContent = t('profile.save_btn');
-          errorEl.textContent = error;
-          return;
-        }
-
-        user.name = data?.name ?? newName;
-        renderContent();
-        // Шапка сама заново читает auth-состояние (getMe уже инвалидирован в updateProfileName) —
-        // просто перерисовываем её, чтобы инициалы/имя в аватаре обновились сразу же, без перехода по страницам.
-        renderHeader(container.querySelector('#header-slot'), {});
-      };
-
-      field.querySelector('#profile-name-save-btn').addEventListener('click', save);
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') save();
-        if (e.key === 'Escape') cancel();
-      });
-    });
-  }
-
   function renderContent() {
     const slot = container.querySelector('#profile-content');
     if (!slot) return;
@@ -279,13 +284,31 @@ export async function renderProfile(container) {
       <div class="profile-card glass-card">
         <div class="profile-avatar">${initials}</div>
         <div class="profile-fields">
-          ${editableNameFieldHTML(user.name)}
-          ${fieldHTML(t('profile.field.email'), user.email)}
+          ${editableFieldHTML('profile-name-field', t('profile.field.name'), user.name)}
+          ${editableFieldHTML('profile-email-field', t('profile.field.email'), user.email)}
         </div>
       </div>
     `;
 
-    attachNameEditHandlers(slot, user);
+    // Имя показывается и в шапке (инициалы аватара) — после сохранения перерисовываем и её.
+    attachEditableFieldHandlers(slot, {
+      fieldId: 'profile-name-field',
+      label: t('profile.field.name'),
+      user, key: 'name',
+      maxLength: 40, autocomplete: 'name',
+      updater: updateProfileName,
+      renderContent,
+      onSaved: () => renderHeader(container.querySelector('#header-slot'), {}),
+    });
+
+    attachEditableFieldHandlers(slot, {
+      fieldId: 'profile-email-field',
+      label: t('profile.field.email'),
+      user, key: 'email',
+      inputType: 'email', maxLength: 80, autocomplete: 'email',
+      updater: updateProfileEmail,
+      renderContent,
+    });
   }
 
   renderContent();
