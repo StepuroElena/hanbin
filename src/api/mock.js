@@ -1237,6 +1237,29 @@ export async function getAuthState() {
 // CACHE INVALIDATION
 // ─────────────────────────────────────────────
 
+/**
+ * Обновляет имя пользователя — PATCH /api/v1/profiles/{id}. Бэк теперь требует авторизацию
+ * и сверяет, что {id} в пути совпадает с profile_id из токена — менять чужое имя нельзя.
+ * Поле email в этом же UpdateInput на бэке пока игнорируется — отдельной функции для email пока нет намеренно.
+ *
+ * @param {string|number} id — profile_id текущего пользователя (auth.user.id из getAuthState/getMe)
+ * @param {string} name
+ */
+export async function updateProfileName(id, name) {
+  const token = localStorage.getItem('hanbin_token');
+  if (!token) return { data: null, error: 'Войди, чтобы изменить имя' };
+
+  const { data, error } = await authPatch(`/profiles/${id}`, { name });
+  if (data) {
+    // Имя показывается и в шапке (инициалы аватара), и на самой странице профиля —
+    // сбрасываем кэш getMe(), чтобы следующий запрос подтянул свежее имя.
+    invalidateUserCache();
+    return { data, error: null };
+  }
+  console.warn('[API] updateProfileName failed:', error);
+  return { data: null, error };
+}
+
 export function invalidateUserCache() {
   _getMeCache = null;
   _getMeInflight = null;

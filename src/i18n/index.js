@@ -97,6 +97,11 @@ export const translations = {
     'profile.field.empty':         'Не указано',
     'profile.guest.text':          'Войди в аккаунт, чтобы увидеть профиль',
     'profile.guest.btn':           'Войти',
+    'profile.edit_tooltip':        'Изменить',
+    'profile.save_btn':            'Сохранить',
+    'profile.cancel_btn':          'Отмена',
+    'profile.saving':              'Сохраняем…',
+    'profile.err_name_empty':      'Имя не может быть пустым',
 
     // Movie categories (Сеттингс)
     'settings.categories.title':          'Категории фильмов',
@@ -437,6 +442,11 @@ export const translations = {
     'profile.field.empty':         'Not set',
     'profile.guest.text':          'Sign in to see your profile',
     'profile.guest.btn':           'Sign in',
+    'profile.edit_tooltip':        'Edit',
+    'profile.save_btn':            'Save',
+    'profile.cancel_btn':          'Cancel',
+    'profile.saving':              'Saving…',
+    'profile.err_name_empty':      'Name cannot be empty',
 
     // Movie categories (Settings)
     'settings.categories.title':          'Movie categories',
