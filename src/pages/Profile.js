@@ -67,6 +67,11 @@ const PROFILE_CSS = `
   }
   .profile-guest__btn:hover { transform: translateY(-2px); }
 
+  /* Общий .loading-dots (из global.js) центрирует текст — на широких сетках (Movies/Settings) это уместно,
+     но здесь всё остальное содержимое страницы прижато к левому краю — центрированный текст
+     выглядит сдвинутым относительно заголовка/кнопки «Назад». Выравниваем по левому краю. */
+  .profile-page .loading-dots { text-align: left; padding: 40px 0; }
+
   @media (max-width: 640px) {
     .profile-card { flex-direction: column; text-align: center; }
     .profile-header__title { font-size: 28px; }
