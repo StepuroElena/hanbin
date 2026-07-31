@@ -14,6 +14,10 @@
  *   — год: клик → дропдаун (1980..текущий+3).
  * Архивные строки НЕ редактируются — так же, как и у дорам (архив — «замороженная» запись).
  *
+ * Фильтр по категории (чип-триггер рядом со статус-чипсами) — тот же паттерн, что и фильтр по жанру
+ * у дорам (Filters.js): плавающая панель с чекбоксами, мультивыбор (ИЛИ внутри группы, И со
+ * статусом), список опций — реально встречающиеся категории среди фильмов пользователя.
+ *
  * Данные — GET /api/v1/movies (см. src/api/mock.js), гостю показывается локальный мок.
  */
 
@@ -266,6 +270,10 @@ export async function renderMovies(container) {
 
   let allMovies = [];       // полный список (без архива) — фильтр-чипсы режут именно его, без повторного запроса
   let currentFilter = 'all';
+  // Мультивыбор по категории — тот же принцип, что и фильтр по жанру у дорам (Filters.js): внутри группы — ИЛИ,
+  // со статусом — И. Список опций строится из реально встречающихся значений в allMovies (а не весь личный список
+  // категорий) — чтобы не показывать в фильтре категории, которые нигде не используются.
+  let selectedCategoryFilters = [];
 
   // Персональный список категорий — тянется лениво при первом открытии меню категорий и кэшируется
   // на весь визит страницы (перезагрузится сам при следующем заходе на страницу).
@@ -289,6 +297,102 @@ export async function renderMovies(container) {
   function persistPagination() {
     sessionStorage.setItem('hanbin_movies_page_size', String(pageSize));
     sessionStorage.setItem('hanbin_movies_page', String(currentPage));
+  }
+
+  // Реально встречающиеся категории среди allMovies — тот же принцип, что и getFacets() у дорам в Filters.js.
+  function categoryFacets() {
+    const set = new Set();
+    allMovies.forEach(m => {
+      (m.category ?? '').split(',').map(c => c.trim()).filter(Boolean).forEach(c => set.add(c));
+    });
+    return [...set].sort();
+  }
+
+  function updateCategoryFilterTriggerLabel(trigger) {
+    const count = selectedCategoryFilters.length;
+    trigger.innerHTML = `${t('movies.table.category')}${count ? ` (${count})` : ''} <span class="genre-dropdown-caret">▾</span>`;
+    trigger.classList.toggle('active', count > 0);
+  }
+
+  /**
+   * Плавающая панель с чекбоксами — визуально тот же openGenrePanel, что и у дорам в Filters.js (те же
+   * глобальные классы .genre-dropdown-panel/.genre-checkbox-item), но встроена в общий для страницы
+   * синглтон _movieMenuEl/closeMovieStatusMenu, чтобы не открывалась одновременно с другими дропдаунами.
+   */
+  function openCategoryFilterPanel(trigger, facets) {
+    const alreadyOpen = _movieMenuEl?.dataset.kind === 'category-filter';
+    closeMovieStatusMenu();
+    if (alreadyOpen) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const panel = document.createElement('div');
+    panel.className = 'genre-dropdown-panel';
+    panel.dataset.kind = 'category-filter';
+    panel.style.left = rect.left + 'px';
+    panel.style.top = (rect.bottom + 8) + 'px';
+    panel.innerHTML = facets.map(c => `
+      <label class="genre-checkbox-item">
+        <input type="checkbox" value="${c}" ${selectedCategoryFilters.includes(c) ? 'checked' : ''}>
+        <span>${c}</span>
+      </label>
+    `).join('');
+    panel.addEventListener('click', (e) => e.stopPropagation());
+
+    panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const value = cb.value;
+        if (cb.checked) {
+          if (!selectedCategoryFilters.includes(value)) selectedCategoryFilters.push(value);
+        } else {
+          selectedCategoryFilters = selectedCategoryFilters.filter(v => v !== value);
+        }
+        updateCategoryFilterTriggerLabel(trigger);
+        currentPage = 1;
+        persistPagination();
+        renderTable();
+      });
+    });
+
+    document.body.appendChild(panel);
+    _movieMenuEl = panel;
+
+    setTimeout(() => {
+      document.addEventListener('click', closeMovieStatusMenu, { once: true });
+    }, 0);
+  }
+
+  /**
+   * Строит/перестраивает чип-триггер фильтра по категории в filters-row — вызывается после каждой загрузки
+   * фильмов (фасеты могли поменяться). Если ни у одного фильма нет категории — чип просто не показываем.
+   */
+  function renderCategoryFilterChip() {
+    const row = container.querySelector('#movies-filters-row');
+    if (!row) return;
+    row.querySelector('#movies-category-filter-divider')?.remove();
+    row.querySelector('#movies-category-filter-trigger')?.remove();
+
+    const facets = categoryFacets();
+    if (!facets.length) return;
+
+    const divider = document.createElement('div');
+    divider.className = 'filter-divider';
+    divider.id = 'movies-category-filter-divider';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.id = 'movies-category-filter-trigger';
+    trigger.className = 'filter-chip genre-dropdown-trigger';
+    updateCategoryFilterTriggerLabel(trigger);
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const alreadyOpen = _movieMenuEl?.dataset.kind === 'category-filter';
+      if (alreadyOpen) { closeMovieStatusMenu(); return; }
+      openCategoryFilterPanel(trigger, categoryFacets());
+    });
+
+    row.appendChild(divider);
+    row.appendChild(trigger);
   }
 
   function buildShell() {
@@ -822,7 +926,14 @@ export async function renderMovies(container) {
     const paginationSlot = container.querySelector('#movies-pagination-slot');
     if (!slot) return;
 
-    const filtered = currentFilter === 'all' ? allMovies : allMovies.filter(m => m.status === currentFilter);
+    const filtered = allMovies.filter(m => {
+      if (currentFilter !== 'all' && m.status !== currentFilter) return false;
+      if (selectedCategoryFilters.length) {
+        const cats = (m.category ?? '').split(',').map(c => c.trim()).filter(Boolean);
+        if (!cats.some(c => selectedCategoryFilters.includes(c))) return false;
+      }
+      return true;
+    });
 
     if (!allMovies.length) {
       if (paginationSlot) paginationSlot.innerHTML = '';
@@ -904,6 +1015,7 @@ export async function renderMovies(container) {
 
     allMovies = data ?? [];
     renderStats(allMovies);
+    renderCategoryFilterChip();
     renderTable();
   }
 
