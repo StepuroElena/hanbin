@@ -12,7 +12,9 @@ import { renderUnauthorized } from './pages/Unauthorized.js';
 import { renderSettings }     from './pages/Settings.js';
 import { renderMovies }       from './pages/Movies.js';
 import { renderProfile }      from './pages/Profile.js';
-import { getAuthState }       from './api/mock.js';
+import { getAuthState, validateResetToken } from './api/mock.js';
+import { t } from './i18n/index.js';
+import { showToast } from './components/Toast.js';
 // TODO: раскомментируй когда создашь эти страницы:
 // import { renderSearch }    from './pages/Search.js';
 // import { renderDrama }     from './pages/Drama.js';
@@ -38,6 +40,13 @@ export function getCurrentRoute() {
   return window.location.hash || '#/';
 }
 
+export function getQueryParams() {
+  const hash = window.location.hash || '';
+  const qIndex = hash.indexOf('?');
+  if (qIndex === -1) return {};
+  return Object.fromEntries(new URLSearchParams(hash.slice(qIndex + 1)));
+}
+
 // ─── Принудительный ре-рендер текущего маршрута ──
 // Используется после логина: хэш мог не измениться,
 // поэтому hashchange не стреляет — вызываем render вручную.
@@ -45,8 +54,9 @@ export let forceRender = () => {}; // будет заменён внутри ini
 
 // ─── Resolve маршрута с параметрами ───────────
 function resolveRoute(hash) {
+  const path = hash.split('?')[0];
   // Точное совпадение
-  if (ROUTES[hash]) return { handler: ROUTES[hash], params: {} };
+  if (ROUTES[path]) return { handler: ROUTES[path], params: {} };
 
   // Параметрические маршруты (напр. #/drama/123)
   for (const [pattern, handler] of Object.entries(ROUTES)) {
@@ -55,7 +65,7 @@ function resolveRoute(hash) {
       paramNames.push(name);
       return '([^/]+)';
     });
-    const match = hash.match(new RegExp(`^${regexStr}$`));
+    const match = path.match(new RegExp(`^${regexStr}$`));
     if (match) {
       const params = {};
       paramNames.forEach((name, i) => params[name] = match[i + 1]);
@@ -127,6 +137,14 @@ export function initRouter(appEl) {
 
   async function render() {
     const hash = getCurrentRoute();
+
+    // Ссылка восстановления пароля из письма (#/reset-password?token=...) — не отдельная страница,
+    // а модалка поверх главной. Перехватываем здесь, до resolveRoute.
+    if (hash.startsWith('#/reset-password')) {
+      await handleResetPasswordLink();
+      return;
+    }
+
     let { handler, params } = resolveRoute(hash);
 
     if (isHomeHash(hash)) {
@@ -157,6 +175,35 @@ export function initRouter(appEl) {
       isFirstRenderAfterLoad = false;
       restoreScroll(hash);
     }
+  }
+
+  /**
+   * Обрабатывает открытие ссылки восстановления из письма. Сначала тихо убираем ?token=... из адресной
+   * строки (через history.replaceState — без hashchange, чтобы не спровоцировать второй render()
+   * через событие), рендерим главную как обычно, и только потом поверх неё либо открываем
+   * модалку смены пароля (токен валиден), либо показываем toast с ошибкой (протух/использован/нет токена).
+   */
+  async function handleResetPasswordLink() {
+    const token = getQueryParams().token ?? '';
+
+    history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
+
+    if (!token) {
+      await render();
+      showToast(t('reset.err_no_token'), 'error');
+      return;
+    }
+
+    const { data, error } = await validateResetToken(token);
+    await render();
+
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+
+    const { openResetPasswordModal } = await import('./components/ResetPasswordModal.js');
+    openResetPasswordModal(token, data.email);
   }
 
   async function validateSessionInBackground(pageEl, hashAtRenderTime) {
