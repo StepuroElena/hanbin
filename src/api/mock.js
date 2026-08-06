@@ -1076,7 +1076,7 @@ export async function resetPassword(token, password) {
     try { json = JSON.parse(text); } catch (_) {}
 
     if (!res.ok) {
-      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+      return { data: null, error: mapResetTokenError(json?.error, res.status) };
     }
 
     return { data: json, error: null };
@@ -1109,7 +1109,7 @@ export async function validateResetToken(token) {
     try { json = JSON.parse(text); } catch (_) {}
 
     if (!res.ok) {
-      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+      return { data: null, error: mapResetTokenError(json?.error, res.status) };
     }
 
     return { data: { email: json?.email ?? '' }, error: null };
@@ -1122,6 +1122,16 @@ export async function validateResetToken(token) {
         : 'Ошибка. Попробуй позже.',
     };
   }
+}
+
+// Бэк возвращает английский текст ошибки (см. authdomain.ErrTokenInvalid/ErrTokenExpired в auth.service.go) —
+// переводим известные варианты на русский, чтобы UI не показывал сырой английский текст.
+// Используется и validateResetToken(), и resetPassword() — оба могут вернуть ту же ошибку.
+function mapResetTokenError(rawMessage, status) {
+  const msg = (rawMessage ?? '').toLowerCase();
+  if (msg.includes('expired')) return 'Ссылка устарела — запроси новую через «Забыл(а) пароль?»';
+  if (msg.includes('invalid') || msg.includes('already been used')) return 'Ссылка недействительна или уже использована';
+  return rawMessage || `Ошибка сервера (${status})`;
 }
 
 export async function deleteDrama(id) {
