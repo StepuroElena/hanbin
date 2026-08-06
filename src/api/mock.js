@@ -1016,6 +1016,124 @@ export async function loginUser({ email, password }) {
   }
 }
 
+/**
+ * Запрашивает восстановление пароля по email — POST /api/v1/auth/forgot-password.
+ * Если такого аккаунта нет, бэк вернёт 404 — ошибка прокидывается в UI как есть.
+ *
+ * ВРЕМЕННО (пока не подключён реальный email-провайдер): бэк возвращает готовую ссылку
+ * восстановления прямо в ответе (data.resetLink) — её показывает ForgotPasswordModal.js.
+ * Как только появится email-сервис — это поле с бэка уйдёт, и весь шаг с показом ссылки надо будет убрать.
+ *
+ * @param {string} email
+ * @returns {Promise<{ data: { resetLink: string, expiresAt: string }|null, error: string|null }>}
+ */
+export async function forgotPassword(email) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok) {
+      if (res.status === 404) return { data: null, error: 'Аккаунт с такой почтой не найден.' };
+      if (res.status === 400) return { data: null, error: json?.error ?? 'Проверь почту.' };
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})` };
+    }
+
+    return { data: { resetLink: json?.reset_link ?? '', expiresAt: json?.expires_at ?? '' }, error: null };
+  } catch (err) {
+    console.error('[API] forgotPassword network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка. Попробуй позже.',
+    };
+  }
+}
+
+/**
+ * Устанавливает новый пароль по токену из ссылки восстановления — POST /api/v1/auth/reset-password.
+ * Используется ResetPasswordModal.js.
+ * @param {string} token
+ * @param {string} password
+ */
+export async function resetPassword(token, password) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok) {
+      return { data: null, error: mapResetTokenError(json?.error, res.status) };
+    }
+
+    return { data: json, error: null };
+  } catch (err) {
+    console.error('[API] resetPassword network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка. Попробуй позже.',
+    };
+  }
+}
+
+/**
+ * Проверяет токен восстановления пароля до того, как показать форму смены пароля — GET /api/v1/auth/reset-password?token=...
+ * Чистое чтение, ничего не меняет. Используется router.js при открытии ссылки из письма,
+ * чтобы решить — открывать ResetPasswordModal.js (токен валиден) или показать тост с ошибкой.
+ * @param {string} token
+ * @returns {Promise<{ data: { email: string }|null, error: string|null }>}
+ */
+export async function validateResetToken(token) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/reset-password?token=${encodeURIComponent(token)}`, {
+      method: 'GET',
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok) {
+      return { data: null, error: mapResetTokenError(json?.error, res.status) };
+    }
+
+    return { data: { email: json?.email ?? '' }, error: null };
+  } catch (err) {
+    console.error('[API] validateResetToken network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка. Попробуй позже.',
+    };
+  }
+}
+
+// Бэк возвращает английский текст ошибки (см. authdomain.ErrTokenInvalid/ErrTokenExpired в auth.service.go) —
+// переводим известные варианты на русский, чтобы UI не показывал сырой английский текст.
+// Используется и validateResetToken(), и resetPassword() — оба могут вернуть ту же ошибку.
+function mapResetTokenError(rawMessage, status) {
+  const msg = (rawMessage ?? '').toLowerCase();
+  if (msg.includes('expired')) return 'Ссылка устарела — запроси новую через «Забыл(а) пароль?»';
+  if (msg.includes('invalid') || msg.includes('already been used')) return 'Ссылка недействительна или уже использована';
+  return rawMessage || `Ошибка сервера (${status})`;
+}
+
 export async function deleteDrama(id) {
   const token = localStorage.getItem('hanbin_token');
 

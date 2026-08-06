@@ -2,7 +2,15 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=pages/home.html">
+  <script>
+    // Сохраняем hash (роут + query-параметры, напр. #/reset-password?token=...) при редиректе —
+    // meta http-equiv="refresh" его теряет (браузер редиректит на чистый URL без хеша), поэтому через JS.
+    // Именно из-за этого ссылка восстановления пароля (ведёт на корень домена "/") раньше тихо теряла ?token=...
+    location.replace('pages/home.html' + location.hash);
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0; url=pages/home.html">
+  </noscript>
 </head>
 <body></body>
 </html>
