@@ -216,6 +216,8 @@ function setupPasswordToggle(inputId, toggleId) {
 
 // ─── Смонтировать содержимое регистрации ─────
 export function mountRegisterContent(content, enterClass) {
+  document.getElementById('hb-modal-box')?.setAttribute('data-screen', 'register');
+
   // Сохраняем значения полей перед перерисовкой (при смене языка)
   const prevName  = document.getElementById('hb-reg-name')?.value  ?? '';
   const prevEmail = document.getElementById('hb-reg-email')?.value ?? '';

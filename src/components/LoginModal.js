@@ -174,6 +174,21 @@ const MODAL_CSS = `
   .hb-btn-secondary:hover {
     border-color: rgba(201,123,138,0.6); background: rgba(201,123,138,0.08);
   }
+
+  .hb-forgot-link {
+    display: block; text-align: right; margin: -4px 0 16px;
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 11px;
+    color: rgba(201,123,138,0.75); transition: color 0.2s;
+  }
+  .hb-forgot-link:hover { color: #ff6b8a; text-decoration: underline; }
+
+  /* Экран «Письмо отправлено» в ForgotPasswordModal.js — только этот подзаголовок, остальные
+     модалки (логин/регистрация и т.д.) по-прежнему используют базовый .hb-modal-sub. */
+  .hb-modal-sub--email-sent {
+    text-transform: none; font-style: italic; text-align: center;
+    font-size: 13px; letter-spacing: 0.01em; line-height: 1.5;
+  }
 `;
 
 // ─── Логотип SVG ──────────────────────────────
@@ -238,6 +253,8 @@ function loginContentHTML() {
         placeholder="${t('modal.login.pass_ph')}" maxlength="64" autocomplete="current-password">
       <div class="hb-field-error" id="hb-pass-error"></div>
     </div>
+
+    <button type="button" class="hb-forgot-link" id="hb-btn-forgot-password">${t('modal.login.forgot_link')}</button>
 
     <button class="hb-btn-primary" id="hb-btn-login" disabled>${t('modal.login.btn')}</button>
 
@@ -354,6 +371,8 @@ async function validateAndLogin() {
 
 // ─── Смонтировать содержимое логина ──────────
 export function mountLoginContent(content, enterClass) {
+  document.getElementById('hb-modal-box')?.setAttribute('data-screen', 'login');
+
   // Сохраняем значения полей если они уже были введены (при смене языка)
   const prevEmail = document.getElementById('hb-email')?.value ?? '';
   const prevPass  = document.getElementById('hb-pass')?.value ?? '';
@@ -390,9 +409,22 @@ export function mountLoginContent(content, enterClass) {
   );
 
   document.getElementById('hb-btn-register').addEventListener('click', () => {
+    // Запускаем загрузку модуля сразу, параллельно с exit-анимацией (~300–400мс) — если ждать import()
+    // только после её завершения, старая форма на мгновение полностью возвращается (opacity сбрасывается вместе
+    // с удалением класса), и получается видимое моргание.
+    const modulePromise = import('./RegisterModal.js');
     transitionModalContent('left', (el, cls) => {
-      import('./RegisterModal.js').then(({ mountRegisterContent }) => {
+      modulePromise.then(({ mountRegisterContent }) => {
         mountRegisterContent(el, cls);
+      });
+    });
+  });
+
+  document.getElementById('hb-btn-forgot-password').addEventListener('click', () => {
+    const modulePromise = import('./ForgotPasswordModal.js');
+    transitionModalContent('left', (el, cls) => {
+      modulePromise.then(({ mountForgotPasswordContent }) => {
+        mountForgotPasswordContent(el, cls);
       });
     });
   });
@@ -445,12 +477,18 @@ export function openLoginModal() {
     const content = document.getElementById('hb-modal-content');
     if (!content) return;
 
-    // Определяем что сейчас открыто — логин или регистрация
-    const isRegister = document.getElementById('hb-modal-box')?.classList.contains('hb-theme-register');
+    // Определяем, какой экран сейчас открыт — по data-screen (ставится каждым mountXContent при монтировании),
+    // а не по CSS-классу темы — тот также ставится на экране восстановления (общая тема с регистрацией),
+    // и было бы двусмысленно перепутать их при смене языка.
+    const screen = document.getElementById('hb-modal-box')?.dataset.screen ?? 'login';
 
-    if (isRegister) {
+    if (screen === 'register') {
       import('./RegisterModal.js').then(({ mountRegisterContent }) => {
         mountRegisterContent(content, null);
+      });
+    } else if (screen === 'forgot') {
+      import('./ForgotPasswordModal.js').then(({ mountForgotPasswordContent }) => {
+        mountForgotPasswordContent(content, null);
       });
     } else {
       mountLoginContent(content, null);
