@@ -387,6 +387,15 @@ export const translations = {
     'modal.reg.err_email':        '⚠ Некорректный адрес почты',
     'modal.reg.err_pass':         '⚠ Минимум 8 символов',
     'modal.reg.success':          '✓ Аккаунт создан! (TODO: подключить к API)',
+    'modal.reg.email_sent_title': 'Письмо отправлено',
+    'modal.reg.email_sent_sub':   'Проверь почту — перейди по ссылке, чтобы подтвердить аккаунт. Ссылка действительна 24 часа. Не видишь письмо — загляни в папку Спам.',
+    'modal.reg.sent_title':       'Аккаунт создан',
+    'modal.reg.sent_sub':         'Осталось подтвердить почту',
+    'modal.reg.dev_note':         'Письма пока не отправляются — вот ссылка для теста',
+
+    // Confirm email
+    'confirm.success':            '✓ Почта подтверждена — теперь можно войти',
+    'confirm.err_no_token':       'Ссылка повреждена — токен не найден',
   },
 
   en: {
@@ -767,6 +776,15 @@ export const translations = {
     'modal.reg.err_email':        '⚠ Invalid email address',
     'modal.reg.err_pass':         '⚠ At least 8 characters',
     'modal.reg.success':          '✓ Account created! (TODO: connect to API)',
+    'modal.reg.email_sent_title': 'Email sent',
+    'modal.reg.email_sent_sub':   'Check your inbox and follow the link to confirm your account. The link is valid for 24 hours. Don’t see it? Check your spam folder.',
+    'modal.reg.sent_title':       'Account created',
+    'modal.reg.sent_sub':         'One more step — confirm your email',
+    'modal.reg.dev_note':         'Emails aren’t sent yet — here’s the link for testing',
+
+    // Confirm email
+    'confirm.success':            '✓ Email confirmed — you can sign in now',
+    'confirm.err_no_token':       'Link is broken — no token found',
   },
 };
 

@@ -12,7 +12,7 @@ import { renderUnauthorized } from './pages/Unauthorized.js';
 import { renderSettings }     from './pages/Settings.js';
 import { renderMovies }       from './pages/Movies.js';
 import { renderProfile }      from './pages/Profile.js';
-import { getAuthState, validateResetToken } from './api/mock.js';
+import { getAuthState, validateResetToken, confirmEmail } from './api/mock.js';
 import { t } from './i18n/index.js';
 import { showToast } from './components/Toast.js';
 // TODO: раскомментируй когда создашь эти страницы:
@@ -145,6 +145,13 @@ export function initRouter(appEl) {
       return;
     }
 
+    // Ссылка подтверждения email из письма после регистрации (#/confirm-email?token=...) —
+    // тот же паттерн, что и у #/reset-password выше: не отдельная страница, а действие поверх главной.
+    if (hash.startsWith('#/confirm-email')) {
+      await handleConfirmEmailLink();
+      return;
+    }
+
     let { handler, params } = resolveRoute(hash);
 
     if (isHomeHash(hash)) {
@@ -204,6 +211,38 @@ export function initRouter(appEl) {
 
     const { openResetPasswordModal } = await import('./components/ResetPasswordModal.js');
     openResetPasswordModal(token, data.email);
+  }
+
+  /**
+   * Обрабатывает открытие ссылки подтверждения почты из письма — тот же паттерн, что и у
+   * handleResetPasswordLink: сначала тихо убираем ?token=... из адресной строки (через history.replaceState —
+   * без hashchange, чтобы не спровоцировать второй render() через событие), рендерим главную как обычно,
+   * и только потом показываем тост с результатом подтверждения. В отличие от ссылки восстановления
+   * пароля здесь нет отдельной модалки — токен одноразовый, повторный переход по ссылке всё равно вернёт
+   * ошибку «уже использован» от бэка — это нормально, не показываем это как ошибку пользователю.
+   */
+  async function handleConfirmEmailLink() {
+    const token = getQueryParams().token ?? '';
+
+    history.replaceState(null, '', window.location.pathname + window.location.search + '#/');
+
+    if (!token) {
+      await render();
+      showToast(t('confirm.err_no_token'), 'error');
+      return;
+    }
+
+    const { error } = await confirmEmail(token);
+    await render();
+
+    if (error) {
+      showToast(error, 'error');
+      return;
+    }
+
+    showToast(t('confirm.success'), 'info');
+    const { openLoginModal } = await import('./components/LoginModal.js');
+    openLoginModal();
   }
 
   async function validateSessionInBackground(pageEl, hashAtRenderTime) {
