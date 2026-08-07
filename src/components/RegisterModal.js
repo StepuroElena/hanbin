@@ -2,10 +2,9 @@
  * HANBIN — Register Modal Component
  */
 
-import { navigate, forceRender }                                 from '../router.js';
 import { t }                                                     from '../i18n/index.js';
-import { closeModal, transitionModalContent, mountLoginContent } from './LoginModal.js';
-import { registerUser, loginUser }                               from '../api/mock.js';
+import { transitionModalContent, mountLoginContent }             from './LoginModal.js';
+import { registerUser }                                          from '../api/mock.js';
 
 const LOGO_SVG = `
   <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -86,6 +85,35 @@ function registerContentHTML() {
 }
 
 // ─── Логика формы ─────────────────────────────
+// ─── Экран «Письмо отправлено» (после успешной регистрации) ───
+// Бэк (см. api/mock.js:registerUser) возвращает два варианта ответа в зависимости от того, настроен ли на
+// бэке реальный email-провайдер (RESEND_API_KEY):
+//   — ключ есть → письмо реально ушло, data.confirmation_link пустой → показываем простое «проверь почту»;
+//   — ключа нет (локальная разработка без Resend) → confirmation_link заполнен → показываем ссылку прямо в модалке.
+function registerSuccessHTML(confirmationLink) {
+  if (!confirmationLink) {
+    return `
+      <div class="hb-modal-title">${t('modal.reg.email_sent_title')}</div>
+      <div class="hb-modal-sub hb-modal-sub--email-sent">${t('modal.reg.email_sent_sub')}</div>
+      <button class="hb-btn-secondary" id="hb-btn-reg-back">${t('modal.reg.to_login')}</button>
+    `;
+  }
+
+  return `
+    <div class="hb-modal-title">${t('modal.reg.sent_title')}</div>
+    <div class="hb-modal-sub">${t('modal.reg.sent_sub')}</div>
+
+    <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(232,196,184,0.18);border-radius:12px;padding:14px 16px;margin-bottom:22px;">
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,230,211,0.4);margin-bottom:8px;">
+        ${t('modal.reg.dev_note')}
+      </div>
+      <a href="${confirmationLink}" style="word-break:break-all;color:#c97b8a;font-size:13px;line-height:1.5;">${confirmationLink}</a>
+    </div>
+
+    <button class="hb-btn-secondary" id="hb-btn-reg-back">${t('modal.reg.to_login')}</button>
+  `;
+}
+
 function syncRegisterButton() {
   const name  = document.getElementById('hb-reg-name')?.value.trim();
   const email = document.getElementById('hb-reg-email')?.value.trim();
@@ -165,32 +193,15 @@ async function validateAndRegister() {
   // ─ Успех: сохраняем user_id ─────────────────────────
   console.log('[RegisterModal] Регистрация успешна, user_id:', data.user_id);
 
-  // Получаем JWT-токен сразу после регистрации, чтобы не заставлять пользователя логиниться второй раз
-  setLoadingState(btn, true);
-  const { data: loginData, error: loginError } = await loginUser({
-    email:    emailEl.value.trim(),
-    password: passEl.value,
-  });
-  setLoadingState(btn, false);
-
-  if (loginError || !loginData?.token) {
-    // Регистрация прошла, но автологин не удался — отправляем на страницу логина
-    console.warn('[RegisterModal] Автологин не удался:', loginError);
-    closeModal();
-    navigate('#/guest');
-    return;
+  // НЕ логиним автоматически — сначала надо подтвердить почту по ссылке из письма
+  // (см. router.js: #/confirm-email). Показываем экран «проверь почту» поверх той же модалки.
+  const content = document.getElementById('hb-modal-content');
+  if (content) {
+    content.innerHTML = registerSuccessHTML(data.confirmation_link || '');
+    document.getElementById('hb-btn-reg-back')?.addEventListener('click', () => {
+      transitionModalContent('right', (el, cls) => mountLoginContent(el, cls));
+    });
   }
-
-  // Сохраняем токен — дальше getMe() будет его использовать для запросов к бэку
-  localStorage.setItem('hanbin_token', loginData.token);
-  localStorage.setItem('hanbin_user', JSON.stringify({
-    id:    String(loginData.user_id),
-    email: loginData.email,
-  }));
-
-  closeModal();
-  navigate('#/');
-  forceRender();
 }
 
 // Блокируем/разблокируем кнопку во время запроса

@@ -191,6 +191,18 @@ const MODAL_CSS = `
   }
 `;
 
+// ─── SVG иконки «показать/скрыть пароль» (тот же набор, что и в ResetPasswordModal.js) ─
+ const EYE_ICONS_SVG = `
+  <svg class="hb-eye-icon hb-eye-icon--show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+  <svg class="hb-eye-icon hb-eye-icon--hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>
+`;
+
 // ─── Логотип SVG ──────────────────────────────
 const LOGO_SVG = `
   <svg class="hb-modal-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
@@ -249,8 +261,13 @@ function loginContentHTML() {
         <span>${t('modal.login.password')} <span class="hb-required">*</span></span>
         <span class="hb-counter" id="hb-pass-counter">0 / 64</span>
       </div>
-      <input class="hb-field-input" id="hb-pass" type="password"
-        placeholder="${t('modal.login.pass_ph')}" maxlength="64" autocomplete="current-password">
+      <div class="hb-field-password-wrap">
+        <input class="hb-field-input hb-field-input--password" id="hb-pass" type="password"
+          placeholder="${t('modal.login.pass_ph')}" maxlength="64" autocomplete="current-password">
+        <button type="button" class="hb-eye-toggle" id="hb-pass-toggle" aria-label="${t('modal.show_pass')}">
+          ${EYE_ICONS_SVG}
+        </button>
+      </div>
       <div class="hb-field-error" id="hb-pass-error"></div>
     </div>
 
@@ -369,6 +386,20 @@ async function validateAndLogin() {
   });
 }
 
+// Показать/скрыть пароль по клику на глазик — тот же паттерн, что и в ResetPasswordModal.js.
+function setupPasswordToggle(inputId, toggleId) {
+  const input  = document.getElementById(inputId);
+  const toggle = document.getElementById(toggleId);
+  if (!input || !toggle) return;
+
+  toggle.addEventListener('click', () => {
+    const willShow = input.type === 'password';
+    input.type = willShow ? 'text' : 'password';
+    toggle.classList.toggle('hb-eye-toggle--active', willShow);
+    toggle.setAttribute('aria-label', willShow ? t('modal.hide_pass') : t('modal.show_pass'));
+  });
+}
+
 // ─── Смонтировать содержимое логина ──────────
 export function mountLoginContent(content, enterClass) {
   document.getElementById('hb-modal-box')?.setAttribute('data-screen', 'login');
@@ -402,6 +433,7 @@ export function mountLoginContent(content, enterClass) {
     updateCounter('hb-pass', 'hb-pass-counter', 64, 'hb-pass-error'));
 
   document.getElementById('hb-btn-login').addEventListener('click', validateAndLogin);
+  setupPasswordToggle('hb-pass', 'hb-pass-toggle');
   ['hb-email', 'hb-pass'].forEach(id =>
     document.getElementById(id).addEventListener('keydown', e => {
       if (e.key === 'Enter') validateAndLogin();

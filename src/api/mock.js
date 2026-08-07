@@ -1134,6 +1134,47 @@ function mapResetTokenError(rawMessage, status) {
   return rawMessage || `Ошибка сервера (${status})`;
 }
 
+// Тот же смысл, что и mapResetTokenError, но для ошибок токена подтверждения почты
+// (authdomain.ErrConfirmationTokenInvalid/ErrConfirmationTokenExpired).
+function mapConfirmationTokenError(rawMessage, status) {
+  const msg = (rawMessage ?? '').toLowerCase();
+  if (msg.includes('expired')) return 'Ссылка подтверждения устарела — зарегистрируйся заново, чтобы получить новое письмо';
+  if (msg.includes('invalid') || msg.includes('already been used')) return 'Ссылка недействительна или почта уже подтверждена';
+  return rawMessage || `Ошибка сервера (${status})`;
+}
+
+/**
+ * Подтверждает email по токену из ссылки в письме — GET /api/v1/auth/confirm-email?token=...
+ * Используется router.js при открытии ссылки #/confirm-email?token=...
+ * @param {string} token
+ * @returns {Promise<{ data: { ok: true }|null, error: string|null }>}
+ */
+export async function confirmEmail(token) {
+  try {
+    const res = await fetch(`${API_BASE}/auth/confirm-email?token=${encodeURIComponent(token)}`, {
+      method: 'GET',
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (!res.ok) {
+      return { data: null, error: mapConfirmationTokenError(json?.error, res.status) };
+    }
+
+    return { data: json, error: null };
+  } catch (err) {
+    console.error('[API] confirmEmail network error:', err);
+    return {
+      data: null,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка. Попробуй позже.',
+    };
+  }
+}
+
 export async function deleteDrama(id) {
   const token = localStorage.getItem('hanbin_token');
 
