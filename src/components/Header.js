@@ -7,6 +7,10 @@ import { searchDramas, setViewMode, getAuthState } from '../api/mock.js';
 import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { renderLangToggle } from './LangToggle.js';
+import { getRoyalTitleKey } from '../utils/royalTitle.js';
+
+// Миниатюрная SVG-корона для бейджа на аватаре — fill="currentColor", цвет задаётся модификатором класса (avatar-crown--free/plus/pro).
+const CROWN_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18l1-9-5.5 4L12 6l-4.5 7L2 9l1 9z"/></svg>';
 
 export async function renderHeader(container, { onSearch, onViewChange }) {
   // ── Начальное auth-состояние — берём ТОЛЬКО из localStorage, без похода в сеть. ──
@@ -26,6 +30,13 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
     ? { isLoggedIn: true, user: { ...cachedUser, name: fallbackName } }
     : { isLoggedIn: false, user: null };
 
+  // Обращение — чисто клиентская настройка в localStorage (см. getHonorific/setHonorific в api/mock.js) — читаем напрямую, без аватара,
+  // так же, как hasTokenLocally/currentMode выше — не блокирует первый рендер.
+  const honorific = localStorage.getItem('hanbin_honorific') === 'lord' ? 'lord' : 'lady';
+
+  // Тариф пока неизвестен (hanbin_user в localStorage хранит только id/email, без plan) — по дефолту считаем 'free',
+  // реальный plan доедет с фоновым getAuthState() ниже и перерисует шапку, если отличается.
+
   // Храним текущий вид в мутабельной переменной — переживает перерендер при смене языка
   let currentMode = localStorage.getItem('hanbin_view_mode') || 'card';
 
@@ -36,11 +47,19 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
     const currentHash = getCurrentRoute();
     const isMoviesRoute = currentHash === '#/movies';
     const avatarHTML = auth.isLoggedIn
-      ? `<div class="avatar-wrap" id="avatar-wrap">
-          <div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name}">${auth.user.name.slice(0, 2)}</div>
+      ? (() => {
+          const plan = auth.user?.plan || 'free';
+          const royalTitle = t(getRoyalTitleKey(plan, honorific));
+          const isPaid = plan !== 'free'; // корона на аватаре — только для платных тарифов, чтобы быть визуально ценной привилегией, а не базовым атрибутом всех
+          return `<div class="avatar-wrap" id="avatar-wrap">
+          <div class="avatar avatar--logged-in" id="avatar-btn" data-tooltip="${t('header.tooltip.profile')}: ${auth.user.name} · ${royalTitle}">
+            ${auth.user.name.slice(0, 2)}
+            ${isPaid ? `<span class="avatar-crown avatar-crown--${plan}">${CROWN_SVG}</span>` : ''}
+          </div>
           <div class="avatar-dropdown" id="avatar-dropdown">
             <div class="avatar-dropdown__user">
               <div class="avatar-dropdown__name">${auth.user.name}</div>
+              <div class="avatar-dropdown__title">${CROWN_SVG} ${royalTitle}</div>
             </div>
             <button class="avatar-dropdown__btn" id="dropdown-profile-btn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -55,7 +74,8 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
               ${t('header.dropdown.logout')}
             </button>
           </div>
-        </div>`
+        </div>`;
+        })()
       : `<button class="avatar avatar--guest" id="avatar-btn" data-tooltip="${t('header.tooltip.login')}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
@@ -245,7 +265,8 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
   if (hasTokenLocally) {
     getAuthState().then(({ data: realAuth }) => {
       const changed = realAuth.isLoggedIn !== auth.isLoggedIn ||
-        (realAuth.user?.name ?? null) !== (auth.user?.name ?? null);
+        (realAuth.user?.name ?? null) !== (auth.user?.name ?? null) ||
+        (realAuth.user?.plan ?? 'free') !== (auth.user?.plan ?? 'free');
       auth = realAuth;
       if (changed && container.isConnected) refreshHeader();
     }).catch(() => { /* тихо игнорируем — шапка уже рабочая с локальным состоянием */ });

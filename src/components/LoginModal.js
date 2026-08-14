@@ -472,6 +472,34 @@ export function closeModal() {
   overlay.addEventListener('animationend', () => overlay.remove(), { once: true });
 }
 
+// ─── Открыть модалку с произвольным содержимым (не только логин) ───
+// Переиспользует тот же оверлей/CSS/закрытие по Escape/клику вне, что и openLoginModal, но монтирует
+// произвольный mountFn вместо mountLoginContent — используется, например, CancelSubscriptionModal.js.
+export function openModal(mountFn) {
+  if (document.getElementById('hb-modal-overlay')) return;
+
+  injectModalCSS();
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = createOverlayHTML();
+  document.body.appendChild(wrapper.firstElementChild);
+
+  document.getElementById('hb-modal-close').addEventListener('click', closeModal);
+  document.getElementById('hb-modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'hb-modal-overlay') closeModal();
+  });
+
+  const onKeydown = e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', onKeydown);
+    }
+  };
+  document.addEventListener('keydown', onKeydown);
+
+  mountFn(document.getElementById('hb-modal-content'), null);
+}
+
 // ─── Открыть модалку логина ───────────────────
 export function openLoginModal() {
   if (document.getElementById('hb-modal-overlay')) return;

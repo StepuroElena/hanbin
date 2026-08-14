@@ -15,6 +15,13 @@ const MOCK_DELAY = 300; // ms, имитация latency
 
 const delay = (ms = MOCK_DELAY) => new Promise(res => setTimeout(res, ms));
 
+// ВРЕМЕННЫЙ override для ручного тестирования тарифов (ветка feature/payments, бэк ещё не хранит plan) —
+// конкретному тестовому email жёстко проставляем план, чтобы посмотреть, как выглядит средний
+// тариф на реальном аккаунте. Убрать, когда бэк начнёт возвращать plan по-настоящему.
+const TEST_PLAN_OVERRIDES = {
+  'n63223304@gmail.com': 'plus',
+};
+
 // ─────────────────────────────────────────────
 // DATA FIXTURES
 // ─────────────────────────────────────────────
@@ -23,6 +30,9 @@ const MOCK_USER = {
   id: 'user_001',
   name: 'Elena',
   avatar: '소',
+  // Тарифный план 'free' | 'plus' | 'pro' — платёжная интеграция ещё не подключена (ветка feature/payments) —
+  // бэк пока не знает про plan, всегда отдаём 'free' как дефолт. См. Profile.js — блок «Podpiska».
+  plan: 'free',
   stats: {
     dramasWatched: 73,
     totalEpisodes: 1840,
@@ -51,6 +61,7 @@ const EMPTY_USER = {
   id: null,
   name: '',
   avatar: '',
+  plan: 'free',
   stats: {
     dramasWatched: 0,
     totalEpisodes: 0,
@@ -1281,6 +1292,78 @@ export async function getViewMode() {
   return { data: { mode: localStorage.getItem('hanbin_view_mode') || 'card' }, error: null };
 }
 
+/**
+ * Обращение пользователя — 'lord' (Господин) | 'lady' (Госпожа) — чисто клиентская
+ * настройка (как и язык/вид таблицы), на бэке поля нет — хранится в localStorage. Влияет на названия
+ * тарифов (см. ROYAL_TITLES в Profile.js) — дефолт 'lady', если пользователь ничего не выбирал.
+ */
+export async function getHonorific() {
+  const value = localStorage.getItem('hanbin_honorific');
+  return { data: { honorific: value === 'lord' ? 'lord' : 'lady' }, error: null };
+}
+
+export async function setHonorific(honorific) {
+  await delay(50);
+  localStorage.setItem('hanbin_honorific', honorific === 'lord' ? 'lord' : 'lady');
+  return { data: { honorific }, error: null };
+}
+
+/**
+ * Разбивка библиотеки по категориям (дорамы / фильмы, без архива/удалённых) — используется в модалке
+ * отмены подписки (CancelSubscriptionModal.js), чтобы честно предупредить точными числами, сколько записей
+ * каждой категории будет удалено при откате на тариф с меньшим лимитом (см. PLAN_LIBRARY_LIMITS в data/subscriptionPlans.js).
+ */
+export async function getLibraryBreakdown() {
+  const [{ data: dramas }, { data: movies }] = await Promise.all([getDramas({ limit: 9999 }), getMovies()]);
+  return { data: { dramas: dramas?.length ?? 0, movies: movies?.length ?? 0 }, error: null };
+}
+
+/**
+ * Общий размер библиотеки (дорамы + фильмы) — простая сумма поверх getLibraryBreakdown(), оставлена для мест,
+ * где важен только итог.
+ */
+export async function getLibrarySize() {
+  const { data } = await getLibraryBreakdown();
+  return { data: data.dramas + data.movies, error: null };
+}
+
+/**
+ * Клиентское состояние отмены подписки — хранится в localStorage (реального биллинга нет, ветка feature/payments).
+ * Доступ к тарифу не пропадает мгновенно при отмене — сохраняется «до конца периода» (здесь — моковые +30 дней от момента отмены).
+ */
+export async function getCancellation() {
+  try {
+    const raw = localStorage.getItem('hanbin_subscription_cancel');
+    return { data: raw ? JSON.parse(raw) : null, error: null };
+  } catch {
+    return { data: null, error: null };
+  }
+}
+
+/**
+ * Планирует отмену/даунгрейд — срабатывает и полную отмену (targetPlan: 'free'),
+ * и мягкий даунгрейд с Pro на Plus вместо полной отмены (targetPlan: 'plus').
+ * @param {{ fromPlan: string, targetPlan: string, reason: string|null }} params
+ */
+export async function scheduleCancellation({ fromPlan, targetPlan, reason }) {
+  await delay(200);
+  const scheduledAt = new Date();
+  const effectiveAt = new Date(scheduledAt.getTime() + 30 * 24 * 3600000); // мок «до конца оплаченного периода» — 30 дней
+  const record = {
+    fromPlan, targetPlan, reason: reason ?? null,
+    scheduledAt: scheduledAt.toISOString(),
+    effectiveAt: effectiveAt.toISOString(),
+  };
+  localStorage.setItem('hanbin_subscription_cancel', JSON.stringify(record));
+  return { data: record, error: null };
+}
+
+export async function undoCancellation() {
+  await delay(100);
+  localStorage.removeItem('hanbin_subscription_cancel');
+  return { data: null, error: null };
+}
+
 let _getMeCache = null;
 let _getMeInflight = null;
 const GET_ME_TTL = 5000;
@@ -1348,6 +1431,9 @@ export async function getMe() {
       name:   raw.name,
       email:  raw.email,
       avatar: raw.name?.slice(0, 2) ?? '소',
+      // Бэк пока не возвращает plan (платёжная интеграция в работе, ветка feature/payments) — дефолт 'free',
+      // кроме тестового email из TEST_PLAN_OVERRIDES выше — ему план подменяем вручную для теста.
+      plan: TEST_PLAN_OVERRIDES[raw.email] ?? (raw.plan ?? 'free'),
       stats: {
         dramasWatched,
         totalEpisodes,
@@ -1392,6 +1478,7 @@ export async function getAuthState() {
           id:   cached.id   ?? MOCK_USER.id,
           name: cached.name ?? MOCK_USER.name,
           email: cached.email ?? '',
+          plan: TEST_PLAN_OVERRIDES[cached.email] ?? MOCK_USER.plan,
         };
         return { data: { isLoggedIn: true, user: fallbackUser }, error: null };
       }
@@ -1405,7 +1492,13 @@ export async function getAuthState() {
     const raw = localStorage.getItem('hanbin_user');
     const cached = raw ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : null;
     if (cached) {
-      const fallbackUser = { ...MOCK_USER, id: cached.id ?? MOCK_USER.id, name: cached.name ?? MOCK_USER.name };
+      const fallbackUser = {
+        ...MOCK_USER,
+        id: cached.id ?? MOCK_USER.id,
+        name: cached.name ?? MOCK_USER.name,
+        email: cached.email ?? '',
+        plan: TEST_PLAN_OVERRIDES[cached.email] ?? MOCK_USER.plan,
+      };
       return { data: { isLoggedIn: true, user: fallbackUser }, error: null };
     }
     return { data: { isLoggedIn: false, user: null }, error: null };

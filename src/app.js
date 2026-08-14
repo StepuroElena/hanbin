@@ -158,6 +158,23 @@ const componentCSS = `
   background: rgba(201,123,138,0.15); border-color: var(--color-rose); color: var(--color-rose);
 }
 
+/* ── Корона-бейдж на аватаре — пассивное напоминание о титуле на каждой странице, цвет по тарифу ── */
+.avatar-crown {
+  position: absolute;
+  bottom: -3px; right: -3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(26,10,24,0.92);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  pointer-events: none;
+}
+.avatar-crown svg { width: 9px; height: 9px; }
+.avatar-crown--free svg { color: #a8907a; }
+.avatar-crown--plus svg { color: var(--color-rose); }
+.avatar-crown--pro svg { color: var(--color-gold); }
+
 /* ── Avatar dropdown ── */
 .avatar-wrap {
   position: relative;
@@ -198,6 +215,21 @@ const componentCSS = `
   font-size: 16px;
   color: var(--color-text);
   margin-bottom: 2px;
+}
+
+.avatar-dropdown__title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-rose);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+.avatar-dropdown__title svg {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
 }
 
 .avatar-dropdown__label {
