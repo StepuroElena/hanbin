@@ -397,6 +397,7 @@ function planCardHTML(plan, currentPlan, honorific, cancellation) {
   // словом «Отменяется» — сам факт отмены и так виден ниже по access-until и кнопке «Снова стать ...».
 
   const nameKey = honorific === 'lord' ? plan.nameKeyLord : plan.nameKeyLady;
+  const nameInstrKey = honorific === 'lord' ? plan.nameInstrKeyLord : plan.nameInstrKeyLady;
   const ctaKey = honorific === 'lord' ? plan.ctaKeyLord : plan.ctaKeyLady;
   // Кнопка выбора нужна только для нетекущих платных тарифов — текущий план и так очевиден по тегу выше
   // («Отменяется»/«Твой план»), отдельная disabled-кнопка «Текущий план» была избыточной.
@@ -409,7 +410,7 @@ function planCardHTML(plan, currentPlan, honorific, cancellation) {
     if (isCancelling) {
       footer = `
         <div class="plan-card__access-until">${t('profile.subscription.access_until', { date: formatCancelDate(cancellation.effectiveAt) })}</div>
-        <button type="button" class="plan-card__btn plan-card__btn--undo" data-undo-cancel="${plan.id}">${t('profile.subscription.btn_undo_cancel', { title: t(nameKey) })}</button>
+        <button type="button" class="plan-card__btn plan-card__btn--undo" data-undo-cancel="${plan.id}">${t('profile.subscription.btn_undo_cancel', { title: t(nameInstrKey) })}</button>
       `;
     } else if (isCurrent) {
       footer = `<button type="button" class="plan-card__btn plan-card__btn--cancel" data-cancel-plan="${plan.id}">${t('profile.subscription.btn_cancel')}</button>`;
@@ -496,7 +497,8 @@ function attachSubscriptionHandlers(slot, { currentPlan, honorific, onCancellati
     btn.addEventListener('click', async () => {
       btn.disabled = true;
       await undoCancellation();
-      showToast(t('profile.subscription.undo_toast', { title: t(getRoyalTitleKey(currentPlan, honorific)) }), 'info');
+      const toastKey = honorific === 'lord' ? 'profile.subscription.undo_toast_lord' : 'profile.subscription.undo_toast_lady';
+      showToast(t(toastKey, { title: t(getRoyalTitleKey(currentPlan, honorific)) }), 'info');
       onCancellationChanged();
     });
   });
