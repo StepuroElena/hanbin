@@ -1659,3 +1659,127 @@ export async function deleteMovieCategory(id) {
 
   return authDelete(`/movie-categories/${id}`);
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// RANDOM PICKER — вся фильтрация/выбор теперь на бэке (GET /api/v1/random/*).
+// Фронт только дёргает эндпоинт и рендерит ответ, без локальных вычислений. Для гостя
+// (нет токена) — локальный fallback по MOCK_DRAMAS/MOCK_MOVIES ниже, точно повторяющий логику бэка.
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Превращает ответ /random/pick в форму, готовую к рендеру — без пересчётов на фронте. */
+function adaptRandomPickFromApi(p) {
+  return {
+    id: String(p.id),
+    kind: p.kind, // 'drama' | 'movie'
+    title: p.title,
+    year: p.year || null,
+    genres: p.genres || [],
+    country: p.country || null,
+    cover: p.cover ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(p.cover)}` : null,
+    watchUrl: p.watch_url || null,
+    rating: p.rating ?? null, // уже 0-5, бэк сам перевёл из 0-10
+    episodesTotal: p.episodes_total || null,
+    episodeDurationMin: p.episode_duration_min ?? null,
+    seasons: p.seasons || null,
+  };
+}
+
+/**
+ * Жанры + флаги has_movies/has_series для текущего типа, только из пула "Запланировано".
+ * @param {'any'|'movie'|'series'} type
+ * @returns {Promise<{data: {genres: string[], hasMovies: boolean, hasSeries: boolean}|null, error: string|null}>}
+ */
+export async function getRandomFacets(type = 'any') {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet(`/random/facets?type=${encodeURIComponent(type)}`);
+    if (data) {
+      return { data: { genres: data.genres || [], hasMovies: !!data.has_movies, hasSeries: !!data.has_series }, error: null };
+    }
+    return { data: null, error };
+  }
+
+  // Гость: та же логика, что и на бэке — только статус 'plan', без архива.
+  await delay(50);
+  const planDramas = MOCK_DRAMAS.filter(d => d.status === 'plan' && !d.isArchived);
+  const planMovies = MOCK_MOVIES.filter(m => m.status === 'plan' && !m.isArchived);
+
+  const dramaGenres = type !== 'movie' ? planDramas.flatMap(d => d.genres || []) : [];
+  const movieGenres = type !== 'series' ? planMovies.flatMap(m => m.genres || []) : [];
+  const genres = [...new Set([...dramaGenres, ...movieGenres])].sort();
+
+  return {
+    data: {
+      genres,
+      hasMovies: planMovies.length > 0,
+      hasSeries: planDramas.length > 0,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Случайный тайтл из "Запланировано", взвешенно между дорамами и фильмами.
+ * @param {'any'|'movie'|'series'} type
+ * @param {string} [genre] — пустой = без фильтра
+ * @param {'drama'|'movie'} [excludeKind] — тип предыдущего результата (для "Ещё раз")
+ * @param {string|number} [excludeId]
+ * @returns {Promise<{data: object|null, error: string|null}>}
+ */
+export async function getRandomPick(type = 'any', genre = '', excludeKind = '', excludeId = '') {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const params = new URLSearchParams({ type });
+    if (genre) params.set('genre', genre);
+    if (excludeKind) params.set('exclude_kind', excludeKind);
+    if (excludeId) params.set('exclude_id', String(excludeId));
+
+    const { data, error } = await authGet(`/random/pick?${params.toString()}`);
+    if (data) return { data: adaptRandomPickFromApi(data), error: null };
+    return { data: null, error }; // включая 404 от бэка (пустой пул) — authGet не различает статусы, просто data===null
+  }
+
+  // Гость: та же логика взвешенного выбора, что и в random.service.go на бэке.
+  await delay(80);
+
+  let dramaPool = type !== 'movie' ? MOCK_DRAMAS.filter(d => d.status === 'plan' && !d.isArchived) : [];
+  let moviePool = type !== 'series' ? MOCK_MOVIES.filter(m => m.status === 'plan' && !m.isArchived) : [];
+  if (genre) {
+    dramaPool = dramaPool.filter(d => (d.genres || []).includes(genre));
+    moviePool = moviePool.filter(m => (m.genres || []).includes(genre));
+  }
+
+  const total = dramaPool.length + moviePool.length;
+  if (total === 0) return { data: null, error: 'no matching planned title' };
+
+  const pickFromDramas = type === 'series' ? true : type === 'movie' ? false : Math.random() < dramaPool.length / total;
+  let pool = pickFromDramas ? dramaPool : moviePool;
+
+  if (pool.length > 1 && excludeKind === (pickFromDramas ? 'drama' : 'movie') && excludeId) {
+    const withoutLast = pool.filter(item => String(item.id) !== String(excludeId));
+    if (withoutLast.length > 0) pool = withoutLast;
+  }
+
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  const kind = pickFromDramas ? 'drama' : 'movie';
+
+  return {
+    data: {
+      id: String(picked.id),
+      kind,
+      title: picked.title,
+      year: picked.year || null,
+      genres: picked.genres || [],
+      country: picked.country || null,
+      cover: kind === 'drama' ? (picked.cover || null) : null,
+      watchUrl: kind === 'drama' ? (picked.watchUrl || null) : null,
+      rating: kind === 'drama' ? (picked.rating ?? null) : null,
+      episodesTotal: kind === 'drama' ? (picked.episodesTotal ?? null) : null,
+      episodeDurationMin: kind === 'drama' ? (picked.episodeDurationMin ?? null) : null,
+      seasons: kind === 'drama' ? (picked.seasons ?? null) : null,
+    },
+    error: null,
+  };
+}
