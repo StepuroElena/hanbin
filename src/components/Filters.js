@@ -14,7 +14,7 @@
 import { t, onLangChange } from '../i18n/index.js';
 import { getFacets } from '../api/mock.js';
 
-const GENRE_KEY_MAP = {
+export const GENRE_KEY_MAP = {
   Romance: 'modal.add.genres.romance',
   Thriller: 'modal.add.genres.thriller',
   Historical: 'modal.add.genres.historical',

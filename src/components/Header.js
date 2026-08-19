@@ -8,6 +8,34 @@ import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { renderLangToggle } from './LangToggle.js';
 
+// ── Random pick бутон: дизейблится, если в библиотеке 0 тайтлов со статусом "Запланировано".
+// На модульном уровне (не внутри renderHeader) — renderHeader вызывается заново
+// на каждой навигации (Home.js/Movies.js), и если вешать подписку внутри неё —
+// каждый ререндер добавлял бы ещё один window-листенер без удаления старого — утечка.
+// Счёт дёргается асинхронно (не блокирует первый рендер шапки), пересчитывается
+// при любом изменении данных (data-changed — добавили/архивировали; stats-changed — поменялся статус).
+// Ищет кнопку в document, а не в закрытом container — он всегда актуален, так как шапка в любой момент одна.
+async function updateRandomButtonState() {
+  const btn = document.getElementById('random-pick-btn');
+  if (!btn) return;
+  try {
+    const { getPlannedCount } = await import('./RandomPickerModal.js');
+    const count = await getPlannedCount();
+    const stillBtn = document.getElementById('random-pick-btn'); // могли уйти со страницы, пока шёл запрос
+    if (!stillBtn) return;
+    const isEmpty = count === 0;
+    stillBtn.disabled = isEmpty;
+    stillBtn.style.opacity = isEmpty ? '0.4' : '';
+    stillBtn.style.cursor = isEmpty ? 'not-allowed' : '';
+    stillBtn.setAttribute('data-tooltip', isEmpty ? t('header.tooltip.random_empty') : t('header.tooltip.random'));
+  } catch (err) {
+    console.warn('[Header] updateRandomButtonState failed:', err);
+  }
+}
+
+window.addEventListener('hanbin:data-changed', updateRandomButtonState);
+window.addEventListener('hanbin:stats-changed', updateRandomButtonState);
+
 export async function renderHeader(container, { onSearch, onViewChange }) {
   // ── Начальное auth-состояние — берём ТОЛЬКО из localStorage, без похода в сеть. ──
   // Так шапка (лого, поиск, переключатель вида) отрисовывается сразу, не дожидаясь бэка.
@@ -103,6 +131,10 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
           <div id="lang-toggle-slot"></div>
 
+          <button class="add-btn" id="random-pick-btn" data-tooltip="${t('header.tooltip.random')}">
+            🎲
+          </button>
+
           <button class="add-btn" id="add-drama-btn" data-tooltip="${t('header.tooltip.add')}">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -132,6 +164,9 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
 
   // ── Re-render header on language change (nav links, placeholder, tagline…) ──
   onLangChange(() => refreshHeader({ preserveScroll: true }));
+
+  // ── Random pick бутон ── дизейблится, если в библиотеке 0 тайтлов со статусом "Запланировано".
+  // Счёт дёргается асинхронно (не блокирует первый рендер шапки).
 
   function attachListeners() {
     // ── Search ──
@@ -190,6 +225,15 @@ export async function renderHeader(container, { onSearch, onViewChange }) {
         openAddDramaModal();
       });
     });
+
+    // ── Random pick ──
+    container.querySelector('#random-pick-btn').addEventListener('click', () => {
+      import('./RandomPickerModal.js').then(({ openRandomPickerModal }) => {
+        openRandomPickerModal();
+      });
+    });
+
+    updateRandomButtonState();
 
     // ── Avatar dropdown ──
     const avatarBtn      = container.querySelector('#avatar-btn');
