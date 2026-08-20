@@ -50,7 +50,26 @@ export const translations = {
     'movies.status.toggle_hint':  'Кликни, чтобы переключить',
     'movies.add_btn':             'Добавить фильм',
     'movies.archive.empty':       'Архив пуст — здесь будут фильмы, от которых ты отказалась',
+    'movies.share.btn':           'Поделиться',
+    'movies.share.title':         'Список фильмов · hanbin',
+    'movies.share.copied':        'Ссылка на твой список скопирована в буфер обмена ✦',
+    'movies.share.failed':        'Не удалось скопировать ссылку',
+    'movies.share.guest_hint':    'Войди, чтобы поделиться своим списком',
     'movies.filter_empty':        'По этому фильтру ничего не найдено',
+
+    // Public profile page (шаринг списка по ссылке, без логина)
+    'public.loading':              'Загружаем список…',
+    'public.not_found_title':      'Список не найден',
+    'public.not_found_sub':        'Такой ссылки больше не существует — возможно, владелец удалил аккаунт.',
+    'public.title':                'Список фильмов — {name}',
+    'public.count':                '{n} фильмов',
+    'public.empty':                'Здесь пока пусто',
+    'public.cta_title':            'Заведи свой список',
+    'public.cta_sub':               'Отслеживай фильмы и дорамы, ставь статусы, делись с друзьями',
+    'public.cta_btn':               'Зарегистрироваться',
+    'public.back_home':             '← На главную hanbin',
+    'public.random_btn':            'Случайный выбор',
+    'public.random_label':          'Может, начать с этого?',
 
     // Add Movie modal
     'modal.addmovie.title':        'Новый фильм',
@@ -661,6 +680,27 @@ export const translations = {
     'table.watch_tooltip':         'Watch drama',
     'table.no_voiceover':          'No voiceover',
     'archive.hint':               'Never started and changed your mind — move to archive',
+
+    // Movies page — sharing
+    'movies.share.btn':           'Share',
+    'movies.share.title':         'Movie list · hanbin',
+    'movies.share.copied':        'Link to your list copied to clipboard ✦',
+    'movies.share.failed':        'Could not copy the link',
+    'movies.share.guest_hint':    'Sign in to share your list',
+
+    // Public profile page (share list via link, no login required)
+    'public.loading':              'Loading list…',
+    'public.not_found_title':      'List not found',
+    'public.not_found_sub':        'This link no longer exists — the owner may have deleted their account.',
+    'public.title':                '{name}’s movie list',
+    'public.count':                '{n} movies',
+    'public.empty':                'Nothing here yet',
+    'public.cta_title':            'Start your own list',
+    'public.cta_sub':               'Track movies and dramas, set statuses, share with friends',
+    'public.cta_btn':               'Sign up',
+    'public.back_home':             '← Back to hanbin',
+    'public.random_btn':            'Surprise me',
+    'public.random_label':          'Maybe start with this?',
 
     // Table headers
     'table.col.drama':            'Drama',

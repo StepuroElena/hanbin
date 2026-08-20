@@ -22,11 +22,12 @@
  */
 
 import { renderHeader } from '../components/Header.js';
-import { getMovies, getArchivedMovies, updateMovieStatus, updateMovieField, getMovieCategories, archiveMovie, unarchiveMovie, deleteMovie } from '../api/mock.js';
+import { getMovies, getArchivedMovies, updateMovieStatus, updateMovieField, getMovieCategories, archiveMovie, unarchiveMovie, deleteMovie, getMe } from '../api/mock.js';
 import { renderPagination, PAGE_SIZE_OPTIONS } from '../components/Pagination.js';
 import { GENRE_KEYS } from '../components/AddMovieModal.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { COUNTRIES } from '../data/countries.js';
+import { showToast } from '../components/Toast.js';
 
 const MOVIES_CSS = `
   .movies-page { animation: fadeUp 0.5s ease both; }
@@ -123,9 +124,21 @@ const MOVIES_CSS = `
   .movies-archive-section { margin-top: 44px; opacity: 0.72; transition: opacity 0.25s ease; }
   .movies-archive-section:hover { opacity: 1; }
 
+  /* — Шаринг списка: иконка-кнопка рядом с заголовком таблицы, отправляет весь список одним кликом — */
+  .movies-share-controls { display: flex; align-items: center; gap: 12px; }
+
+  .movies-share-icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: none; border: 1px solid var(--color-border);
+    color: var(--color-text-muted); cursor: pointer; transition: var(--transition-fast);
+  }
+  .movies-share-icon-btn:hover { background: var(--color-accentGlow); color: var(--color-rose); border-color: rgba(201,123,138,0.4); }
+
   @media (max-width: 768px) {
     .movies-stats-row { flex-direction: column; }
     .movies-add-btn { width: 100%; flex-direction: row; padding: 16px; }
+    .movies-share-controls { flex-wrap: wrap; }
   }
   @media (max-width: 640px) {
     .movies-header__title { font-size: 32px; }
@@ -270,6 +283,7 @@ export async function renderMovies(container) {
 
   let allMovies = [];       // полный список (без архива) — фильтр-чипсы режут именно его, без повторного запроса
   let currentFilter = 'all';
+
   // Мультивыбор по категории — тот же принцип, что и фильтр по жанру у дорам (Filters.js): внутри группы — ИЛИ,
   // со статусом — И. Список опций строится из реально встречающихся значений в allMovies (а не весь личный список
   // категорий) — чтобы не показывать в фильтре категории, которые нигде не используются.
@@ -423,8 +437,18 @@ export async function renderMovies(container) {
         </div>
         <section class="section" style="margin-bottom:0">
           <div class="section-header">
-            <div class="movies-section-title">${t('movies.section.list')}</div>
-            <div class="pagination-slot" id="movies-pagination-slot"></div>
+            <div class="movies-section-title">
+              <span id="movies-section-title-text">${t('movies.section.list')}</span>
+              <button type="button" class="movies-share-icon-btn" id="movies-share-icon-btn" data-tooltip="${t('movies.share.btn')}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                  <polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+                </svg>
+              </button>
+            </div>
+            <div class="movies-share-controls">
+              <div class="pagination-slot" id="movies-pagination-slot"></div>
+            </div>
           </div>
           <div id="movies-list-slot">
             <div class="loading-dots">${t('loading')}</div>
@@ -1061,6 +1085,39 @@ export async function renderMovies(container) {
     attachDeleteButtons(slot);
   }
 
+  // ── Шаринг списка: иконка-кнопка рядом с заголовком — ведёт на публичную read-only страницу (#/u/{profile_id}),
+  // а не строит текст вручную — так ссылка всегда актуальна (открывает живые данные на момент клика по ней,
+  // а не снимок на момент шаринга) и ведёт получателя в регистрацию, если он ещё не пользователь hanbin.
+  container.querySelector('#movies-share-icon-btn')?.addEventListener('click', async () => {
+    if (!localStorage.getItem('hanbin_token')) {
+      showToast(t('movies.share.guest_hint'), 'error');
+      return;
+    }
+
+    const { data: me } = await getMe();
+    if (!me?.id) {
+      showToast(t('movies.share.failed'), 'error');
+      return;
+    }
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}#/u/${me.id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: t('movies.share.title'), url: shareUrl });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // пользователь сам отменил шаринг — не ошибка
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast(t('movies.share.copied'));
+    } catch (e) {
+      showToast(t('movies.share.failed'), 'error');
+    }
+  });
+
   // ── Фильтр-чипсы ──
   container.querySelectorAll('#movies-filters-row .filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -1087,7 +1144,7 @@ export async function renderMovies(container) {
     if (titleEl) titleEl.textContent = t('movies.title');
     const subEl = container.querySelector('.movies-header__sub');
     if (subEl) subEl.textContent = t('movies.sub');
-    const sectionTitleEl = container.querySelector('.movies-section-title:not(.movies-section-title--archive)');
+    const sectionTitleEl = container.querySelector('#movies-section-title-text');
     if (sectionTitleEl) sectionTitleEl.textContent = t('movies.section.list');
     const archiveTitleEl = container.querySelector('.movies-section-title--archive');
     if (archiveTitleEl) archiveTitleEl.textContent = t('archive.title');
@@ -1099,6 +1156,8 @@ export async function renderMovies(container) {
       const key = filterLabels[chip.dataset.filter];
       if (key) chip.textContent = t(key);
     });
+    const expandBtn = container.querySelector('#movies-share-icon-btn');
+    if (expandBtn) expandBtn.setAttribute('data-tooltip', t('movies.share.btn'));
     renderHeader(container.querySelector('#header-slot'), {});
     await Promise.all([loadMovies(), loadArchive()]);
   });

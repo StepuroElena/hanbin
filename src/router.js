@@ -12,6 +12,7 @@ import { renderUnauthorized } from './pages/Unauthorized.js';
 import { renderSettings }     from './pages/Settings.js';
 import { renderMovies }       from './pages/Movies.js';
 import { renderProfile }      from './pages/Profile.js';
+import { renderPublicProfile } from './pages/PublicProfile.js';
 import { getAuthState, validateResetToken, confirmEmail } from './api/mock.js';
 import { t } from './i18n/index.js';
 import { showToast } from './components/Toast.js';
@@ -27,6 +28,7 @@ const ROUTES = {
   '#/settings': renderSettings,
   '#/movies':   renderMovies,
   '#/profile':  renderProfile,
+  '#/u/:id':    renderPublicProfile, // Публичный read-only список чужих фильмов — шаринг, без логина
   // '#/search':   renderSearch,
   // '#/drama/:id':renderDrama,
 };
