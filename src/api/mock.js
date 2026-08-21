@@ -956,6 +956,61 @@ export async function deleteMovie(id) {
 // AUTH
 // ─────────────────────────────────────────────
 
+/**
+ * Публичный (без авторизации) список фильмов чужого профиля — GET /api/v1/public/profiles/{id}/movies.
+ * Используется страницей PublicProfile.js (маршрут #/u/:id), на которую ведёт кнопка
+ * «Поделиться» на странице Фильмов. Не требует JWT — открывается любым получателем ссылки,
+ * включая незалогиненных — в этом весь смысл шаринга как growth-петли.
+ *
+ * @param {string|number} profileId
+ * @returns {Promise<{ data: { profileId: number, name: string, movies: Array }|null, error: string|null, notFound: boolean }>}
+ */
+export async function getPublicProfileMovies(profileId) {
+  try {
+    const res = await fetch(`${API_BASE}/public/profiles/${profileId}/movies`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (_) {}
+
+    if (res.status === 404) {
+      return { data: null, error: json?.error ?? 'Список не найден', notFound: true };
+    }
+    if (!res.ok) {
+      return { data: null, error: json?.error ?? `Ошибка сервера (${res.status})`, notFound: false };
+    }
+
+    return {
+      data: {
+        profileId: json.profile_id,
+        name: json.name,
+        movies: (json.movies ?? []).map(m => ({
+          title: m.title,
+          genre: m.genre ?? '',
+          country: m.country ?? '',
+          category: m.category ?? '',
+          year: m.release_year ?? null,
+          status: m.watch_status ?? 'planned',
+        })),
+      },
+      error: null,
+      notFound: false,
+    };
+  } catch (err) {
+    console.error('[API] getPublicProfileMovies network error:', err);
+    return {
+      data: null,
+      notFound: false,
+      error: err instanceof TypeError
+        ? 'Не удалось подключиться к серверу.'
+        : 'Ошибка. Попробуй позже.',
+    };
+  }
+}
+
 export async function registerUser({ name, email, password }) {
   try {
     const res = await fetch(`${API_BASE}/auth/register`, {
