@@ -3,6 +3,8 @@
  */
 
 import { t } from '../i18n/index.js';
+import { scrapeDrama } from '../api/mock.js';
+import { API_BASE } from '../api/client.js';
 
 /** Форматирует временную метку в читаемый вид (i18n-aware) */
 export function timeAgo(date) {
@@ -43,12 +45,18 @@ export function countryFlag(code) {
 
 /**
  * Получает URL постера дорамы с m.doramatv.one по названию.
- * Берёт первый результат поиска — img[data-original] из карточки-ссылки.
  * Кэширует в sessionStorage чтобы не делать лишних запросов.
+ *
+ * Раньше здесь был прямой fetch на m.doramatv.one через сторонний CORS-прокси (corsproxy.io) —
+ * тот сломался в проде: бесплатный тариф corsproxy.io разрешает запросы только с dev-окружений
+ * (localhost, CodePen, Glitch и т.п.), продакшн-домен (hanbin-drama.com) получал 403 по всем
+ * постерам разом. Бэк уже умеет ходить на этот сайт сам через GET /api/v1/dramas/scrape
+ * (server-to-server — никакого CORS вообще, плюс кеш на 14 дней) — переиспользуем этот же
+ * эндпоинт вместо ещё одного стороннего бесплатного сервиса, который может так же сломаться.
  *
  * @param {string} title  — название дорамы (на любом языке)
  * @param {string} [watchUrl] — ссылка на дораму (пока не используется, оставлено для расширения)
- * @returns {Promise<string|null>} — URL постера или null если не найдено
+ * @returns {Promise<string|null>} — URL постера (уже завёрнутый через /dramas/poster-proxy) или null если не найдено
  */
 export async function fetchPoster(title, watchUrl) {
   if (!title) return null;
@@ -58,55 +66,16 @@ export async function fetchPoster(title, watchUrl) {
   // null строкой означает «точно не найдено» — не повторяем запрос
   if (cached !== null) return cached === 'null' ? null : cached;
 
-  try {
-    const query = encodeURIComponent(title);
-    const url   = `https://m.doramatv.one/search/?q=${query}`;
-    const res   = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const { data } = await scrapeDrama(title, 'https://m.doramatv.one');
+  const rawPoster = data?.poster_url || null;
 
-    const html = await res.text();
-    const doc  = new DOMParser().parseFromString(html, 'text/html');
+  // Прямой hotlink на CDN картинок doramatv часто защищён проверкой Referer — заворачиваем
+  // через тот же /dramas/poster-proxy, что уже используется в adaptDramaFromApi/adaptRandomPickFromApi,
+  // иначе сам <img src="..."> может словить 403 даже с рабочим URL постера.
+  const poster = rawPoster ? `${API_BASE}/dramas/poster-proxy?url=${encodeURIComponent(rawPoster)}` : null;
 
-    // Все результаты поиска: <a class="non-hover"><img data-original="..." title="..."></a>
-    const resultImgs = [...doc.querySelectorAll('a.non-hover img[data-original]')];
-    if (!resultImgs.length) {
-      sessionStorage.setItem(cacheKey, 'null');
-      return null;
-    }
-
-    const normalize = s => s.toLowerCase()
-      .replace(/[^a-zа-яё0-9\s]/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const needle = normalize(title);
-
-    // Ищем по приоритетам:
-    // 1. Точное совпадение (alt === needle)
-    // 2. Название из базы полностью входит в результат (напр. «Демон» → «Мой демон»)
-    // 3. Результат полностью входит в название из базы (только если результат достаточно длинный)
-    const getLabel = img => normalize(img.getAttribute('alt') || img.getAttribute('title') || '');
-
-    let match =
-      // 1. Точное
-      resultImgs.find(img => getLabel(img) === needle) ??
-      // 2. needle целиком входит в название результата
-      resultImgs.find(img => getLabel(img).includes(needle)) ??
-      // 3. название результата целиком входит в needle,
-      // но только если результат занимает большую часть needle (не одно слово)
-      resultImgs.find(img => {
-        const label = getLabel(img);
-        return needle.includes(label) && label.split(' ').length >= Math.max(1, needle.split(' ').length - 1);
-      });
-
-    const poster = match?.getAttribute('data-original') ?? null;
-
-    sessionStorage.setItem(cacheKey, poster ?? 'null');
-    return poster;
-  } catch (e) {
-    console.warn('[fetchPoster] failed for', title, e.message);
-    sessionStorage.setItem(cacheKey, 'null');
-    return null;
-  }
+  sessionStorage.setItem(cacheKey, poster ?? 'null');
+  return poster;
 }
 
 /**
