@@ -2,9 +2,9 @@
  * HANBIN — Drama Card Component
  */
 
-import { updateDramaStatus, updateVoiceover, updateSeasons, updateReleaseTag, updateTranslationTag, updateEpisodeDuration, updateEpisodeCount, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
+import { updateDramaStatus, updateVoiceover, loadEnabledVoiceoverNames, updateSeasons, updateReleaseTag, updateTranslationTag, updateEpisodeDuration, updateEpisodeCount, rateDrama, deleteDrama, archiveDrama, unarchiveDrama } from '../api/mock.js';
 import { openEditDramaLinksModal } from './EditDramaLinksModal.js';
-import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo, VOICEOVER_OPTIONS } from '../utils/helpers.js';
+import { renderStars, statusLabel, fetchPoster, defaultPosterURI, timeAgo } from '../utils/helpers.js';
 import { t } from '../i18n/index.js';
 
 const STATUS_OPTIONS = [
@@ -31,11 +31,63 @@ const TRANSLATION_OPTIONS = [
 ];
 
 let _floatingMenuEl = null;
+let _floatingAnchor = null;   // ячейка, к которой привязано открытое меню
+let _anchorStart = null;      // её позиция в момент открытия меню
 
 function closeFloatingMenu() {
   _floatingMenuEl?.remove();
   _floatingMenuEl = null;
+  _floatingAnchor = null;
+  _anchorStart = null;
 }
+
+/**
+ * Привязывает открытое меню к ячейке-триггеру. Меню — position:fixed (чтобы не обрезалось
+ * таблицей), поэтому при прокрутке страницы оно само по себе стояло бы на месте, а строка
+ * уезжала. Запоминаем позицию ячейки и на scroll/resize сдвигаем меню на ту же дельту.
+ */
+function trackFloatingMenu(anchor) {
+  _floatingAnchor = anchor;
+  const r = anchor.getBoundingClientRect();
+  _anchorStart = { top: r.top, left: r.left };
+}
+
+/**
+ * Ставит меню под ячейкой-триггером так, чтобы оно не вылезало за край окна
+ * (position:fixed окном не обрезается — пункты внизу были бы недоступны):
+ * ограничивает высоту местом до низа окна, а если снизу мало места — открывает вверх.
+ * Раньше так делал только дропдаун «Серии», теперь — все меню таблицы.
+ */
+function placeFloatingMenu(menu, rect) {
+  const viewportMargin = 12;
+  const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+  const spaceAbove = rect.top - viewportMargin;
+
+  if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
+    menu.style.top = (rect.bottom + 6) + 'px';
+    menu.style.maxHeight = Math.max(120, Math.min(280, spaceBelow)) + 'px';
+  } else {
+    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    menu.style.maxHeight = Math.max(120, Math.min(280, spaceAbove)) + 'px';
+  }
+}
+
+function syncFloatingMenu(e) {
+  if (!_floatingMenuEl || !_floatingAnchor) return;
+  // Прокрутка внутри самого меню (длинный список) — не трогаем.
+  if (e?.target instanceof Node && _floatingMenuEl.contains(e.target)) return;
+  if (!_floatingAnchor.isConnected) { closeFloatingMenu(); return; }
+
+  const r = _floatingAnchor.getBoundingClientRect();
+  // Ячейка ушла за край окна — закрываем, а не держим меню «в воздухе».
+  if (r.bottom < 0 || r.top > window.innerHeight) { closeFloatingMenu(); return; }
+
+  _floatingMenuEl.style.transform = `translate(${r.left - _anchorStart.left}px, ${r.top - _anchorStart.top}px)`;
+}
+
+// capture: true — ловим прокрутку и окна, и любых прокручиваемых контейнеров (напр. обёртки таблицы).
+window.addEventListener('scroll', syncFloatingMenu, { capture: true, passive: true });
+window.addEventListener('resize', syncFloatingMenu, { passive: true });
 
 /**
  * Навешивает клик-обработчик на ячейки со статусом в таблице (.status-select-wrap).
@@ -61,7 +113,7 @@ function attachStatusDropdown(container) {
       menu.dataset.forId = id;
       menu.dataset.kind = 'status';
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+      placeFloatingMenu(menu, rect);
 
       STATUS_OPTIONS.filter(opt => opt.value !== current).forEach(opt => {
         const item = document.createElement('div');
@@ -92,6 +144,7 @@ function attachStatusDropdown(container) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       // Закрытие по клику снаружи — вешаем на следующий тик, чтобы не поймать текущий клик
       setTimeout(() => {
@@ -103,18 +156,24 @@ function attachStatusDropdown(container) {
 
 /**
  * Аналогично attachStatusDropdown, но для ячейки озвучки (.voiceover-select-wrap) —
- * список опций тот же, что и в модалке добавления дорамы (VOICEOVER_OPTIONS).
+ * опции — включённые озвучки пользователя с бэка (loadEnabledVoiceoverNames, кэшируется),
+ * тот же список, что и в модалке добавления дорамы. Редактируется на странице Настроек.
  * Выбор шлёт PATCH через updateVoiceover — он сам инвалидирует кэш и через
  * событие hanbin:data-changed вся страница (Home.js) сама перерисует таблицу.
  */
 function attachVoiceoverDropdown(container) {
   container.querySelectorAll('.voiceover-select-wrap').forEach(wrap => {
-    wrap.addEventListener('click', (e) => {
+    wrap.addEventListener('click', async (e) => {
       e.stopPropagation();
 
       const alreadyOpenForThis = _floatingMenuEl?.dataset.forId === wrap.dataset.id && _floatingMenuEl?.dataset.kind === 'voiceover';
       closeFloatingMenu();
       if (alreadyOpenForThis) return;
+
+      // Обычно мгновенно — из кэша; первый раз — один запрос к бэку.
+      const options = await loadEnabledVoiceoverNames();
+      if (!wrap.isConnected) return;
+      closeFloatingMenu(); // пока ждали список, мог открыться другой дропдаун
 
       const id = wrap.dataset.id;
       const current = wrap.dataset.current || '';
@@ -125,7 +184,7 @@ function attachVoiceoverDropdown(container) {
       menu.dataset.forId = id;
       menu.dataset.kind = 'voiceover';
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+      placeFloatingMenu(menu, rect);
 
       const applyVoiceover = async (value) => {
         closeFloatingMenu();
@@ -153,7 +212,7 @@ function attachVoiceoverDropdown(container) {
         menu.appendChild(clearItem);
       }
 
-      VOICEOVER_OPTIONS.filter(v => v !== current).forEach(opt => {
+      options.filter(v => v !== current).forEach(opt => {
         const item = document.createElement('div');
         item.className = 'status-dropdown-option';
         item.textContent = opt;
@@ -163,6 +222,7 @@ function attachVoiceoverDropdown(container) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       setTimeout(() => {
         document.addEventListener('click', closeFloatingMenu, { once: true });
@@ -208,7 +268,7 @@ function attachSeasonsDropdown(container) {
       menu.dataset.forId = id;
       menu.dataset.kind = 'seasons';
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+      placeFloatingMenu(menu, rect);
 
       SEASONS_OPTIONS.filter(v => v !== current).forEach(opt => {
         const item = document.createElement('div');
@@ -236,6 +296,7 @@ function attachSeasonsDropdown(container) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       setTimeout(() => {
         document.addEventListener('click', closeFloatingMenu, { once: true });
@@ -268,7 +329,7 @@ function attachTagDropdown(container, { selector, kind, options, updateFn }) {
       menu.dataset.forId = id;
       menu.dataset.kind = kind;
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+      placeFloatingMenu(menu, rect);
 
       options.filter(opt => opt.value !== current).forEach(opt => {
         const item = document.createElement('div');
@@ -294,6 +355,7 @@ function attachTagDropdown(container, { selector, kind, options, updateFn }) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       setTimeout(() => {
         document.addEventListener('click', closeFloatingMenu, { once: true });
@@ -329,19 +391,7 @@ function attachEpisodeCountDropdown(container) {
       // оказаться за пределами viewport, т.к. position:fixed не обрезается окном браузера.
       // Считаем, сколько места реально осталось ниже триггера, и ограничиваем высоту меню
       // этим значением (с отступом от края), чтобы скролл всегда доходил до последнего пункта.
-      const viewportMargin = 12;
-      const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
-      const spaceAbove = rect.top - viewportMargin;
-
-      if (spaceBelow >= 160 || spaceBelow >= spaceAbove) {
-        // Открываем вниз, как обычно, но не даём меню вылезти за нижний край окна
-        menu.style.top = (rect.bottom + 6) + 'px';
-        menu.style.maxHeight = Math.max(120, Math.min(280, spaceBelow)) + 'px';
-      } else {
-        // Снизу слишком мало места (строка ближе к низу страницы) — открываем вверх от триггера
-        menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-        menu.style.maxHeight = Math.max(120, Math.min(280, spaceAbove)) + 'px';
-      }
+      placeFloatingMenu(menu, rect);
 
       EPISODE_COUNT_OPTIONS.filter(v => v !== current).forEach(opt => {
         const item = document.createElement('div');
@@ -369,6 +419,7 @@ function attachEpisodeCountDropdown(container) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       setTimeout(() => {
         document.addEventListener('click', closeFloatingMenu, { once: true });
@@ -410,7 +461,7 @@ function attachEpisodeDurationEditor(container) {
       menu.dataset.forId = id;
       menu.dataset.kind = 'duration';
       menu.style.left = rect.left + 'px';
-      menu.style.top = (rect.bottom + 6) + 'px';
+      placeFloatingMenu(menu, rect);
       menu.addEventListener('click', (ev) => ev.stopPropagation()); // клик внутри не должен закрывать попап
 
       menu.innerHTML = `
@@ -425,6 +476,7 @@ function attachEpisodeDurationEditor(container) {
 
       document.body.appendChild(menu);
       _floatingMenuEl = menu;
+      trackFloatingMenu(wrap);
 
       const hInput = menu.querySelector(`#dur-h-${id}`);
       const mInput = menu.querySelector(`#dur-m-${id}`);
@@ -891,7 +943,7 @@ export function renderDramaTable(container, dramas) {
   // —— Смена статуса из таблицы: клик по badge —> выпадающий список из остальных статусов
   attachStatusDropdown(container);
 
-  // —— Смена озвучки из таблицы: клик —> выпадающий список из VOICEOVER_OPTIONS
+  // —— Смена озвучки из таблицы: клик —> выпадающий список включённых озвучек пользователя
   attachVoiceoverDropdown(container);
 
   // —— Смена количества сезонов из таблицы: клик —> выпадающий список 1–5

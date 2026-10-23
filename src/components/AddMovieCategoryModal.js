@@ -92,7 +92,13 @@ function mountContent(content, { onAdded } = {}) {
     const { data, error } = await addMovieCategory({ name });
 
     if (error) {
-      content.querySelector('#hb-addcategory-global-error').textContent = error;
+      // Дубль (проверка на бэке, без учёта регистра) — показываем под полем названия
+      if (String(error).includes('already exists')) {
+        nameInput.classList.add('hb-error');
+        content.querySelector('#hb-addcategory-name-error').textContent = t('modal.addcategory.err_duplicate');
+      } else {
+        content.querySelector('#hb-addcategory-global-error').textContent = error;
+      }
       submitBtn.disabled = false;
       submitBtn.textContent = t('modal.addcategory.btn');
       return;

@@ -10,9 +10,9 @@
  */
 
 import { closeModal, injectModalCSS } from './LoginModal.js';
-import { addDrama, getDramas, invalidateUserCache, scrapeDrama, getStreamingSites } from '../api/mock.js';
+import { addDrama, getDramas, invalidateUserCache, scrapeDrama, getStreamingSites, loadEnabledVoiceoverNames, matchVoiceover } from '../api/mock.js';
 import { API_BASE } from '../api/client.js';
-import { debounce, VOICEOVER_OPTIONS } from '../utils/helpers.js';
+import { debounce } from '../utils/helpers.js';
 import { t, onLangChange } from '../i18n/index.js';
 import { DEFAULT_STREAMING_SITES } from '../data/streamingSites.js';
 import { navigate } from '../router.js';
@@ -38,6 +38,9 @@ const LOGO_SVG = `
 `;
 
 export let STREAMING_SITES = DEFAULT_STREAMING_SITES;
+
+// Включённые озвучки пользователя с бэка — подгружаются перед открытием модалки (см. openAddDramaModal).
+let VOICEOVER_NAMES = [];
 
 let sitesLoaded = false;
 let sitesLoadingPromise = null;
@@ -515,7 +518,7 @@ function buildHTML(savedState = {}) {
         <div class="hb-field-label"><span>${t('modal.add.field.voiceover')}</span></div>
         <select class="hb-field-select" id="hb-add-voiceover">
           <option value="" ${!savedState.voiceover ? 'selected' : ''}>${t('modal.add.field.voiceover_ph')}</option>
-          ${VOICEOVER_OPTIONS.map(v => `<option value="${v}" ${savedState.voiceover === v ? 'selected' : ''}>${v}</option>`).join('')}
+          ${VOICEOVER_NAMES.map(v => `<option value="${v}" ${savedState.voiceover === v ? 'selected' : ''}>${v}</option>`).join('')}
         </select>
       </div>
 
@@ -838,19 +841,15 @@ function applyScrapeData(scraped, { setCountry, setGenres, setReleaseTag, setSub
   if (scraped.voiceover) {
     const voiceoverSelect = document.getElementById('hb-add-voiceover');
     if (voiceoverSelect) {
-      // Селект — фиксированный список. Со скрейпа может прийти сразу несколько студий через
-      // запятую (напр. "DubLikTV, Light Breeze, Русские субтитры"), а названия могут немного
-      // отличаться от нашего списка (напр. "DubLikTV" vs "DubLik.TV") — поэтому сравниваем не точно,
-      // а по нормализованной форме (только буквы/цифры, без точек/пробелов/регистра), и пробуем
-      // каждую перечисленную студию по отдельности, а не только строку целиком.
-      const normalize = s => s.toLowerCase().replace(/[^a-z0-9а-яё]/gi, '');
-      const candidates = scraped.voiceover.split(',').map(s => s.trim()).filter(Boolean);
-      let match = null;
-      for (const candidate of candidates) {
-        const found = VOICEOVER_OPTIONS.find(v => normalize(v) === normalize(candidate));
-        if (found) { match = found; break; }
-      }
-      if (match) voiceoverSelect.value = match;
+      // Со скрейпа может прийти сразу несколько студий через запятую и с другим написанием
+      // (напр. "DubLikTV, Light Breeze, Русские субтитры") — сопоставление с персональным списком
+      // делает бэк (GET /voiceovers/match) и отдаёт название из списка или null.
+      matchVoiceover(scraped.voiceover).then(match => {
+        const select = document.getElementById('hb-add-voiceover');
+        if (match && select && [...select.options].some(o => o.value === match)) {
+          select.value = match;
+        }
+      });
     }
   }
 
@@ -1352,7 +1351,8 @@ export async function openAddDramaModal() {
 
   // Тянем свежий персональный список сайтов ДО первого рендера дропдауна — обычно мгновенно,
   // т.к. кэшируется после первого запроса за время жизни вкладки.
-  await loadStreamingSites();
+  // Так же — включённые озвучки пользователя для селекта «Озвучка».
+  [, VOICEOVER_NAMES] = await Promise.all([loadStreamingSites(), loadEnabledVoiceoverNames()]);
   _addModalOpening = false;
 
   // Пока шёл запрос — модалка могла уже открыться другим кликом/вызовом.

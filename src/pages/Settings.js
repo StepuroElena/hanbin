@@ -10,12 +10,17 @@
  *
  * В каждой языковой группе есть кнопка «+ Добавить сайт» — открывает модалку добавления
  * собственного сайта (за пределами дефолтных 10). Гостю недоступно — нет аккаунта, некуда сохранять.
+ *
+ * Озвучки (GET /api/v1/voiceovers) — тот же список, что в дропдауне «Озвучка» в таблице дорам и
+ * в модалке добавления. Дефолтные (общие для всех) — только тогл; свои — тогл, переименовать, удалить.
+ * Все правила проверяет бэк, страница только рисует флаги is_default / enabled из ответа.
  */
 
 import { renderHeader } from '../components/Header.js';
 import { loadStreamingSites } from '../components/AddDramaModal.js';
-import { updateStreamingSite, getMovieCategories, updateMovieCategory, deleteMovieCategory } from '../api/mock.js';
+import { updateStreamingSite, getMovieCategories, updateMovieCategory, deleteMovieCategory, getVoiceovers, updateVoiceoverOption, deleteVoiceoverOption } from '../api/mock.js';
 import { t, onLangChange } from '../i18n/index.js';
+import { openConfirmModal } from '../components/ConfirmModal.js';
 
 const SETTINGS_CSS = `
   .settings-page { animation: fadeUp 0.5s ease both; }
@@ -173,6 +178,20 @@ const SETTINGS_CSS = `
   }
   .settings-add-category-tile:hover { background: rgba(201,123,138,0.12); border-color: rgba(201,123,138,0.6); color: var(--color-rose); }
 
+  /* ── Озвучки ── (карточки как у категорий + карандаш у своих и пометка у дефолтных) */
+  .settings-voiceover-edit {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: rgba(245,230,211,0.35);
+    cursor: pointer; padding: 0; transition: var(--transition-fast);
+  }
+  .settings-voiceover-edit:hover { background: rgba(201,123,138,0.18); color: var(--color-rose); }
+  .settings-voiceover-default {
+    flex-shrink: 0; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(245,230,211,0.28);
+  }
+
   @media (max-width: 640px) {
     .settings-sites-grid { grid-template-columns: 1fr; }
     .settings-header__title { font-size: 28px; }
@@ -254,7 +273,9 @@ function buildSitesSection(sites, isGuest) {
 function attachToggleHandlers(container, sites) {
   const isGuest = !localStorage.getItem('hanbin_token');
 
-  container.querySelectorAll('.hb-toggle-input').forEach(input => {
+  // Только тоглы сайтов — у категорий и озвучек свои обработчики. Раньше селектор '.hb-toggle-input'
+  // цеплял и их: уходил PATCH /streaming-sites/undefined, падал и откатывал тогл назад.
+  container.querySelectorAll('.hb-toggle-input[data-site-id]').forEach(input => {
     if (isGuest) {
       input.disabled = true;
       return;
@@ -397,24 +418,24 @@ function attachCategoryToggleHandlers(container, categories) {
   });
 }
 
-/** Навешивает удаление категории — без подтверждения, так как это просто личный тег, а не данные о фильмах. */
+/** Навешивает удаление категории — с подтверждением в модалке (ConfirmModal.js). */
 function attachCategoryDeleteHandlers(container, categories, rerender) {
-  container.querySelectorAll('.settings-category-delete').forEach(btn => {
-    btn.addEventListener('click', async () => {
+  container.querySelectorAll('.settings-category-delete[data-category-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
       const categoryId = btn.dataset.categoryId;
-      const card = btn.closest('.settings-category-card');
-      if (card) { card.style.opacity = '0.4'; card.style.pointerEvents = 'none'; }
+      const category = categories.find(c => String(c.id) === String(categoryId));
+      if (!category) return;
 
-      const { error } = await deleteMovieCategory(categoryId);
-      if (error) {
-        console.warn('[Settings] delete movie category failed:', error);
-        if (card) { card.style.opacity = ''; card.style.pointerEvents = ''; }
-        return;
-      }
-
-      const idx = categories.findIndex(c => String(c.id) === String(categoryId));
-      if (idx !== -1) categories.splice(idx, 1);
-      rerender();
+      openConfirmModal({
+        title: t('settings.categories.delete_confirm_title', { name: category.name }),
+        text: t('settings.categories.delete_confirm_text'),
+        onConfirm: () => deleteMovieCategory(categoryId),
+        onDone: () => {
+          const idx = categories.findIndex(c => String(c.id) === String(categoryId));
+          if (idx !== -1) categories.splice(idx, 1);
+          rerender();
+        },
+      });
     });
   });
 }
@@ -429,6 +450,135 @@ function attachAddCategoryHandler(container, categories, rerender) {
           rerender();
         },
       });
+    });
+  });
+}
+
+// ────────────────────────
+// Озвучки — тот же паттерн, что и с категориями. Дефолтные: только тогл, свои: тогл + ✎ + ×.
+// ────────────────────────
+
+const escapeHTML = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+const LOCK_SVG = `
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+  </svg>
+`;
+
+const PENCIL_SVG = `
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+  </svg>
+`;
+
+function voiceoverCard(v, isGuest) {
+  const enabled = v.enabled !== false;
+  const actions = v.isDefault
+    ? `<span class="settings-voiceover-default" data-tooltip="${t('settings.voiceovers.default_tooltip')}" data-tooltip-pos="top">${LOCK_SVG}</span>`
+    : isGuest ? '' : `
+      <button type="button" class="settings-voiceover-edit" data-voiceover-id="${v.id}" data-tooltip="${t('settings.voiceovers.edit_tooltip')}" data-tooltip-pos="top">${PENCIL_SVG}</button>
+      <button type="button" class="settings-category-delete settings-voiceover-delete" data-voiceover-id="${v.id}" data-tooltip="${t('settings.voiceovers.delete_tooltip')}" data-tooltip-pos="top">×</button>`;
+
+  return `
+    <div class="settings-category-card ${enabled ? '' : 'settings-category-card--disabled'}" data-voiceover-id="${v.id}">
+      <span class="settings-category-name">${escapeHTML(v.name)}</span>
+      ${actions}
+      <label class="hb-toggle" data-tooltip="${enabled ? t('settings.voiceovers.disable_tooltip') : t('settings.voiceovers.enable_tooltip')}">
+        <input type="checkbox" class="hb-toggle-input hb-voiceover-toggle-input" data-voiceover-id="${v.id}" ${enabled ? 'checked' : ''}>
+        <span class="hb-toggle-track"><span class="hb-toggle-thumb"></span></span>
+      </label>
+    </div>
+  `;
+}
+
+function buildVoiceoversSection(voiceovers, isGuest) {
+  return `
+    <section class="settings-section">
+      <div class="settings-section__head">
+        <div class="settings-section__title">${t('settings.voiceovers.title')}</div>
+      </div>
+      <div class="settings-section__sub">${t('settings.voiceovers.sub')}</div>
+      <div class="settings-categories-grid">
+        ${voiceovers.map(v => voiceoverCard(v, isGuest)).join('')}
+        ${isGuest ? '' : `
+          <div class="settings-add-category-tile" id="settings-add-voiceover-tile">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            ${t('settings.voiceovers.add_btn')}
+          </div>`}
+      </div>
+    </section>
+  `;
+}
+
+/** Тоглы озвучек — тот же оптимистичный паттерн, что и у категорий: красим сразу, откатываем при ошибке. */
+function attachVoiceoverToggleHandlers(container, voiceovers) {
+  const isGuest = !localStorage.getItem('hanbin_token');
+
+  container.querySelectorAll('.hb-voiceover-toggle-input').forEach(input => {
+    if (isGuest) { input.disabled = true; return; }
+
+    input.addEventListener('change', async () => {
+      const id = input.dataset.voiceoverId;
+      const nextEnabled = input.checked;
+      const card = input.closest('.settings-category-card');
+
+      input.disabled = true;
+      card?.classList.toggle('settings-category-card--disabled', !nextEnabled);
+
+      const { error } = await updateVoiceoverOption(id, { enabled: nextEnabled });
+      input.disabled = false;
+
+      if (error) {
+        input.checked = !nextEnabled;
+        card?.classList.toggle('settings-category-card--disabled', !!nextEnabled);
+        console.warn('[Settings] toggle voiceover failed:', error);
+        return;
+      }
+
+      const v = voiceovers.find(x => String(x.id) === String(id));
+      if (v) v.enabled = nextEnabled;
+    });
+  });
+}
+
+/** Удаление своей озвучки — с подтверждением в модалке (у дефолтных кнопки нет; бэк их в любом случае не удалит). */
+function attachVoiceoverDeleteHandlers(container, voiceovers, rerender) {
+  container.querySelectorAll('.settings-voiceover-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.voiceoverId;
+      const voiceover = voiceovers.find(x => String(x.id) === String(id));
+      if (!voiceover) return;
+
+      openConfirmModal({
+        title: t('settings.voiceovers.delete_confirm_title', { name: voiceover.name }),
+        text: t('settings.voiceovers.delete_confirm_text'),
+        onConfirm: () => deleteVoiceoverOption(id),
+        onDone: () => {
+          const idx = voiceovers.findIndex(x => String(x.id) === String(id));
+          if (idx !== -1) voiceovers.splice(idx, 1);
+          rerender();
+        },
+      });
+    });
+  });
+}
+
+/** Добавление (плитка «+») и переименование (✎) — одна модалка AddVoiceoverModal.js в двух режимах. */
+function attachVoiceoverModalHandlers(container, voiceovers, rerender) {
+  const open = (opts) => import('../components/AddVoiceoverModal.js').then(({ openVoiceoverModal }) => openVoiceoverModal(opts));
+
+  container.querySelector('#settings-add-voiceover-tile')?.addEventListener('click', () => {
+    open({ onSaved: (v) => { voiceovers.push(v); rerender(); } });
+  });
+
+  container.querySelectorAll('.settings-voiceover-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = voiceovers.find(x => String(x.id) === String(btn.dataset.voiceoverId));
+      if (!v) return;
+      open({ voiceover: v, onSaved: (saved) => { Object.assign(v, saved); rerender(); } });
     });
   });
 }
@@ -466,8 +616,9 @@ export async function renderSettings(container) {
   // Тянем персональный список с бэка (или дефолтный для гостя) — обычно мгновенно из-за кэша,
   // но при первом открытии показываем индикатор загрузки выше, чтобы не показать пустоту.
   let sites = await loadStreamingSites();
-  const { data: categoriesData } = await getMovieCategories();
+  const [{ data: categoriesData }, { data: voiceoversData }] = await Promise.all([getMovieCategories(), getVoiceovers()]);
   let categories = categoriesData ?? [];
+  let voiceovers = voiceoversData ?? [];
 
   // Страница могла уйти, пока шёл запрос
   if (!container.isConnected) return;
@@ -475,12 +626,15 @@ export async function renderSettings(container) {
   function renderSection() {
     const slot = container.querySelector('#settings-sections');
     if (!slot) return;
-    slot.innerHTML = buildSitesSection(sites, isGuest) + buildCategoriesSection(categories, isGuest);
+    slot.innerHTML = buildSitesSection(sites, isGuest) + buildVoiceoversSection(voiceovers, isGuest) + buildCategoriesSection(categories, isGuest);
     attachToggleHandlers(slot, sites);
     attachAddSiteHandlers(slot, sites, renderSection);
     attachCategoryToggleHandlers(slot, categories);
     attachCategoryDeleteHandlers(slot, categories, renderSection);
     attachAddCategoryHandler(slot, categories, renderSection);
+    attachVoiceoverToggleHandlers(slot, voiceovers);
+    attachVoiceoverDeleteHandlers(slot, voiceovers, renderSection);
+    attachVoiceoverModalHandlers(slot, voiceovers, renderSection);
   }
 
   renderSection();

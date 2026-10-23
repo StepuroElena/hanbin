@@ -154,5 +154,3 @@ export function debounce(fn, ms = 300) {
   };
 }
 
-/** Фиксированный список озвучек — общий для модалки добавления дорамы и табличного вида. */
-export const VOICEOVER_OPTIONS = ['Light Breeze', 'SlothSound', 'DubLik.TV', 'SoftBox', 'AniMaunt', 'STEPonee'];
