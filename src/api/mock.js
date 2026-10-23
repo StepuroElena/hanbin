@@ -570,7 +570,7 @@ export async function rateDrama(id, rating) {
 
 /**
  * Обновляет озвучку дорамы — используется выпадающим списком в табличном виде,
- * тем же списком VOICEOVER_OPTIONS, что и в модалке добавления дорамы.
+ * тем же персональным списком озвучек (loadEnabledVoiceoverNames), что и в модалке добавления дорамы.
  * value === null — снять озвучку.
  */
 export async function updateVoiceover(id, value) {
@@ -1713,6 +1713,125 @@ export async function deleteMovieCategory(id) {
   if (!token) return { data: null, error: 'Войди, чтобы удалить категорию' };
 
   return authDelete(`/movie-categories/${id}`);
+}
+
+// ────────────────────────
+// VOICEOVERS (озвучки)
+// ────────────────────────
+// Список озвучек живёт на бэке (таблица voiceovers): дефолтные — общие для всех, их можно только
+// выключить тоглом; свои — можно добавлять, переименовывать, удалять. Фронт ничего не решает сам:
+// берёт готовый список (с флагами enabled / is_default) и рендерит его.
+
+const toVoiceover = v => ({ id: v.id, name: v.name, enabled: v.enabled !== false, isDefault: !!v.is_default });
+
+let _voiceoversCache = null;
+let _voiceoversPromise = null;
+
+/**
+ * Полный список озвучек пользователя (дефолтные + свои, включая выключенные) — для Настроек.
+ * Авторизованный — GET /api/v1/voiceovers; гость — GET /api/v1/voiceovers/defaults (публичный).
+ */
+export async function getVoiceovers() {
+  const token = localStorage.getItem('hanbin_token');
+
+  if (token) {
+    const { data, error } = await authGet('/voiceovers');
+    return data ? { data: data.map(toVoiceover), error: null } : { data: [], error };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/voiceovers/defaults`);
+    if (!res.ok) return { data: [], error: `Ошибка сервера (${res.status})` };
+    return { data: (await res.json()).map(toVoiceover), error: null };
+  } catch (err) {
+    console.warn('[API] getVoiceovers (defaults) failed:', err);
+    return { data: [], error: 'Не удалось загрузить список озвучек' };
+  }
+}
+
+/**
+ * Кэшированный список озвучек на время жизни вкладки — для дропдаунов (таблица дорам, модалка
+ * добавления). После любых правок в Настройках кэш сбрасывается через invalidateVoiceoversCache().
+ */
+export async function loadVoiceovers({ forceRefresh = false } = {}) {
+  if (_voiceoversCache && !forceRefresh) return _voiceoversCache;
+  if (_voiceoversPromise && !forceRefresh) return _voiceoversPromise;
+
+  _voiceoversPromise = getVoiceovers().then(({ data, error }) => {
+    _voiceoversPromise = null;
+    if (!error) _voiceoversCache = data;
+    return data;
+  });
+  return _voiceoversPromise;
+}
+
+/** Названия включённых озвучек — то, что показывается в дропдаунах. */
+export async function loadEnabledVoiceoverNames(opts) {
+  const list = await loadVoiceovers(opts);
+  return list.filter(v => v.enabled).map(v => v.name);
+}
+
+export function invalidateVoiceoversCache() {
+  _voiceoversCache = null;
+  _voiceoversPromise = null;
+}
+
+/** Добавляет свою озвучку. Требует авторизации. */
+export async function addVoiceoverOption({ name }) {
+  if (!localStorage.getItem('hanbin_token')) return { data: null, error: 'Войди, чтобы добавить свою озвучку' };
+
+  const { data, error } = await authPost('/voiceovers', { name });
+  if (data) { invalidateVoiceoversCache(); return { data: toVoiceover(data), error: null }; }
+  return { data: null, error };
+}
+
+/** Переименовывает свою озвучку и/или переключает тогл (enabled) — для любой. Требует авторизации. */
+export async function updateVoiceoverOption(id, { name, enabled }) {
+  if (!localStorage.getItem('hanbin_token')) return { data: null, error: 'Войди, чтобы изменить озвучку' };
+
+  const body = {};
+  if (name !== undefined) body.name = name;
+  if (enabled !== undefined) body.enabled = enabled;
+
+  const { data, error } = await authPatch(`/voiceovers/${id}`, body);
+  if (data) {
+    invalidateVoiceoversCache();
+    // Переименование переносится бэком и на дорамы — сбрасываем кэш дорам, чтобы таблица показала новое имя.
+    if (name !== undefined) invalidateUserCacheSilent();
+    return { data: toVoiceover(data), error: null };
+  }
+  return { data: null, error };
+}
+
+/** Удаляет свою озвучку. Дефолтные удалить нельзя (бэк ответит 403). Требует авторизации. */
+export async function deleteVoiceoverOption(id) {
+  if (!localStorage.getItem('hanbin_token')) return { data: null, error: 'Войди, чтобы удалить озвучку' };
+
+  const result = await authDelete(`/voiceovers/${id}`);
+  if (!result.error) invalidateVoiceoversCache();
+  return result;
+}
+
+/**
+ * Сопоставляет строку озвучки со скрейпа (напр. "DubLikTV, Light Breeze, Русские субтитры")
+ * с включёнными озвучками пользователя — сопоставление целиком на бэке.
+ * Возвращает название из списка или null. Гость — сопоставление с дефолтным списком (эндпоинт без JWT).
+ */
+export async function matchVoiceover(raw) {
+  if (!raw) return null;
+  const path = `/voiceovers/match?q=${encodeURIComponent(raw)}`;
+
+  if (localStorage.getItem('hanbin_token')) {
+    const { data } = await authGet(path);
+    return data?.name || null;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`);
+    return res.ok ? ((await res.json()).name || null) : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

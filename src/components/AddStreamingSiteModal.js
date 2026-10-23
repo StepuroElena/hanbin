@@ -140,7 +140,17 @@ function mountContent(content, { defaultLanguage = 'ru', onAdded } = {}) {
     const { data, error } = await addStreamingSite({ name, url, language: selectedLanguage });
 
     if (error) {
-      content.querySelector('#hb-addsite-global-error').textContent = error;
+      // Дубли проверяет бэк (без учёта регистра; ссылки — ещё и без https://, www и «/» в конце)
+      const msg = String(error);
+      if (msg.includes('name already exists')) {
+        nameInput.classList.add('hb-error');
+        content.querySelector('#hb-addsite-name-error').textContent = t('modal.addsite.err_duplicate_name');
+      } else if (msg.includes('url already exists')) {
+        urlInput.classList.add('hb-error');
+        content.querySelector('#hb-addsite-url-error').textContent = t('modal.addsite.err_duplicate_url');
+      } else {
+        content.querySelector('#hb-addsite-global-error').textContent = error;
+      }
       submitBtn.disabled = false;
       submitBtn.textContent = t('modal.addsite.btn');
       return;

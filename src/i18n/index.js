@@ -130,6 +130,39 @@ export const translations = {
     'settings.categories.disable_tooltip': 'Скрыть из списка выбора',
     'settings.categories.add_btn':         'Добавить категорию',
     'settings.categories.delete_tooltip':  'Удалить категорию',
+    'settings.categories.delete_confirm_title': 'Удалить категорию «{name}»?',
+    'settings.categories.delete_confirm_text':  'Она пропадёт из списка выбора при добавлении фильма.',
+
+    // Confirm modal
+    'confirm_modal.delete':   'Удалить',
+    'confirm_modal.deleting': 'Удаляем…',
+    'confirm_modal.cancel':   'Отмена',
+
+    // Voiceovers (Сеттингс)
+    'settings.voiceovers.title':           'Озвучки',
+    'settings.voiceovers.sub':             'Студии озвучки, которые предлагаются при добавлении дорамы и в таблице. Стандартные можно только выключить, свои — переименовать и удалить',
+    'settings.voiceovers.enable_tooltip':  'Включить в список выбора',
+    'settings.voiceovers.disable_tooltip': 'Скрыть из списка выбора',
+    'settings.voiceovers.add_btn':         'Добавить озвучку',
+    'settings.voiceovers.edit_tooltip':    'Переименовать',
+    'settings.voiceovers.delete_tooltip':  'Удалить озвучку',
+    'settings.voiceovers.delete_confirm_title': 'Удалить озвучку «{name}»?',
+    'settings.voiceovers.delete_confirm_text':  'Она пропадёт из списка выбора. У дорам, где она уже указана, название останется.',
+    'settings.voiceovers.default_tooltip': 'Стандартная озвучка — её можно только выключить',
+
+    // Add / Edit Voiceover modal
+    'modal.voiceover.title':          'Новая озвучка',
+    'modal.voiceover.sub':            'Своя студия озвучки в список выбора',
+    'modal.voiceover.edit_title':     'Переименовать озвучку',
+    'modal.voiceover.edit_sub':       'Название обновится и у дорам с этой озвучкой',
+    'modal.voiceover.field.name':     'Название',
+    'modal.voiceover.field.name_ph':  'Например: LostFilm',
+    'modal.voiceover.btn':            'Добавить',
+    'modal.voiceover.btn_save':       'Сохранить',
+    'modal.voiceover.btn_loading':    'Сохраняем…',
+    'modal.voiceover.err_name':       'Введи название озвучки',
+    'modal.voiceover.err_duplicate':  'Такая озвучка уже есть в списке',
+    'modal.voiceover.err_too_long':   'Слишком длинное название',
 
     // Add Movie Category modal
     'modal.addcategory.title':        'Новая категория',
@@ -139,6 +172,7 @@ export const translations = {
     'modal.addcategory.btn':          'Добавить',
     'modal.addcategory.btn_loading':  'Добавляем…',
     'modal.addcategory.err_name':     'Введи название категории',
+    'modal.addcategory.err_duplicate': 'Такая категория уже есть в списке',
 
     // Add Streaming Site modal
     'modal.addsite.title':        'Добавить сайт',
@@ -155,6 +189,8 @@ export const translations = {
     'modal.addsite.btn_loading':  'Добавляем…',
     'modal.addsite.err_name':     'Введи название сайта',
     'modal.addsite.err_url':      'Введи ссылку на сайт',
+    'modal.addsite.err_duplicate_name': 'Сайт с таким названием уже есть в списке',
+    'modal.addsite.err_duplicate_url':  'Сайт с такой ссылкой уже есть в списке',
 
     // Stats block
     'stats.dramas_watched':       'Просмотрено дорам',
@@ -542,6 +578,39 @@ export const translations = {
     'settings.categories.disable_tooltip': 'Hide from the picker',
     'settings.categories.add_btn':         'Add category',
     'settings.categories.delete_tooltip':  'Delete category',
+    'settings.categories.delete_confirm_title': 'Delete category “{name}”?',
+    'settings.categories.delete_confirm_text':  'It will disappear from the picker when adding a movie.',
+
+    // Confirm modal
+    'confirm_modal.delete':   'Delete',
+    'confirm_modal.deleting': 'Deleting…',
+    'confirm_modal.cancel':   'Cancel',
+
+    // Voiceovers (Settings)
+    'settings.voiceovers.title':           'Voiceovers',
+    'settings.voiceovers.sub':             'Dubbing studios offered when adding a drama and in the table. Standard ones can only be turned off, your own can be renamed and deleted',
+    'settings.voiceovers.enable_tooltip':  'Show in the picker',
+    'settings.voiceovers.disable_tooltip': 'Hide from the picker',
+    'settings.voiceovers.add_btn':         'Add voiceover',
+    'settings.voiceovers.edit_tooltip':    'Rename',
+    'settings.voiceovers.delete_tooltip':  'Delete voiceover',
+    'settings.voiceovers.delete_confirm_title': 'Delete voiceover “{name}”?',
+    'settings.voiceovers.delete_confirm_text':  'It will disappear from the picker. Dramas that already have it keep the name.',
+    'settings.voiceovers.default_tooltip': 'Standard voiceover — it can only be turned off',
+
+    // Add / Edit Voiceover modal
+    'modal.voiceover.title':          'New voiceover',
+    'modal.voiceover.sub':            'Add your own dubbing studio to the picker',
+    'modal.voiceover.edit_title':     'Rename voiceover',
+    'modal.voiceover.edit_sub':       'Dramas with this voiceover will be updated too',
+    'modal.voiceover.field.name':     'Name',
+    'modal.voiceover.field.name_ph':  'e.g. LostFilm',
+    'modal.voiceover.btn':            'Add',
+    'modal.voiceover.btn_save':       'Save',
+    'modal.voiceover.btn_loading':    'Saving…',
+    'modal.voiceover.err_name':       'Enter the voiceover name',
+    'modal.voiceover.err_duplicate':  'This voiceover is already in the list',
+    'modal.voiceover.err_too_long':   'The name is too long',
 
     // Add Movie Category modal
     'modal.addcategory.title':        'New category',
@@ -551,6 +620,7 @@ export const translations = {
     'modal.addcategory.btn':          'Add',
     'modal.addcategory.btn_loading':  'Adding…',
     'modal.addcategory.err_name':     'Enter the category name',
+    'modal.addcategory.err_duplicate': 'This category is already in the list',
 
     // Add Streaming Site modal
     'modal.addsite.title':        'Add a site',
@@ -567,6 +637,8 @@ export const translations = {
     'modal.addsite.btn_loading':  'Adding…',
     'modal.addsite.err_name':     'Enter the site name',
     'modal.addsite.err_url':      'Enter the site URL',
+    'modal.addsite.err_duplicate_name': 'A site with this name is already in the list',
+    'modal.addsite.err_duplicate_url':  'A site with this URL is already in the list',
 
     // Stats block
     'stats.dramas_watched':       'Dramas watched',
